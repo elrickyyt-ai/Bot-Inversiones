@@ -15,4 +15,5 @@ Sistema de inteligencia financiera para apoyo a decisiones de inversión (no un 
 ## Estado del proyecto
 
 - Fase 0 (arquitectura conceptual): completada — `docs/00-arquitectura-conceptual.md`.
-- Fase 1 (definición de MVP, holdings, watchlist): en curso.
+- Fase 1 (definición de MVP, holdings, watchlist, fuentes de datos): completada — ver `cartera/` (holdings pseudonimizados de `CARTERA_A` y watchlist) y `docs/01-fase1-fuentes-datos-y-plantilla.md` / `docs/02-fase1-gaps-y-roadmap-fuentes.md`. Pendiente para más adelante (no ahora): investigar plataformas alternativas a Binance/Kraken/MyInvestor.
+- Fase 2 (Fundamental Engine): en curso.
