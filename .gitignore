@@ -1,0 +1,5 @@
+# Datos de mercado descargados: reproducibles ejecutando el pipeline de ingesta,
+# no se versionan (Fase 2, decisión de higiene de repo).
+engine/*/_data/
+__pycache__/
+*.pyc

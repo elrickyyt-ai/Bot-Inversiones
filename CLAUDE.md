@@ -16,4 +16,4 @@ Sistema de inteligencia financiera para apoyo a decisiones de inversión (no un 
 
 - Fase 0 (arquitectura conceptual): completada — `docs/00-arquitectura-conceptual.md`.
 - Fase 1 (definición de MVP, holdings, watchlist, fuentes de datos): completada — ver `cartera/` (holdings pseudonimizados de `CARTERA_A` y watchlist) y `docs/01-fase1-fuentes-datos-y-plantilla.md` / `docs/02-fase1-gaps-y-roadmap-fuentes.md`. Pendiente para más adelante (no ahora): investigar plataformas alternativas a Binance/Kraken/MyInvestor.
-- Fase 2 (Fundamental Engine): en curso.
+- Fase 2 (Fundamental Engine): en curso. Orden acordado: cripto primero (motor de tokenomics/on-chain, `engine/crypto/`, ya con primera versión funcionando para BTC/ETH/ADA/SOL/DOT/XRP — ver `informes/2026-07-20_cripto_fundamentales_v1.md`), acciones (IBM/NVIDIA/ExxonMobil, motor SEC EDGAR + Yahoo Finance) después.
