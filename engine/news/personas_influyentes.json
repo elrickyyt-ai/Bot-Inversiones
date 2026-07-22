@@ -1,0 +1,17 @@
+{
+  "_esquema": {
+    "descripcion": "Registro de divulgadores/expertos individuales monitorizados (Fase 0, punto 11 y Prioridad 4 de fuentes). La credibilidad NO se asume: se calcula a partir de predicciones_registradas una vez haya histórico suficiente.",
+    "campos_persona": ["nombre", "region", "rol", "medio_principal", "categoria", "predicciones_registradas", "credibilidad_status"]
+  },
+  "personas": [
+    {
+      "nombre": "José Luis Cava",
+      "region": "España",
+      "rol": "Analista técnico y comentarista de mercados en medios españoles",
+      "medio_principal": "Prensa/TV financiera española",
+      "categoria": "divulgador financiero",
+      "predicciones_registradas": [],
+      "credibilidad_status": "sin histórico verificado en este sistema todavía — reputación pública ampliamente conocida en círculos financieros españoles de llamadas muy confiadas y frecuentemente erróneas a corto plazo, pero no se traduce en un score sin datos propios registrados. Pendiente: registrar predicciones concretas con fecha para poder puntuar de verdad."
+    }
+  ]
+}
