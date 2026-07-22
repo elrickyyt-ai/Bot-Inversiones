@@ -26,8 +26,10 @@ def _pct_in_window(values):
 
 
 def score_asset(symbol, tvl_chain):
-    detail = json.load(open(f"{DATA_DIR}/{symbol}_detail.json"))
-    chart = json.load(open(f"{DATA_DIR}/{symbol}_chart.json"))
+    with open(f"{DATA_DIR}/{symbol}_detail.json") as f:
+        detail = json.load(f)
+    with open(f"{DATA_DIR}/{symbol}_chart.json") as f:
+        chart = json.load(f)
     md = detail.get("market_data", {})
     dd = detail.get("developer_data", {})
 
@@ -46,7 +48,8 @@ def score_asset(symbol, tvl_chain):
     tvl_percentile = None
     tvl_data_issue = False
     if tvl_chain:
-        tvl_series = json.load(open(f"{DATA_DIR}/{symbol}_tvl.json"))
+        with open(f"{DATA_DIR}/{symbol}_tvl.json") as f:
+            tvl_series = json.load(f)
         vals = [r["tvl"] for r in tvl_series][-365:]
         tvl_now = vals[-1] if vals else None
         tvl_percentile = _pct_in_window(vals)

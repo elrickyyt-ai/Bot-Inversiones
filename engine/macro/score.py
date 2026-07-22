@@ -13,7 +13,8 @@ DATA_DIR = os.path.join(os.path.dirname(__file__), "_data")
 
 
 def _load(name):
-    return json.load(open(f"{DATA_DIR}/{name}.json"))
+    with open(f"{DATA_DIR}/{name}.json") as f:
+        return json.load(f)
 
 
 def _yoy(series):

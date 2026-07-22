@@ -14,7 +14,8 @@ ASSETS = ["BTC", "ETH", "ADA", "SOL", "DOT", "XRP"]
 
 
 def _load_ohlc(symbol):
-    raw = json.load(open(f"{DATA_DIR}/{symbol}_ohlc.json"))
+    with open(f"{DATA_DIR}/{symbol}_ohlc.json") as f:
+        raw = json.load(f)
     # Kraken: [time, open, high, low, close, vwap, volume, count]
     return [
         {"time": r[0], "open": float(r[0 + 1]), "high": float(r[2]),
