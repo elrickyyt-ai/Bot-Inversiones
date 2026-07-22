@@ -1,17 +1,141 @@
 {
   "_esquema": {
     "descripcion": "Registro de divulgadores/expertos individuales monitorizados (Fase 0, punto 11 y Prioridad 4 de fuentes). La credibilidad NO se asume: se calcula a partir de predicciones_registradas una vez haya histórico suficiente.",
-    "campos_persona": ["nombre", "region", "rol", "medio_principal", "categoria", "predicciones_registradas", "credibilidad_status"]
+    "campos_persona": ["nombre", "region", "rol", "categoria", "identidad_verificada", "predicciones_registradas", "credibilidad_status"]
   },
   "personas": [
     {
       "nombre": "José Luis Cava",
       "region": "España",
       "rol": "Analista técnico y comentarista de mercados en medios españoles",
-      "medio_principal": "Prensa/TV financiera española",
       "categoria": "divulgador financiero",
+      "identidad_verificada": true,
       "predicciones_registradas": [],
-      "credibilidad_status": "sin histórico verificado en este sistema todavía — reputación pública ampliamente conocida en círculos financieros españoles de llamadas muy confiadas y frecuentemente erróneas a corto plazo, pero no se traduce en un score sin datos propios registrados. Pendiente: registrar predicciones concretas con fecha para poder puntuar de verdad."
+      "credibilidad_status": "sin histórico verificado en este sistema todavía — reputación pública ampliamente conocida en círculos financieros españoles de llamadas muy confiadas y frecuentemente erróneas a corto plazo (confirmado además por tu propia experiencia siguiéndole). No se traduce en un score sin datos propios registrados."
+    },
+    {
+      "nombre": "Javier Alfayate Gallardo",
+      "region": "España",
+      "rol": "Gestor de fondos (Link Capital), analista técnico",
+      "categoria": "analista técnico",
+      "identidad_verificada": true,
+      "predicciones_registradas": [],
+      "credibilidad_status": "identidad confirmada (Estrategias de Inversión, Capital Radio). Sin histórico de predicciones registrado todavía."
+    },
+    {
+      "nombre": "Roberto Moro",
+      "region": "España",
+      "rol": "Analista técnico independiente",
+      "categoria": "analista técnico",
+      "identidad_verificada": true,
+      "predicciones_registradas": [],
+      "credibilidad_status": "identidad confirmada. Sin histórico de predicciones registrado todavía."
+    },
+    {
+      "nombre": "Víctor Galán",
+      "region": "España",
+      "rol": "Analista, enfoque en geopolítica y mercados",
+      "categoria": "analista técnico",
+      "identidad_verificada": true,
+      "predicciones_registradas": [],
+      "credibilidad_status": "identidad confirmada. Sin histórico de predicciones registrado todavía."
+    },
+    {
+      "nombre": "Daniel Lacalle",
+      "region": "España",
+      "rol": "Economista, gestor de inversiones, columnista",
+      "categoria": "divulgador financiero",
+      "identidad_verificada": true,
+      "predicciones_registradas": [],
+      "credibilidad_status": "identidad confirmada. Nota de cautela propia: es una figura ideológicamente marcada (economía de libre mercado) y sus previsiones macro han sido cuestionadas públicamente en varias ocasiones — se le aplica el mismo criterio que a cualquier otro, sin dar por buena su credibilidad de antemano."
+    },
+    {
+      "nombre": "Juan Ramón Rallo",
+      "region": "España",
+      "rol": "Economista (escuela austriaca), profesor y divulgador",
+      "categoria": "divulgador financiero",
+      "identidad_verificada": true,
+      "predicciones_registradas": [],
+      "credibilidad_status": "identidad confirmada. Sin histórico de predicciones registrado todavía."
+    },
+    {
+      "nombre": "El Profesor del Dividendo",
+      "region": "España",
+      "rol": "Divulgador de inversión en dividendos (YouTube)",
+      "categoria": "divulgador financiero",
+      "identidad_verificada": true,
+      "predicciones_registradas": [],
+      "credibilidad_status": "identidad confirmada como canal/personalidad. Sin histórico de predicciones registrado todavía."
+    },
+    {
+      "nombre": "Jan Hatzius",
+      "region": "EE.UU.",
+      "rol": "Chief Economist, Goldman Sachs",
+      "categoria": "macroeconomista",
+      "identidad_verificada": true,
+      "predicciones_registradas": [],
+      "credibilidad_status": "identidad confirmada (figura pública ampliamente conocida). Sin histórico de predicciones registrado todavía en este sistema."
+    },
+    {
+      "nombre": "Nouriel Roubini",
+      "region": "EE.UU.",
+      "rol": "Economista, NYU Stern",
+      "categoria": "macroeconomista",
+      "identidad_verificada": true,
+      "predicciones_registradas": [],
+      "credibilidad_status": "identidad confirmada. Nota de cautela propia: conocido públicamente por un sesgo bajista persistente ('Dr. Doom') con un historial mixto de acierto en el timing de sus advertencias — se registra igual que a los demás, sin descartarlo ni darlo por bueno de antemano."
+    },
+    {
+      "nombre": "George Soros",
+      "region": "Global",
+      "rol": "Inversor macro (retirado de gestión activa)",
+      "categoria": "trader/inversor",
+      "identidad_verificada": true,
+      "predicciones_registradas": [],
+      "credibilidad_status": "identidad confirmada. Ya no gestiona activamente — su relevancia hoy es más histórica/reputacional que como fuente de llamadas de mercado recientes."
+    },
+    {
+      "nombre": "Ray Dalio",
+      "region": "Global",
+      "rol": "Fundador de Bridgewater Associates",
+      "categoria": "trader/inversor",
+      "identidad_verificada": true,
+      "predicciones_registradas": [],
+      "credibilidad_status": "identidad confirmada. Sin histórico de predicciones registrado todavía en este sistema."
+    },
+    {
+      "nombre": "Stanley Druckenmiller",
+      "region": "Global",
+      "rol": "Inversor macro, Duquesne Family Office",
+      "categoria": "trader/inversor",
+      "identidad_verificada": true,
+      "predicciones_registradas": [],
+      "credibilidad_status": "identidad confirmada. Sin histórico de predicciones registrado todavía en este sistema."
+    },
+    {
+      "nombre": "Paul Tudor Jones",
+      "region": "Global",
+      "rol": "Inversor macro, Tudor Investment Corporation",
+      "categoria": "trader/inversor",
+      "identidad_verificada": true,
+      "predicciones_registradas": [],
+      "credibilidad_status": "identidad confirmada. Sin histórico de predicciones registrado todavía en este sistema."
+    },
+    {
+      "nombre": "Michael Burry",
+      "region": "Global",
+      "rol": "Inversor, Scion Asset Management",
+      "categoria": "trader/inversor",
+      "identidad_verificada": true,
+      "predicciones_registradas": [],
+      "credibilidad_status": "identidad confirmada. Conocido por una llamada muy acertada (2008) pero con varias llamadas bajistas posteriores que no se cumplieron en el plazo que sugirió — se registra con el mismo criterio que a los demás."
+    }
+  ],
+  "pendientes_de_identificar": [
+    {
+      "nombres_recibidos": ["Carpenter (macro EE.UU.)", "Baig, Casanova (macro Asia)", "Gil (analista técnico España)", "Ortiz (divulgador España)", "Pérez, Blázquez, Duce, González (gestores Europa)"],
+      "motivo": "Solo apellido, sin nombre completo ni fuente — demasiado ambiguo para identificar a una persona concreta con confianza (algunos son apellidos muy comunes en español). No se añaden al registro hasta tener nombre completo o una fuente que confirme de quién se trata.",
+      "nota": "Excepción parcial: 'Baig' probablemente se refiere a Taimur Baig (Chief Economist, DBS Bank) por el contexto de región/rol, pero no se añade sin confirmación explícita."
     }
   ]
 }
