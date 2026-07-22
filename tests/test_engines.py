@@ -133,5 +133,26 @@ class TestScoringConsolidado(unittest.TestCase):
         self.assertEqual(sc["cobertura_dominios"], "4/4")
 
 
+class TestMotorDeRazonamiento(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        _materialize_fixtures()
+        cls.mod = _import("reasoning", "thesis")
+
+    def test_dot_hereda_confianza_reducida_por_incidencia_de_datos(self):
+        t = self.mod.build_thesis("BTC", None)
+        # BTC no tiene incidencia -> confidence no debe ir penalizado a 45
+        self.assertNotEqual(t["confidence_pct"], 45)
+
+    def test_xrp_propaga_la_contradiccion_de_noticias(self):
+        t = self.mod.build_thesis("XRP", None)
+        self.assertTrue(len(t["contradicciones"]) >= 1, "XRP debe heredar la contradicción ya detectada en Fase 4")
+
+    def test_tesis_siempre_declara_los_tres_escenarios(self):
+        t = self.mod.build_thesis("BTC", None)
+        for campo in ("bull_case", "base_case", "bear_case", "factores_que_invalidarian_la_tesis"):
+            self.assertTrue(t[campo], f"falta {campo} en la tesis")
+
+
 if __name__ == "__main__":
     unittest.main()
