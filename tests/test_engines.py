@@ -14,10 +14,12 @@ uno nuevo:
 
     python3 -m unittest discover -s tests -v
 """
+import datetime
 import json
 import os
 import shutil
 import sys
+import tempfile
 import unittest
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -152,6 +154,44 @@ class TestMotorDeRazonamiento(unittest.TestCase):
         t = self.mod.build_thesis("BTC", None)
         for campo in ("bull_case", "base_case", "bear_case", "factores_que_invalidarian_la_tesis"):
             self.assertTrue(t[campo], f"falta {campo} en la tesis")
+
+
+class TestThesisLedger(unittest.TestCase):
+    """Importante: usa un directorio temporal para el ledger, nunca el
+    real -- estas pruebas no deben ensuciar el historial de tesis de
+    verdad con entradas de test."""
+
+    @classmethod
+    def setUpClass(cls):
+        _materialize_fixtures()
+        cls.mod = _import("reasoning", "ledger")
+
+    def setUp(self):
+        self.tmpdir = tempfile.mkdtemp()
+        self.mod.LEDGER_DIR = self.tmpdir
+
+    def tearDown(self):
+        shutil.rmtree(self.tmpdir, ignore_errors=True)
+
+    def test_registrar_tesis_crea_entrada_con_umbral(self):
+        entrada = self.mod.record_thesis("BTC", None)
+        self.assertEqual(entrada["activo"], "BTC")
+        self.assertIsNone(entrada["evaluacion"], "una tesis recién registrada no debe traer evaluación todavía")
+        self.assertIsNotNone(entrada["umbral_movimiento_significativo_pct"])
+
+    def test_no_evalua_antes_de_tiempo(self):
+        self.mod.record_thesis("BTC", None)
+        evaluadas = self.mod.evaluate_pending("BTC", precio_actual=999999)
+        self.assertEqual(evaluadas, [], "no debe evaluar una entrada de hoy mismo, el horizonte es de 90 días")
+
+    def test_evalua_correctamente_pasado_el_horizonte(self):
+        entrada = self.mod.record_thesis("BTC", None)
+        precio_inicial = entrada["precio_en_el_momento"]
+        futuro = datetime.date.today() + datetime.timedelta(days=200)
+        # Movimiento muy por encima de cualquier umbral de volatilidad razonable
+        evaluadas = self.mod.evaluate_pending("BTC", precio_actual=precio_inicial * 3, hoy=futuro)
+        self.assertEqual(len(evaluadas), 1)
+        self.assertEqual(evaluadas[0]["evaluacion"]["veredicto"], "bull_case")
 
 
 if __name__ == "__main__":
