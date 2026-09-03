@@ -26,9 +26,22 @@ THESIS_FIELDS = {
     "confidence_pct", "data_as_of", "retrieved_at",
 }
 
+# DimAsset -- atributos ESTATICOS del activo (no cambian dia a dia, por
+# eso no se historizan como las metricas). Algunos campos son un dato
+# extraido literalmente de la fuente (ej. "Sector" de Alpha Vantage para
+# acciones), otros son una etiqueta ASIGNADA por este sistema porque la
+# fuente no tiene un equivalente limpio (ej. "sector" = "Cripto" para
+# criptomonedas) -- documentado explicitamente en cada adaptador, el
+# campo "source" de la fila no distingue esto campo a campo.
+ASSET_FIELDS = {
+    "asset_id", "asset_type", "name", "sector", "industry", "country",
+    "currency", "exchange", "active", "retrieved_at", "source",
+}
+
 # Requeridos de verdad (el resto puede ser None si el motor de origen no lo tiene)
 METRIC_REQUIRED = {"asset_id", "asset_type", "domain", "metric", "value", "data_as_of", "retrieved_at", "source", "source_priority"}
 THESIS_REQUIRED = {"thesis_id", "asset_id", "thesis_type", "data_as_of", "retrieved_at"}
+ASSET_REQUIRED = {"asset_id", "asset_type", "name", "currency", "retrieved_at", "source"}
 
 # Prioridad de FUENTE DE DATOS (mercado), distinta de la jerarquia de
 # credibilidad de noticias/periodismo que ya existe en engine/news/sources.py.
@@ -80,6 +93,19 @@ def _validate_pct_range(row, field):
     val = row.get(field)
     if val is not None and not (0 <= val <= 100):
         raise ContractError(f"{field} fuera de rango 0-100: {val}")
+
+
+def validate_asset_row(row):
+    missing = ASSET_REQUIRED - set(k for k, v in row.items() if v is not None)
+    if missing:
+        raise ContractError(f"faltan campos requeridos en fila de DimAsset: {missing}")
+    extra = set(row.keys()) - ASSET_FIELDS
+    if extra:
+        raise ContractError(f"campos no reconocidos por el Data Contract: {extra}")
+    for key, val in row.items():
+        if isinstance(val, str) and any(h in val for h in FORBIDDEN_SOURCE_HINTS):
+            raise ContractError(f"posible dato de cartera privada en campo '{key}': {val!r}")
+    return True
 
 
 def validate_thesis_row(row):

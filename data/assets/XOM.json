@@ -1,0 +1,13 @@
+{
+  "asset_id": "XOM",
+  "asset_type": "equity",
+  "name": "Exxon Mobil Corp",
+  "sector": "ENERGY",
+  "industry": "OIL & GAS INTEGRATED",
+  "country": "USA",
+  "currency": "USD",
+  "exchange": "NYSE",
+  "active": true,
+  "retrieved_at": "2026-09-03T12:13:07Z",
+  "source": "Alpha Vantage"
+}

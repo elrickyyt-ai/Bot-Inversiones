@@ -1,0 +1,13 @@
+{
+  "asset_id": "SOL",
+  "asset_type": "crypto",
+  "name": "Solana",
+  "sector": "Cripto",
+  "industry": null,
+  "country": null,
+  "currency": "EUR",
+  "exchange": null,
+  "active": true,
+  "retrieved_at": "2026-09-03T12:13:07Z",
+  "source": "CoinGecko"
+}

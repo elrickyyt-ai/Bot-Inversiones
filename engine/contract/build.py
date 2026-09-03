@@ -15,8 +15,11 @@ import json
 import os
 import sys
 
-from adapters import adapt_crypto, adapt_technical, adapt_macro, adapt_equity, adapt_thesis
-from schema import validate_metric_row, validate_thesis_row, ContractError
+from adapters import (
+    adapt_crypto, adapt_technical, adapt_macro, adapt_equity, adapt_thesis,
+    adapt_asset_crypto, adapt_asset_equity, adapt_asset_macro,
+)
+from schema import validate_metric_row, validate_thesis_row, validate_asset_row, ContractError
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 DATA_DIR = os.path.join(ROOT, "data")
@@ -56,6 +59,17 @@ def _write_metric_rows(asset_id, new_rows):
     with open(path, "w", encoding="utf-8") as f:
         json.dump(merged, f, ensure_ascii=False, indent=2)
     return len(merged), len(added), len(new_rows) - len(added)
+
+
+def _write_asset_row(asset_id, row):
+    """DimAsset: atributos estaticos, NO se historizan (a diferencia de
+    metricas/tesis) -- se sobrescriben, porque nombre/sector/pais/divisa
+    no cambian dia a dia y no aporta valor guardar un historico de eso."""
+    validate_asset_row(row)
+    path = os.path.join(DATA_DIR, "assets", f"{asset_id}.json")
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(row, f, ensure_ascii=False, indent=2)
 
 
 def _write_thesis_row(asset_id, new_row):
@@ -100,8 +114,9 @@ def build_all():
             by_region.setdefault(row["asset_id"], []).append(row)
         for region, rows in by_region.items():
             total, added, skipped = _write_metric_rows(region, rows)
+            _write_asset_row(region, adapt_asset_macro(region))
             summary.append((region, total, added, skipped, None, None))
-            print(f"{region}: {total} filas históricas ({added} nuevas, {skipped} ya existían)")
+            print(f"{region}: {total} filas históricas ({added} nuevas, {skipped} ya existían) + DimAsset")
     except ContractError as e:
         errors.append(f"macro: {e}")
 
@@ -109,10 +124,11 @@ def build_all():
         try:
             rows = adapt_crypto(symbol, tvl_chain) + adapt_technical(symbol)
             total, added, skipped = _write_metric_rows(symbol, rows)
+            _write_asset_row(symbol, adapt_asset_crypto(symbol))
             thesis = thesis_mod.build_thesis(symbol, tvl_chain)
             t_total, t_added = _write_thesis_row(symbol, adapt_thesis(thesis, "crypto"))
             summary.append((symbol, total, added, skipped, t_total, t_added))
-            print(f"{symbol}: {total} filas históricas ({added} nuevas, {skipped} ya existían) + {t_total} tesis ({t_added} nueva)")
+            print(f"{symbol}: {total} filas históricas ({added} nuevas, {skipped} ya existían) + {t_total} tesis ({t_added} nueva) + DimAsset")
         except ContractError as e:
             errors.append(f"{symbol}: {e}")
 
@@ -120,10 +136,11 @@ def build_all():
         try:
             rows = adapt_equity(symbol)
             total, added, skipped = _write_metric_rows(symbol, rows)
+            _write_asset_row(symbol, adapt_asset_equity(symbol))
             thesis = thesis_mod.build_thesis_equity(symbol)
             t_total, t_added = _write_thesis_row(symbol, adapt_thesis(thesis, "equity"))
             summary.append((symbol, total, added, skipped, t_total, t_added))
-            print(f"{symbol}: {total} filas históricas ({added} nuevas, {skipped} ya existían) + {t_total} tesis ({t_added} nueva)")
+            print(f"{symbol}: {total} filas históricas ({added} nuevas, {skipped} ya existían) + {t_total} tesis ({t_added} nueva) + DimAsset")
         except ContractError as e:
             errors.append(f"{symbol}: {e}")
 

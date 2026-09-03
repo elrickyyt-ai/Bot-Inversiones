@@ -1,6 +1,6 @@
 # Data Contract (v1)
 
-Capa de visualización — ver `docs/03-arquitectura-visualizacion-y-acceso.md` para la planificación general y `docs/04-modelo-power-bi.md` para el modelo de datos de Power BI (Fases B-G). Esta pieza cubre los pasos 1-3 del orden acordado con el usuario (Data Contract, adaptadores, tests) más la Fase A de diagnóstico (`qa.py`) — **la Web App y Power BI todavía no se han construido**, quedan para cuando se autorice explícitamente.
+Capa de visualización — ver `docs/03-arquitectura-visualizacion-y-acceso.md` para la planificación general y `docs/04-modelo-power-bi.md` para el modelo de datos de Power BI (Fases B-G). Esta pieza cubre los pasos 1-2 del orden acordado con el usuario el 2026-09-03 (historización + DimAsset) más los pasos 1-3 originales (Data Contract, adaptadores, tests) y la Fase A de diagnóstico (`qa.py`) — **la Web App y Power BI todavía no se han construido**, quedan para cuando se autorice explícitamente.
 
 ## Diagnóstico (`qa.py`)
 
@@ -8,11 +8,11 @@ Capa de visualización — ver `docs/03-arquitectura-visualizacion-y-acceso.md` 
 python3 engine/contract/qa.py
 ```
 
-Lee `data/`, valida cada fila contra el contrato y produce un informe legible (no JSON crudo), con PASS/FAIL en cuatro bloques: esquema, privacidad, temporal (`data_as_of` vs. `retrieved_at`), fuentes. Ejecutarlo después de cada `build.py` para saber si el sistema funciona sin inspeccionar los ficheros a mano — ver `informes/2026-09-03_data_qa_v1.md` para la primera ejecución real, que encontró un hallazgo genuino (precio en EUR para cripto vs. USD para acciones) y un defecto real en `schema.py` (rango de `confidence_pct`/`data_quality_pct` sin validar, ya corregido).
+Lee `data/`, valida cada fila contra el contrato y produce un informe legible (no JSON crudo), con PASS/FAIL en cinco bloques: esquema, privacidad, temporal (`data_as_of` vs. `retrieved_at`), fuentes, y DimAsset. Ejecutarlo después de cada `build.py` para saber si el sistema funciona sin inspeccionar los ficheros a mano — ver `informes/2026-09-03_data_qa_v1.md` para la primera ejecución real, que encontró un hallazgo genuino (precio en EUR para cripto vs. USD para acciones) y un defecto real en `schema.py` (rango de `confidence_pct`/`data_quality_pct` sin validar, ya corregido). El hallazgo del EUR/USD quedó resuelto con DimAsset (ver más abajo): la comprobación de unidades incompatibles en `qa.py` ahora compara por `(metric, asset_type)` en vez de solo `metric` — una unidad distinta entre asset_types distintos es esperada y queda explicada por `DimAsset.currency`, no es una incidencia.
 
 ## Qué hace
 
-`schema.py` define dos formas de fila (métrica y tesis) que va a consumir tanto la futura Web App como Power BI, sin lógica duplicada entre ambas. `adapters.py` traduce la salida de cada motor existente (`engine/crypto`, `engine/technical`, `engine/macro`, `engine/equity`, `engine/reasoning`) a esas formas, **sin modificar los motores originales**. `build.py` orquesta todos los adaptadores, valida cada fila contra el contrato antes de escribirla, y genera `data/metrics/{TICKER}.json` y `data/thesis/{TICKER}.json` en la raíz del repo.
+`schema.py` define tres formas de fila (métrica, tesis, y DimAsset) que va a consumir tanto la futura Web App como Power BI, sin lógica duplicada entre ambas. `adapters.py` traduce la salida de cada motor existente (`engine/crypto`, `engine/technical`, `engine/macro`, `engine/equity`, `engine/reasoning`) a esas formas, **sin modificar los motores originales**. `build.py` orquesta todos los adaptadores, valida cada fila contra el contrato antes de escribirla, y genera `data/metrics/{TICKER}.json`, `data/thesis/{TICKER}.json` y `data/assets/{TICKER}.json` en la raíz del repo.
 
 ## Uso
 
@@ -35,6 +35,17 @@ Requiere que ya existan los datos descargados de cada motor (`_data/` de crypto/
 **Macro ya no escribe un fichero `_macro.json` especial** — EE.UU. y Eurozona pasan a tratarse como activos propios (`US.json`, `EA.json`), con el mismo tratamiento historizado que cripto y acciones.
 
 **Migración del formato de tesis**: antes de historizar, `data/thesis/{ID}.json` era un objeto único (la última tesis). Ahora es una lista de objetos. `build.py` migra automáticamente el formato antiguo la primera vez que se ejecuta, sin perder la tesis que ya hubiera.
+
+## DimAsset (`data/assets/{ID}.json`) — atributos estáticos, no historizados
+
+A diferencia de métricas y tesis, `data/assets/{ID}.json` **se sobrescribe** en cada `build.py` (un objeto, no una lista) — nombre, sector, país, divisa no cambian día a día, así que no aporta valor guardar un histórico. Campos: `asset_id`, `asset_type`, `name`, `sector`, `industry`, `country`, `currency`, `exchange`, `active`, `retrieved_at`, `source`.
+
+**Procedencia de cada campo, documentada por tipo de activo** (en el docstring de cada función `adapt_asset_*` de `adapters.py`, no solo aquí):
+- **Acciones** (`adapt_asset_equity`): todos los campos extraídos literalmente de `COMPANY_OVERVIEW` de Alpha Vantage (`Name`, `Sector`, `Industry`, `Country`, `Currency`, `Exchange`) — ninguno asignado por el sistema.
+- **Cripto** (`adapt_asset_crypto`): `name` viene de CoinGecko. `sector="Cripto"` es una etiqueta **asignada** por este sistema (CoinGecko no tiene un equivalente limpio de "sector" para criptomonedas). `currency="EUR"` es la divisa del **sistema** (todo el motor cripto cotiza vía Kraken en EUR), no una propiedad inherente del activo — esto es precisamente lo que resuelve la ambigüedad EUR/USD que `qa.py` detectó. `country` solo se rellena si CoinGecko trae `country_origin`; si viene vacío se deja `None`, nunca se inventa "Global".
+- **Macro** (`adapt_asset_macro`): pseudo-activos para EE.UU. (`US`, `currency="USD"`) y Eurozona (`EA`, `currency="EUR"`) — nombres y divisas fijados por definición de la región, `source="FRED"`.
+
+**Por qué resuelve el hallazgo EUR/USD de `qa.py`**: antes, una fila con `metric="precio"` no dejaba claro en qué divisa estaba sin ir a mirar el motor de origen. Ahora, unir cualquier fila de métrica con `data/assets/{asset_id}.json` por `asset_id` da la divisa real de forma explícita — es la relación que en el modelo de Power BI (`docs/04-modelo-power-bi.md`) corresponde a la tabla `DimAsset`.
 
 ## `data_as_of` vs. `retrieved_at`
 

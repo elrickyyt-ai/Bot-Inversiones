@@ -91,6 +91,25 @@ class TestAdapters(unittest.TestCase):
         for row in rows:
             schema.validate_metric_row(row)
 
+    def test_adapt_asset_crypto_tiene_currency_documentada(self):
+        row = self.mod.adapt_asset_crypto("BTC")
+        schema.validate_asset_row(row)
+        self.assertEqual(row["currency"], "EUR")
+        self.assertEqual(row["name"], "Bitcoin")
+        self.assertIsNone(row["country"], "BTC no tiene country_origin en CoinGecko, no debe inventarse")
+
+    def test_adapt_asset_equity_todos_los_campos_de_la_fuente(self):
+        row = self.mod.adapt_asset_equity("IBM")
+        schema.validate_asset_row(row)
+        self.assertEqual(row["currency"], "USD")
+        self.assertEqual(row["exchange"], "NYSE")
+        self.assertEqual(row["country"], "USA")
+
+    def test_adapt_asset_macro_no_deja_huerfano_el_asset_id(self):
+        row = self.mod.adapt_asset_macro("US")
+        schema.validate_asset_row(row)
+        self.assertEqual(row["asset_id"], "US")
+
     def test_adapt_macro_filas_validas(self):
         rows = self.mod.adapt_macro()
         self.assertTrue(len(rows) > 0)

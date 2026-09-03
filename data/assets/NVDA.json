@@ -1,0 +1,13 @@
+{
+  "asset_id": "NVDA",
+  "asset_type": "equity",
+  "name": "NVIDIA Corporation",
+  "sector": "TECHNOLOGY",
+  "industry": "SEMICONDUCTORS",
+  "country": "USA",
+  "currency": "USD",
+  "exchange": "NASDAQ",
+  "active": true,
+  "retrieved_at": "2026-09-03T12:13:07Z",
+  "source": "Alpha Vantage"
+}

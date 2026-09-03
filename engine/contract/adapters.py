@@ -180,3 +180,82 @@ def adapt_thesis(thesis, asset_type):
         "data_as_of": thesis["fecha"],
         "retrieved_at": retrieved_at,
     }
+
+
+def adapt_asset_macro(region):
+    """DimAsset para las 'pseudo-cuentas' macro (US, EA) -- para que
+    FactMetrics[asset_id] siempre tenga una fila DimAsset correspondiente
+    y no queden relaciones huerfanas en el modelo de Power BI."""
+    names = {"US": "Estados Unidos", "EA": "Eurozona"}
+    currencies = {"US": "USD", "EA": "EUR"}
+    return {
+        "asset_id": region,
+        "asset_type": "macro",
+        "name": names.get(region, region),
+        "sector": None,
+        "industry": None,
+        "country": None,
+        "currency": currencies.get(region),
+        "exchange": None,
+        "active": True,
+        "retrieved_at": now_utc_iso(),
+        "source": "FRED",
+    }
+
+
+def adapt_asset_crypto(symbol):
+    """DimAsset para criptomonedas, a partir del detalle de CoinGecko ya
+    descargado (engine/crypto/_data/{symbol}_detail.json).
+
+    Proveniencia por campo (importante, no todo viene de la fuente):
+    - name: extraido literalmente de CoinGecko ('name').
+    - sector: NO existe un campo limpio equivalente en CoinGecko (la
+      lista 'categories' es ruidosa e inconsistente -- para BTC incluye
+      'Smart Contract Platform', que no es correcto). Se ASIGNA la
+      etiqueta fija 'Cripto' en vez de usar esa lista, documentado aqui
+      como decision explicita, no como dato extraido.
+    - country: extraido de 'country_origin' solo si no viene vacio (para
+      la mayoria de criptomonedas grandes viene vacio -- no se inventa
+      un valor como 'Global').
+    - currency: 'EUR' -- es la divisa en la que ESTE SISTEMA expresa el
+      precio (viene de los pares EUR de Kraken en engine/technical/), no
+      una propiedad inherente de la criptomoneda.
+    - exchange: None -- no aplica, cotiza en muchos mercados a la vez.
+    """
+    with open(os.path.join(ROOT, "crypto", "_data", f"{symbol}_detail.json")) as fh:
+        detail = json.load(fh)
+    country = detail.get("country_origin") or None
+    return {
+        "asset_id": symbol,
+        "asset_type": "crypto",
+        "name": detail.get("name"),
+        "sector": "Cripto",
+        "industry": None,
+        "country": country,
+        "currency": "EUR",
+        "exchange": None,
+        "active": True,
+        "retrieved_at": now_utc_iso(),
+        "source": "CoinGecko",
+    }
+
+
+def adapt_asset_equity(symbol):
+    """DimAsset para acciones -- todos los campos extraidos literalmente
+    de Alpha Vantage COMPANY_OVERVIEW (engine/equity/_data/{symbol}_overview.json),
+    sin ninguna etiqueta asignada por este sistema."""
+    with open(os.path.join(ROOT, "equity", "_data", f"{symbol}_overview.json")) as fh:
+        overview = json.load(fh)
+    return {
+        "asset_id": symbol,
+        "asset_type": "equity",
+        "name": overview.get("Name"),
+        "sector": overview.get("Sector"),
+        "industry": overview.get("Industry"),
+        "country": overview.get("Country"),
+        "currency": overview.get("Currency"),
+        "exchange": overview.get("Exchange"),
+        "active": True,
+        "retrieved_at": now_utc_iso(),
+        "source": "Alpha Vantage",
+    }
