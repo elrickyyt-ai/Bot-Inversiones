@@ -88,6 +88,24 @@ def adapt_technical(symbol):
     rows.append(_row(symbol, "crypto", "tecnico", "confluencia_sesgo", t["confluencia"]["sesgo"],
                       "categorico", data_as_of, retrieved_at, "Kraken",
                       confidence_pct=conf, calculation_method=method))
+
+    for sma_key in ("sma20", "sma50", "sma100", "sma200"):
+        if t[sma_key] is not None:
+            rows.append(_row(symbol, "crypto", "tecnico", sma_key, t[sma_key], "EUR",
+                              data_as_of, retrieved_at, "Kraken",
+                              confidence_pct=conf, calculation_method=method))
+    if t["atr14"] is not None:
+        rows.append(_row(symbol, "crypto", "tecnico", "atr14", t["atr14"], "EUR",
+                          data_as_of, retrieved_at, "Kraken",
+                          confidence_pct=conf, calculation_method=method))
+    if t["atr14_pct_precio"] is not None:
+        rows.append(_row(symbol, "crypto", "tecnico", "atr14_pct_precio", t["atr14_pct_precio"], "%",
+                          data_as_of, retrieved_at, "Kraken",
+                          confidence_pct=conf, calculation_method=method))
+    if t["volatilidad_hist_30d_anualizada_pct"] is not None:
+        rows.append(_row(symbol, "crypto", "tecnico", "volatilidad_hist_30d_anualizada_pct",
+                          t["volatilidad_hist_30d_anualizada_pct"], "%", data_as_of, retrieved_at,
+                          "Kraken", confidence_pct=conf, calculation_method=method))
     return rows
 
 
@@ -158,6 +176,59 @@ def adapt_equity(symbol):
     rows.append(_row(symbol, "equity", "fundamental", "revenue_growth_yoy_pct", e["revenue_growth_yoy_pct"], "%",
                       fundamental_as_of, retrieved_at, "Alpha Vantage",
                       data_quality_pct=dq, calculation_method=method))
+
+    # EPS: presente en el overview crudo (Alpha Vantage) pero score.py no lo
+    # devuelve todavia -- se lee directamente de overview, mismo patron que
+    # adapt_asset_equity ya usa para Sector/Industry/etc. No es un calculo
+    # nuevo, es un campo de la fuente que faltaba extraer.
+    if overview.get("EPS") not in (None, "None"):
+        rows.append(_row(symbol, "equity", "fundamental", "eps", float(overview["EPS"]), "USD",
+                          fundamental_as_of, retrieved_at, "Alpha Vantage",
+                          data_quality_pct=dq, calculation_method=method))
+
+    rows.append(_row(symbol, "equity", "fundamental", "profit_margin_pct", e["profit_margin_pct"], "%",
+                      fundamental_as_of, retrieved_at, "Alpha Vantage",
+                      data_quality_pct=dq, calculation_method=method))
+    rows.append(_row(symbol, "equity", "fundamental", "operating_margin_pct", e["operating_margin_pct"], "%",
+                      fundamental_as_of, retrieved_at, "Alpha Vantage",
+                      data_quality_pct=dq, calculation_method=method))
+
+    # Sorpresa de resultados -- ya calculada en score.py sobre los ultimos
+    # 8 trimestres de engine/equity/_data/{symbol}_earnings.json.
+    sorpresa = e["sorpresa_resultados"]
+    rows.append(_row(symbol, "equity", "fundamental", "earnings_beats_8q", sorpresa["ultimos_8_trimestres_beats"],
+                      "trimestres", fundamental_as_of, retrieved_at, "Alpha Vantage",
+                      data_quality_pct=dq, calculation_method=method))
+    rows.append(_row(symbol, "equity", "fundamental", "earnings_misses_8q", sorpresa["ultimos_8_trimestres_misses"],
+                      "trimestres", fundamental_as_of, retrieved_at, "Alpha Vantage",
+                      data_quality_pct=dq, calculation_method=method))
+    if sorpresa["sorpresa_media_pct"] is not None:
+        rows.append(_row(symbol, "equity", "fundamental", "earnings_surprise_avg_pct",
+                          sorpresa["sorpresa_media_pct"], "%", fundamental_as_of, retrieved_at, "Alpha Vantage",
+                          data_quality_pct=dq, calculation_method=method))
+    if sorpresa["ultima_sorpresa_pct"] is not None:
+        rows.append(_row(symbol, "equity", "fundamental", "earnings_surprise_last_pct",
+                          sorpresa["ultima_sorpresa_pct"], "%", fundamental_as_of, retrieved_at, "Alpha Vantage",
+                          data_quality_pct=dq, calculation_method=method))
+
+    # Precio objetivo de analistas -- real (AnalystTargetPrice de Alpha
+    # Vantage), no inventado. Alpha Vantage no expone una fecha propia para
+    # el consenso de analistas, asi que se usa fundamental_as_of como el
+    # resto de campos derivados del mismo overview -- aproximacion
+    # documentada, no una fecha exacta de cuando se fijo el consenso.
+    analistas = e["analistas"]
+    if analistas["precio_objetivo"] is not None:
+        rows.append(_row(symbol, "equity", "fundamental", "analyst_target_price",
+                          analistas["precio_objetivo"], "USD", fundamental_as_of, retrieved_at, "Alpha Vantage",
+                          data_quality_pct=dq, calculation_method=method))
+    if analistas["upside_pct"] is not None:
+        rows.append(_row(symbol, "equity", "fundamental", "analyst_upside_pct",
+                          analistas["upside_pct"], "%", fundamental_as_of, retrieved_at, "Alpha Vantage",
+                          data_quality_pct=dq, calculation_method=method))
+    if analistas["n_analistas"]:
+        rows.append(_row(symbol, "equity", "fundamental", "analyst_n_analistas",
+                          analistas["n_analistas"], "analistas", fundamental_as_of, retrieved_at, "Alpha Vantage",
+                          data_quality_pct=dq, calculation_method=method))
     return rows
 
 

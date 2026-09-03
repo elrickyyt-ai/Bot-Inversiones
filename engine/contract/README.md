@@ -1,6 +1,6 @@
 # Data Contract (v1)
 
-Capa de visualización — ver `docs/03-arquitectura-visualizacion-y-acceso.md` para la planificación general y `docs/04-modelo-power-bi.md` para el modelo de datos de Power BI (Fases B-G). Esta pieza cubre los pasos 1-2 del orden acordado con el usuario el 2026-09-03 (historización + DimAsset) más los pasos 1-3 originales (Data Contract, adaptadores, tests) y la Fase A de diagnóstico (`qa.py`) — **la Web App y Power BI todavía no se han construido**, quedan para cuando se autorice explícitamente.
+Capa de visualización — ver `docs/03-arquitectura-visualizacion-y-acceso.md` para la planificación general y `docs/04-modelo-power-bi.md` para el modelo de datos de Power BI (Fases B-G). Esta pieza cubre los pasos 1-3 del orden acordado con el usuario el 2026-09-03 (historización, DimAsset, ampliar adaptadores equity/technical) más los pasos 1-3 originales (Data Contract, adaptadores, tests) y la Fase A de diagnóstico (`qa.py`) — **la Web App y Power BI todavía no se han construido**, quedan para cuando se autorice explícitamente.
 
 ## Diagnóstico (`qa.py`)
 
@@ -46,6 +46,13 @@ A diferencia de métricas y tesis, `data/assets/{ID}.json` **se sobrescribe** en
 - **Macro** (`adapt_asset_macro`): pseudo-activos para EE.UU. (`US`, `currency="USD"`) y Eurozona (`EA`, `currency="EUR"`) — nombres y divisas fijados por definición de la región, `source="FRED"`.
 
 **Por qué resuelve el hallazgo EUR/USD de `qa.py`**: antes, una fila con `metric="precio"` no dejaba claro en qué divisa estaba sin ir a mirar el motor de origen. Ahora, unir cualquier fila de métrica con `data/assets/{asset_id}.json` por `asset_id` da la divisa real de forma explícita — es la relación que en el modelo de Power BI (`docs/04-modelo-power-bi.md`) corresponde a la tabla `DimAsset`.
+
+## Ampliación de equity y technical (desde 2026-09-03)
+
+`adapt_equity()` y `adapt_technical()` inicialmente solo extraían un subconjunto de lo que sus motores ya calculaban. Ampliado a lo que `score.py` de cada motor ya tenía calculado y verificado — **sin tocar la lógica de cálculo de ningún motor**:
+
+- **`adapt_equity()`** (nuevo): `eps` (leído directamente de `overview["EPS"]`, presente en la fuente cruda de Alpha Vantage pero que `engine/equity/score.py` todavía no devolvía — mismo patrón que ya usa `adapt_asset_equity` para Sector/Industry), `profit_margin_pct`, `operating_margin_pct`, `earnings_beats_8q`/`earnings_misses_8q`/`earnings_surprise_avg_pct`/`earnings_surprise_last_pct` (de `sorpresa_resultados`, ya calculado sobre los últimos 8 trimestres), `analyst_target_price`/`analyst_upside_pct`/`analyst_n_analistas` (de `AnalystTargetPrice`, dato real de Alpha Vantage, no inventado). Todas comparten `data_as_of = fundamental_as_of` (el mismo `LatestQuarter` que ya usaban `pe_ratio`/`peg_ratio`/`roe_pct`) — para el precio objetivo de analistas esto es una aproximación documentada: Alpha Vantage no expone una fecha propia del consenso, así que se le asigna la misma fecha que el resto del overview en vez de inventar una.
+- **`adapt_technical()`** (nuevo): `sma20`/`sma50`/`sma100`/`sma200`, `atr14`, `atr14_pct_precio`, `volatilidad_hist_30d_anualizada_pct` — todos ya calculados por `engine/technical/indicators.py` y devueltos por `score_asset()`, solo faltaba extraerlos al contrato.
 
 ## `data_as_of` vs. `retrieved_at`
 

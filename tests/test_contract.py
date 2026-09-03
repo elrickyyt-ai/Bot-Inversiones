@@ -91,6 +91,18 @@ class TestAdapters(unittest.TestCase):
         for row in rows:
             schema.validate_metric_row(row)
 
+    def test_adapt_technical_incluye_sma_atr_y_volatilidad(self):
+        """Paso 3 (2026-09-03): ampliar technical con SMA/ATR/volatilidad,
+        que engine/technical/score.py ya calculaba pero el adaptador
+        todavia no extraia."""
+        rows = self.mod.adapt_technical("BTC")
+        for row in rows:
+            schema.validate_metric_row(row)
+        metrics = {r["metric"] for r in rows}
+        for expected in ("sma20", "sma50", "sma100", "sma200", "atr14",
+                          "atr14_pct_precio", "volatilidad_hist_30d_anualizada_pct"):
+            self.assertIn(expected, metrics)
+
     def test_adapt_asset_crypto_tiene_currency_documentada(self):
         row = self.mod.adapt_asset_crypto("BTC")
         schema.validate_asset_row(row)
@@ -125,6 +137,24 @@ class TestAdapters(unittest.TestCase):
         # el precio y el ratio fundamental vienen de fechas distintas -- la
         # razon de ser de separar data_as_of de retrieved_at (docs/03)
         self.assertNotEqual(precio_row["data_as_of"], pe_row["data_as_of"])
+
+    def test_adapt_equity_incluye_eps_margenes_sorpresa_y_analistas(self):
+        """Paso 3 (2026-09-03): ampliar equity con metricas que el motor ya
+        calculaba pero el adaptador todavia no extraia."""
+        rows = self.mod.adapt_equity("IBM")
+        for row in rows:
+            schema.validate_metric_row(row)
+        by_metric = {r["metric"]: r for r in rows}
+        self.assertIn("eps", by_metric)
+        self.assertEqual(by_metric["eps"]["unit"], "USD")
+        self.assertIn("profit_margin_pct", by_metric)
+        self.assertIn("operating_margin_pct", by_metric)
+        self.assertIn("earnings_beats_8q", by_metric)
+        self.assertIn("earnings_misses_8q", by_metric)
+        self.assertIn("analyst_target_price", by_metric)
+        # todas las metricas nuevas comparten fundamental_as_of con pe_ratio,
+        # no con el precio -- vienen del mismo overview, no de la cotizacion
+        self.assertEqual(by_metric["eps"]["data_as_of"], by_metric["pe_ratio"]["data_as_of"])
 
     def test_adapt_thesis_no_incluye_cantidades_de_cartera(self):
         sys.path.insert(0, os.path.join(ENGINES_ROOT, "engine", "reasoning"))
