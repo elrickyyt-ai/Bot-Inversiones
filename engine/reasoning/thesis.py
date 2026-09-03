@@ -25,9 +25,12 @@ NEWS_FINDINGS = {
     "XRP": {
         "disponible": True,
         "contradiccion_interna": (
-            "Catalizador regulatorio positivo (aprobación de la Clarity Act en el "
-            "Senado de EE.UU., mayo 2026) convive con salidas netas de ETF spot y "
-            "enfriamiento de demanda on-chain (julio 2026) -- ver informes/2026-07-22_noticias_sentimiento_v1.md"
+            "Catalizador regulatorio TODAVÍA PENDIENTE (el Comité Bancario del Senado aprobó "
+            "la Clarity Act en mayo de 2026, pero el Senado pleno aplazó la votación -- "
+            "'Senate Punts on Clarity Act', 7 de agosto de 2026) convive con salidas netas de "
+            "ETF spot y enfriamiento de demanda on-chain (julio 2026) -- ver "
+            "informes/2026-09-03_noticias_sentimiento_v2.md (corrige informes/2026-07-22_noticias_sentimiento_v1.md, "
+            "que había interpretado la aprobación de comité como resuelta)"
         ),
     },
 }
