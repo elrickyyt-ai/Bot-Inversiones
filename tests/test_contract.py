@@ -71,6 +71,29 @@ class TestSchema(unittest.TestCase):
         with self.assertRaises(schema.ContractError):
             schema.validate_metric_row(row)
 
+    def _news_row(self, **overrides):
+        row = {
+            "news_id": "abc123", "asset_id": "XRP", "asset_type": "crypto",
+            "data_as_of": "2026-09-02T21:31:05Z", "retrieved_at": "2026-09-03T12:00:00Z",
+            "source": "Decrypt.co", "source_domain": "decrypt.co", "source_priority": 3,
+            "headline": "titular", "summary": "resumen", "url": "https://decrypt.co/x",
+            "sentiment": 0.19, "sentiment_label": "Somewhat-Bullish", "relevance": 0.68,
+            "persona_influyente": None,
+        }
+        row.update(overrides)
+        return row
+
+    def test_news_row_valida_ok(self):
+        self.assertTrue(schema.validate_news_row(self._news_row()))
+
+    def test_rechaza_relevance_fuera_de_rango(self):
+        with self.assertRaises(schema.ContractError):
+            schema.validate_news_row(self._news_row(relevance=1.5))
+
+    def test_news_row_rechaza_hint_de_cartera_privada(self):
+        with self.assertRaises(schema.ContractError):
+            schema.validate_news_row(self._news_row(summary="ver CARTERA_A_posicion.csv"))
+
 
 class TestAdapters(unittest.TestCase):
     @classmethod
@@ -155,6 +178,32 @@ class TestAdapters(unittest.TestCase):
         # todas las metricas nuevas comparten fundamental_as_of con pe_ratio,
         # no con el precio -- vienen del mismo overview, no de la cotizacion
         self.assertEqual(by_metric["eps"]["data_as_of"], by_metric["pe_ratio"]["data_as_of"])
+
+    def test_adapt_news_filas_validas_una_por_articulo(self):
+        """Paso 4 (2026-09-03): fixture congelada de 3 articulos reales de
+        NEWS_SENTIMENT (Alpha Vantage) para XRP -- cada uno con su propio
+        sentiment/relevance especifico de XRP, no un promedio agregado."""
+        rows = self.mod.adapt_news("XRP", "crypto")
+        self.assertEqual(len(rows), 3)
+        for row in rows:
+            schema.validate_news_row(row)
+            self.assertEqual(row["asset_id"], "XRP")
+        # cada articulo conserva su propia fila -- no se colapsan en un
+        # unico sentimiento medio, tal como pidio el usuario
+        news_ids = {r["news_id"] for r in rows}
+        self.assertEqual(len(news_ids), 3)
+
+    def test_adapt_news_sin_data_devuelve_lista_vacia(self):
+        """Un activo sin _data/{ID}_news_sentiment.json todavia consultado
+        (cuota de Alpha Vantage) no debe hacer fallar build.py."""
+        rows = self.mod.adapt_news("ETH", "crypto")
+        self.assertEqual(rows, [])
+
+    def test_adapt_news_no_inventa_persona_influyente(self):
+        rows = self.mod.adapt_news("XRP", "crypto")
+        for row in rows:
+            if row["persona_influyente"] is not None:
+                self.fail("ningun autor de la fixture esta en personas_influyentes.json")
 
     def test_adapt_thesis_no_incluye_cantidades_de_cartera(self):
         sys.path.insert(0, os.path.join(ENGINES_ROOT, "engine", "reasoning"))
@@ -277,6 +326,33 @@ class TestBuildHistorizacion(unittest.TestCase):
             json.dump(self._thesis_row("2026-08-01"), f)  # formato antiguo: objeto, no lista
         total, added = self.build._write_thesis_row("BTC", self._thesis_row("2026-09-01"))
         self.assertEqual((total, added), (2, 1), "la tesis antigua no debe perderse al migrar a formato historico")
+
+    def _news_row(self, news_id):
+        return {
+            "news_id": news_id, "asset_id": "XRP", "asset_type": "crypto",
+            "data_as_of": "2026-09-02T21:31:05Z", "retrieved_at": "2026-09-03T10:00:00Z",
+            "source": "Decrypt.co", "source_domain": "decrypt.co", "source_priority": 3,
+            "headline": "titular", "summary": "resumen", "url": f"https://decrypt.co/{news_id}",
+            "sentiment": 0.19, "sentiment_label": "Somewhat-Bullish", "relevance": 0.68,
+            "persona_influyente": None,
+        }
+
+    def test_misma_ejecucion_dos_veces_no_duplica_noticias(self):
+        row = self._news_row("abc123")
+        total1, added1, skipped1 = self.build._write_news_rows("XRP", [row])
+        total2, added2, skipped2 = self.build._write_news_rows("XRP", [row])
+        self.assertEqual((total1, added1, skipped1), (1, 1, 0))
+        self.assertEqual((total2, added2, skipped2), (1, 0, 1))
+
+    def test_articulo_nuevo_se_acumula(self):
+        self.build._write_news_rows("XRP", [self._news_row("abc123")])
+        total, added, skipped = self.build._write_news_rows("XRP", [self._news_row("def456")])
+        self.assertEqual((total, added, skipped), (2, 1, 0))
+
+    def test_sin_noticias_y_sin_fichero_previo_no_escribe_nada(self):
+        total, added, skipped = self.build._write_news_rows("BTC", [])
+        self.assertEqual((total, added, skipped), (0, 0, 0))
+        self.assertFalse(os.path.exists(os.path.join(self.tmpdir, "news", "BTC.json")))
 
 
 if __name__ == "__main__":

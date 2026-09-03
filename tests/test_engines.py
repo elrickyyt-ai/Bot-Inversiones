@@ -35,6 +35,7 @@ def _materialize_fixtures():
         "technical": os.path.join(ROOT, "engine", "technical", "_data"),
         "macro": os.path.join(ROOT, "engine", "macro", "_data"),
         "equity": os.path.join(ROOT, "engine", "equity", "_data"),
+        "news": os.path.join(ROOT, "engine", "news", "_data"),
     }
     for name, dest in mapping.items():
         os.makedirs(dest, exist_ok=True)

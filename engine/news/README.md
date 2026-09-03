@@ -28,6 +28,10 @@ A petición del usuario, antes de usar más créditos se probaron en vivo dos fe
 
 El motor da el hecho verificable ("este medio publicó este titular, en esta fecha, con esta credibilidad de fuente"). La relevancia, el sentimiento y el "Impact Score" (fórmula conceptual de la Fase 0: relevancia × sorpresa × credibilidad × alcance × persistencia) son **juicio interpretativo explícito**, no un número que el código calcule solo — así se evita la falsa precisión ya señalada en la crítica de la Fase 0 sobre esa misma fórmula.
 
+## Data Contract (desde 2026-09-03)
+
+`engine/contract/adapters.py::adapt_news(symbol, asset_type)` traduce `NEWS_SENTIMENT` guardado en `_data/{ID}_news_sentiment.json` a `data/news/{ID}.json` — una fila por (artículo, activo), sin agregar a un promedio. Ver `engine/contract/README.md` para el detalle completo. Primera consulta real: XRP, 50 artículos (2026-09-03).
+
 ## Personas influyentes: credibilidad ganada, no asumida
 
 En vez de decidir a priori si un divulgador es fiable, `personas_influyentes.json` registra sus llamadas de mercado con fecha, y se comparan después contra lo que realmente ocurrió — el mismo mecanismo de memoria histórica que el proyecto ya usa para sus propias tesis (Fase 0, punto 21), aplicado también a terceros.

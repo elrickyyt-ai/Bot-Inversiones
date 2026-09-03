@@ -1,7 +1,8 @@
-"""Genera/actualiza data/metrics/{ID}.json y data/thesis/{ID}.json a
-partir de los motores existentes, validando cada fila contra el Data
-Contract (schema.py) antes de escribirla. A diferencia de _data/, data/
-SI se versiona en git -- es lo que leeran la futura Web App y Power BI.
+"""Genera/actualiza data/metrics/{ID}.json, data/thesis/{ID}.json,
+data/assets/{ID}.json y data/news/{ID}.json a partir de los motores
+existentes, validando cada fila contra el Data Contract (schema.py)
+antes de escribirla. A diferencia de _data/, data/ SI se versiona en
+git -- es lo que leeran la futura Web App y Power BI.
 
 HISTORIZACION (desde 2026-09-03): cada archivo es un histórico
 append-only, no un snapshot que se sobrescribe. Ejecutar build.py varias
@@ -16,10 +17,10 @@ import os
 import sys
 
 from adapters import (
-    adapt_crypto, adapt_technical, adapt_macro, adapt_equity, adapt_thesis,
+    adapt_crypto, adapt_technical, adapt_macro, adapt_equity, adapt_thesis, adapt_news,
     adapt_asset_crypto, adapt_asset_equity, adapt_asset_macro,
 )
-from schema import validate_metric_row, validate_thesis_row, validate_asset_row, ContractError
+from schema import validate_metric_row, validate_thesis_row, validate_asset_row, validate_news_row, ContractError
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 DATA_DIR = os.path.join(ROOT, "data")
@@ -37,6 +38,10 @@ def _metric_key(row):
 
 def _thesis_key(row):
     return (row["asset_id"], row["data_as_of"])
+
+
+def _news_key(row):
+    return (row["asset_id"], row["news_id"])
 
 
 def _load_existing(path):
@@ -70,6 +75,29 @@ def _write_asset_row(asset_id, row):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
         json.dump(row, f, ensure_ascii=False, indent=2)
+
+
+def _write_news_rows(asset_id, new_rows):
+    """FactNews: historizado igual que metricas (append-only, idempotente
+    por (asset_id, news_id)). Si new_rows viene vacio (no hay
+    _data/{ID}_news_sentiment.json todavia -- cuota de Alpha Vantage, ver
+    engine/news/README.md) y tampoco existe fichero previo, no escribe
+    nada -- no tiene sentido crear data/news/{ID}.json vacio para cada
+    activo no consultado."""
+    path = os.path.join(DATA_DIR, "news", f"{asset_id}.json")
+    if not new_rows and not os.path.exists(path):
+        return 0, 0, 0
+    for row in new_rows:
+        validate_news_row(row)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    existing = _load_existing(path)
+    existing_keys = {_news_key(r) for r in existing}
+    added = [r for r in new_rows if _news_key(r) not in existing_keys]
+    merged = existing + added
+    merged.sort(key=lambda r: r["data_as_of"])
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(merged, f, ensure_ascii=False, indent=2)
+    return len(merged), len(added), len(new_rows) - len(added)
 
 
 def _write_thesis_row(asset_id, new_row):
@@ -127,8 +155,10 @@ def build_all():
             _write_asset_row(symbol, adapt_asset_crypto(symbol))
             thesis = thesis_mod.build_thesis(symbol, tvl_chain)
             t_total, t_added = _write_thesis_row(symbol, adapt_thesis(thesis, "crypto"))
+            n_total, n_added, n_skipped = _write_news_rows(symbol, adapt_news(symbol, "crypto"))
             summary.append((symbol, total, added, skipped, t_total, t_added))
-            print(f"{symbol}: {total} filas históricas ({added} nuevas, {skipped} ya existían) + {t_total} tesis ({t_added} nueva) + DimAsset")
+            noticias = f" + {n_total} noticias ({n_added} nueva)" if n_total else ""
+            print(f"{symbol}: {total} filas históricas ({added} nuevas, {skipped} ya existían) + {t_total} tesis ({t_added} nueva){noticias} + DimAsset")
         except ContractError as e:
             errors.append(f"{symbol}: {e}")
 
@@ -139,8 +169,10 @@ def build_all():
             _write_asset_row(symbol, adapt_asset_equity(symbol))
             thesis = thesis_mod.build_thesis_equity(symbol)
             t_total, t_added = _write_thesis_row(symbol, adapt_thesis(thesis, "equity"))
+            n_total, n_added, n_skipped = _write_news_rows(symbol, adapt_news(symbol, "equity"))
             summary.append((symbol, total, added, skipped, t_total, t_added))
-            print(f"{symbol}: {total} filas históricas ({added} nuevas, {skipped} ya existían) + {t_total} tesis ({t_added} nueva) + DimAsset")
+            noticias = f" + {n_total} noticias ({n_added} nueva)" if n_total else ""
+            print(f"{symbol}: {total} filas históricas ({added} nuevas, {skipped} ya existían) + {t_total} tesis ({t_added} nueva){noticias} + DimAsset")
         except ContractError as e:
             errors.append(f"{symbol}: {e}")
 

@@ -14,8 +14,8 @@ import os
 import re
 
 from schema import (
-    validate_metric_row, validate_thesis_row, validate_asset_row, ContractError,
-    METRIC_FIELDS, THESIS_FIELDS, ASSET_FIELDS,
+    validate_metric_row, validate_thesis_row, validate_asset_row, validate_news_row, ContractError,
+    METRIC_FIELDS, THESIS_FIELDS, ASSET_FIELDS, NEWS_FIELDS,
 )
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -52,6 +52,7 @@ def run_qa():
     metrics_files = _load_json_files("metrics")
     thesis_files = _load_json_files("thesis")
     assets_files = _load_json_files("assets")
+    news_files = _load_json_files("news")
 
     all_metric_rows = []
     for fname, rows in metrics_files.items():
@@ -79,6 +80,7 @@ def run_qa():
     p(f"Archivos de métricas:     {len(metrics_files)}")
     p(f"Archivos de tesis:        {len(thesis_files)}")
     p(f"Archivos de DimAsset:     {len(assets_files)}")
+    p(f"Archivos de noticias:     {len(news_files)}")
     p(f"Activos distintos:        {len(assets)} ({', '.join(assets)})")
     p(f"Filas de métrica totales: {len(all_metric_rows)}")
     p(f"Tesis totales:            {len(all_thesis_rows)}")
@@ -228,10 +230,72 @@ def run_qa():
     p(f"RESULTADO: {_fmt_pass_fail(not asset_schema_errors and not asset_privacy_issues and not no_currency)}")
     p("")
 
+    # --- VALIDACIÓN DE NOTICIAS (data/news/*.json) ---
+    p("## VALIDACIÓN DE NOTICIAS (data/news/*.json)")
+    all_news_rows = []
+    for fname, rows in news_files.items():
+        for row in rows:
+            all_news_rows.append((fname, row))
+
+    news_schema_errors = []
+    for fname, row in all_news_rows:
+        try:
+            validate_news_row(row)
+        except ContractError as e:
+            news_schema_errors.append(f"  [news/{fname}] {e}")
+
+    news_privacy_issues = []
+    for fname, row in all_news_rows:
+        for key, val in row.items():
+            if CREDENTIAL_KEY_PATTERN.search(key):
+                news_privacy_issues.append(f"  [news/{fname}] campo con nombre sospechoso de credencial: '{key}'")
+            if isinstance(val, str) and any(h in val for h in CARTERA_HINTS):
+                news_privacy_issues.append(f"  [news/{fname}] posible dato de cartera privada en '{key}': {val!r}")
+        extra_fields = set(row.keys()) - NEWS_FIELDS
+        if extra_fields:
+            news_privacy_issues.append(f"  [news/{fname}] campos fuera del contrato: {extra_fields}")
+
+    # duplicados: mismo news_id repetido para el mismo activo
+    seen_news = {}
+    news_duplicates = []
+    for fname, row in all_news_rows:
+        key = (row.get("asset_id"), row.get("news_id"))
+        if key in seen_news:
+            news_duplicates.append(f"  {key} -- en {seen_news[key]} y {fname}")
+        else:
+            seen_news[key] = fname
+
+    news_no_source = [row for _, row in all_news_rows if not row.get("source")]
+    articles_by_asset = {}
+    for _, row in all_news_rows:
+        articles_by_asset.setdefault(row.get("asset_id"), 0)
+        articles_by_asset[row.get("asset_id")] += 1
+
+    p(f"Filas de noticia totales: {len(all_news_rows)}")
+    if articles_by_asset:
+        p("Artículos por activo:")
+        for asset_id, n in sorted(articles_by_asset.items()):
+            p(f"  {asset_id}: {n}")
+    else:
+        p("  (sin datos -- ningún activo tiene _data/{ID}_news_sentiment.json consultado todavía, ver engine/news/README.md)")
+    p(f"Errores de esquema: {len(news_schema_errors)}")
+    for e in news_schema_errors[:20]:
+        p(e)
+    p(f"Incidencias de privacidad: {len(news_privacy_issues)}")
+    for i in news_privacy_issues:
+        p(i)
+    p(f"Duplicados (mismo news_id repetido para el mismo activo): {len(news_duplicates)}")
+    for d in news_duplicates[:20]:
+        p(d)
+    p(f"Noticias sin fuente: {len(news_no_source)}")
+    p(f"RESULTADO: {_fmt_pass_fail(not news_schema_errors and not news_privacy_issues and not news_duplicates and not news_no_source)}")
+    p("")
+
     p("=" * 70)
     overall = (
         not schema_errors and not duplicates and not incompatible and not privacy_issues and not no_source
         and not asset_schema_errors and not asset_privacy_issues and not no_currency
+        and not news_schema_errors and not news_privacy_issues and not news_duplicates and not news_no_source
     )
     p(f"DIAGNÓSTICO GENERAL: {_fmt_pass_fail(overall)}")
     p("=" * 70)

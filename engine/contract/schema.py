@@ -38,10 +38,25 @@ ASSET_FIELDS = {
     "currency", "exchange", "active", "retrieved_at", "source",
 }
 
+# FactNews -- una fila por (articulo, activo mencionado). NO se agrega a
+# un promedio: cada noticia individual se conserva, para que Power BI
+# pueda analizar despues volumen/sentimiento/relevancia/fuente por
+# separado (a peticion expresa del usuario). "sentiment"/"relevance" son
+# especificos del activo dentro del articulo (Alpha Vantage los da por
+# ticker, no solo a nivel de articulo completo) -- mas preciso que el
+# sentimiento general del articulo.
+NEWS_FIELDS = {
+    "news_id", "asset_id", "asset_type", "data_as_of", "retrieved_at",
+    "source", "source_domain", "source_priority", "headline", "summary",
+    "url", "sentiment", "sentiment_label", "relevance", "persona_influyente",
+}
+
 # Requeridos de verdad (el resto puede ser None si el motor de origen no lo tiene)
 METRIC_REQUIRED = {"asset_id", "asset_type", "domain", "metric", "value", "data_as_of", "retrieved_at", "source", "source_priority"}
 THESIS_REQUIRED = {"thesis_id", "asset_id", "thesis_type", "data_as_of", "retrieved_at"}
 ASSET_REQUIRED = {"asset_id", "asset_type", "name", "currency", "retrieved_at", "source"}
+NEWS_REQUIRED = {"news_id", "asset_id", "asset_type", "data_as_of", "retrieved_at",
+                  "source", "headline", "url", "sentiment", "relevance", "source_priority"}
 
 # Prioridad de FUENTE DE DATOS (mercado), distinta de la jerarquia de
 # credibilidad de noticias/periodismo que ya existe en engine/news/sources.py.
@@ -102,6 +117,28 @@ def validate_asset_row(row):
     extra = set(row.keys()) - ASSET_FIELDS
     if extra:
         raise ContractError(f"campos no reconocidos por el Data Contract: {extra}")
+    for key, val in row.items():
+        if isinstance(val, str) and any(h in val for h in FORBIDDEN_SOURCE_HINTS):
+            raise ContractError(f"posible dato de cartera privada en campo '{key}': {val!r}")
+    return True
+
+
+def validate_news_row(row):
+    missing = NEWS_REQUIRED - set(k for k, v in row.items() if v is not None)
+    if missing:
+        raise ContractError(f"faltan campos requeridos en fila de noticia: {missing}")
+    extra = set(row.keys()) - NEWS_FIELDS
+    if extra:
+        raise ContractError(f"campos no reconocidos por el Data Contract: {extra}")
+    # jerarquia de credibilidad periodistica (engine/news/sources.py), 1-5 --
+    # DISTINTA de SOURCE_PRIORITY (fuentes de datos de mercado, 1-2 arriba).
+    if row["source_priority"] not in (1, 2, 3, 4, 5):
+        raise ContractError(f"source_priority (credibilidad periodistica) fuera de rango: {row['source_priority']}")
+    if not (0 <= row["relevance"] <= 1):
+        raise ContractError(f"relevance fuera de rango 0-1: {row['relevance']}")
+    da, ra = _parse_date(row["data_as_of"]), _parse_date(row["retrieved_at"])
+    if da > ra:
+        raise ContractError(f"data_as_of ({da}) no puede ser posterior a retrieved_at ({ra})")
     for key, val in row.items():
         if isinstance(val, str) and any(h in val for h in FORBIDDEN_SOURCE_HINTS):
             raise ContractError(f"posible dato de cartera privada en campo '{key}': {val!r}")

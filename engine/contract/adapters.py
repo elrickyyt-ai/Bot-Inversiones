@@ -3,9 +3,11 @@ existente al Data Contract (schema.py), sin modificar los motores
 originales. Un adaptador delgado por motor, tal como se acordo en
 docs/03-arquitectura-visualizacion-y-acceso.md.
 """
+import hashlib
 import json
 import os
 import sys
+from datetime import datetime
 
 from schema import now_utc_iso, SOURCE_PRIORITY
 
@@ -229,6 +231,71 @@ def adapt_equity(symbol):
         rows.append(_row(symbol, "equity", "fundamental", "analyst_n_analistas",
                           analistas["n_analistas"], "analistas", fundamental_as_of, retrieved_at, "Alpha Vantage",
                           data_quality_pct=dq, calculation_method=method))
+    return rows
+
+
+def _parse_av_time_published(s):
+    """'20260902T213105' (formato de Alpha Vantage NEWS_SENTIMENT) -> ISO UTC."""
+    dt = datetime.strptime(s, "%Y%m%dT%H%M%S")
+    return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def adapt_news(symbol, asset_type):
+    """Fase 4 -- engine/news/. A diferencia de los demas motores, NO hay
+    fetch_data.py: NEWS_SENTIMENT de Alpha Vantage solo es invocable desde
+    el conector MCP dentro de una sesion de Claude (engine/news/README.md),
+    asi que el fichero crudo se guarda a mano en
+    engine/news/_data/{symbol}_news_sentiment.json -- mismo patron manual
+    que engine/equity/. Si ese fichero no existe (no se ha consultado
+    todavia ese activo, por la cuota de 25 llamadas/dia), devuelve [] en
+    vez de fallar -- build.py debe poder seguir sin noticias para activos
+    no consultados.
+
+    Una fila por (articulo, activo) -- NUNCA se agrega a un promedio
+    (a peticion expresa del usuario): sentiment/relevance vienen del
+    bloque ticker_sentiment especifico de este activo dentro del
+    articulo, mas preciso que el sentimiento general del articulo.
+    """
+    path = os.path.join(ROOT, "news", "_data", f"{symbol}_news_sentiment.json")
+    if not os.path.exists(path):
+        return []
+    with open(path, encoding="utf-8") as fh:
+        raw = json.load(fh)
+
+    sources_mod = _load_module("news", "sources")
+    with open(os.path.join(ROOT, "news", "personas_influyentes.json"), encoding="utf-8") as fh:
+        personas = {p["nombre"] for p in json.load(fh)["personas"]}
+
+    ticker_key = f"CRYPTO:{symbol}" if asset_type == "crypto" else symbol
+    retrieved_at = now_utc_iso()
+
+    rows = []
+    for article in raw.get("feed", []):
+        ts = next((t for t in article.get("ticker_sentiment", []) if t.get("ticker") == ticker_key), None)
+        if ts is None:
+            continue  # el articulo salio en la busqueda pero no menciona este ticker directamente
+        news_id = hashlib.sha1(article["url"].encode("utf-8")).hexdigest()[:16]
+        # coincidencia con personas_influyentes.json: credibilidad ganada,
+        # no asumida (engine/news/README.md) -- solo se anota el nombre si
+        # de verdad aparece como autor, nunca se infiere.
+        autor_conocido = next((a for a in article.get("authors", []) if a in personas), None)
+        rows.append({
+            "news_id": news_id,
+            "asset_id": symbol,
+            "asset_type": asset_type,
+            "data_as_of": _parse_av_time_published(article["time_published"]),
+            "retrieved_at": retrieved_at,
+            "source": article.get("source"),
+            "source_domain": article.get("source_domain"),
+            "source_priority": sources_mod.tier_for_domain(article.get("source_domain", "")),
+            "headline": article.get("title"),
+            "summary": article.get("summary"),
+            "url": article["url"],
+            "sentiment": float(ts["ticker_sentiment_score"]),
+            "sentiment_label": ts.get("ticker_sentiment_label"),
+            "relevance": float(ts["relevance_score"]),
+            "persona_influyente": autor_conocido,
+        })
     return rows
 
 

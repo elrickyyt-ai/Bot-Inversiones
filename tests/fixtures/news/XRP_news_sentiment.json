@@ -1,0 +1,168 @@
+{
+  "items": "50",
+  "sentiment_score_definition": "x <= -0.35: Bearish; -0.35 < x <= -0.15: Somewhat-Bearish; -0.15 < x < 0.15: Neutral; 0.15 <= x < 0.35: Somewhat_Bullish; x >= 0.35: Bullish",
+  "relevance_score_definition": "0 < x <= 1, with a higher score indicating higher relevance.",
+  "feed": [
+    {
+      "title": "Japan's Remixpoint Dumps Ethereum, XRP in Shift to Bitcoin-Only Treasury",
+      "url": "https://decrypt.co/377228/remixpoint-xrp-ethereum-bitcoin-only",
+      "time_published": "20260902T213105",
+      "authors": [
+        "Jason Nelson"
+      ],
+      "summary": "The Japanese company booked a ¥117.8 million profit after selling its ETH, SOL, XRP and DOGE, leaving roughly 1,506 BTC as its only cryptocurrency holding.",
+      "banner_image": "https://img.decrypt.co/insecure/rs:fit:3840:0:0:0/plain/https://cdn.decrypt.co/wp-content/uploads/2026/09/Captura-de-pantalla-2026-09-01-133538.png@webp",
+      "source": "Decrypt.co",
+      "category_within_source": "n/a",
+      "source_domain": "decrypt.co",
+      "topics": [
+        {
+          "topic": "Blockchain",
+          "relevance_score": "0.682689"
+        }
+      ],
+      "overall_sentiment_score": 0.190051,
+      "overall_sentiment_label": "Somewhat-Bullish",
+      "ticker_sentiment": [
+        {
+          "ticker": "ZBAO",
+          "relevance_score": "0.115232",
+          "ticker_sentiment_score": "0.128225",
+          "ticker_sentiment_label": "Neutral"
+        },
+        {
+          "ticker": "CRYPTO:BTC",
+          "relevance_score": "0.986251",
+          "ticker_sentiment_score": "0.44077",
+          "ticker_sentiment_label": "Bullish"
+        },
+        {
+          "ticker": "CRYPTO:ETH",
+          "relevance_score": "0.33628",
+          "ticker_sentiment_score": "0.097372",
+          "ticker_sentiment_label": "Neutral"
+        },
+        {
+          "ticker": "CRYPTO:DOGE",
+          "relevance_score": "0.228073",
+          "ticker_sentiment_score": "-0.005426",
+          "ticker_sentiment_label": "Neutral"
+        },
+        {
+          "ticker": "CRYPTO:XRP",
+          "relevance_score": "0.228073",
+          "ticker_sentiment_score": "-0.005426",
+          "ticker_sentiment_label": "Neutral"
+        }
+      ]
+    },
+    {
+      "title": "Remixpoint Sells $5.5M in Altcoins to Focus on Bitcoin",
+      "url": "https://cointelegraph.com/news/remixpoint-dumps-altcoins-1506-btc-sole-crypto-bet",
+      "time_published": "20260902T120000",
+      "authors": [
+        "Helen Partz"
+      ],
+      "summary": "Remixpoint sold $5.5 million in ETH, SOL, XRP and DOGE, booking a $736,000 net gain as it narrowed its crypto strategy to focus on Bitcoin.",
+      "banner_image": "https://s3-images.ctmedia.io/media/content/2026/09/01M1GYJWNT0QPHTKB2K1G763H8/pasted-image-2504.png",
+      "source": "Cointelegraph",
+      "category_within_source": "n/a",
+      "source_domain": "cointelegraph.com",
+      "topics": [
+        {
+          "topic": "Blockchain",
+          "relevance_score": "0.451494"
+        }
+      ],
+      "overall_sentiment_score": 0.166438,
+      "overall_sentiment_label": "Somewhat-Bullish",
+      "ticker_sentiment": [
+        {
+          "ticker": "FOREX:JPY",
+          "relevance_score": "0.546745",
+          "ticker_sentiment_score": "0.23532",
+          "ticker_sentiment_label": "Somewhat-Bullish"
+        },
+        {
+          "ticker": "CRYPTO:BTC",
+          "relevance_score": "0.866386",
+          "ticker_sentiment_score": "0.26295",
+          "ticker_sentiment_label": "Somewhat-Bullish"
+        },
+        {
+          "ticker": "CRYPTO:ETH",
+          "relevance_score": "0.651499",
+          "ticker_sentiment_score": "0.307431",
+          "ticker_sentiment_label": "Somewhat-Bullish"
+        },
+        {
+          "ticker": "CRYPTO:DOGE",
+          "relevance_score": "0.651499",
+          "ticker_sentiment_score": "0.307431",
+          "ticker_sentiment_label": "Somewhat-Bullish"
+        },
+        {
+          "ticker": "CRYPTO:XRP",
+          "relevance_score": "0.651499",
+          "ticker_sentiment_score": "0.307431",
+          "ticker_sentiment_label": "Somewhat-Bullish"
+        }
+      ]
+    },
+    {
+      "title": "Russia's Sberbank Sees $46 Billion in Crypto Trading, Plans Ethereum and USDT-Backed Loans",
+      "url": "https://decrypt.co/376971/russia-sberbank-46-billion-crypto-trading-ethereum-usdt",
+      "time_published": "20260831T184604",
+      "authors": [
+        "Decrypt Staff"
+      ],
+      "summary": "Deputy Chairman Anatoly Popov told state media that trading could hit 4 trillion rubles in its first year, as the bank prepares to broaden crypto-backed lending once regulators sign off.",
+      "banner_image": "https://img.decrypt.co/insecure/rs:fit:3840:0:0:0/plain/https://cdn.decrypt.co/wp-content/uploads/2026/08/myriad-bitcoin-price-8-30.png@webp",
+      "source": "Decrypt.co",
+      "category_within_source": "n/a",
+      "source_domain": "decrypt.co",
+      "topics": [
+        {
+          "topic": "Economy - Monetary",
+          "relevance_score": "0.451494"
+        },
+        {
+          "topic": "Blockchain",
+          "relevance_score": "0.451494"
+        },
+        {
+          "topic": "Financial Markets",
+          "relevance_score": "0.503496"
+        }
+      ],
+      "overall_sentiment_score": 0.119878,
+      "overall_sentiment_label": "Neutral",
+      "ticker_sentiment": [
+        {
+          "ticker": "CRYPTO:BTC",
+          "relevance_score": "0.297061",
+          "ticker_sentiment_score": "0.120005",
+          "ticker_sentiment_label": "Neutral"
+        },
+        {
+          "ticker": "CRYPTO:ETH",
+          "relevance_score": "0.297061",
+          "ticker_sentiment_score": "0.128527",
+          "ticker_sentiment_label": "Neutral"
+        },
+        {
+          "ticker": "CRYPTO:USDT",
+          "relevance_score": "0.200688",
+          "ticker_sentiment_score": "0.074122",
+          "ticker_sentiment_label": "Neutral"
+        },
+        {
+          "ticker": "CRYPTO:XRP",
+          "relevance_score": "0.101154",
+          "ticker_sentiment_score": "-0.009697",
+          "ticker_sentiment_label": "Neutral"
+        }
+      ]
+    }
+  ]
+}
