@@ -34,6 +34,7 @@ def _materialize_fixtures():
         "crypto": os.path.join(ROOT, "engine", "crypto", "_data"),
         "technical": os.path.join(ROOT, "engine", "technical", "_data"),
         "macro": os.path.join(ROOT, "engine", "macro", "_data"),
+        "equity": os.path.join(ROOT, "engine", "equity", "_data"),
     }
     for name, dest in mapping.items():
         os.makedirs(dest, exist_ok=True)
@@ -154,6 +155,30 @@ class TestMotorDeRazonamiento(unittest.TestCase):
         t = self.mod.build_thesis("BTC", None)
         for campo in ("bull_case", "base_case", "bear_case", "factores_que_invalidarian_la_tesis"):
             self.assertTrue(t[campo], f"falta {campo} en la tesis")
+
+
+class TestEquityFundamentalsEngine(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        _materialize_fixtures()
+        cls.mod = _import("equity", "score")
+
+    def test_ibm_schema_y_rangos(self):
+        r = self.mod.score_asset("IBM")
+        self.assertEqual(r["activo"], "IBM")
+        self.assertTrue(0 <= r["posicion_rango_52s_pct"] <= 100)
+        self.assertTrue(0 <= r["data_quality_pct"] <= 100)
+        self.assertTrue(r["confluencia"]["sesgo"])
+
+    def test_xom_detecta_el_fallo_del_ultimo_trimestre(self):
+        r = self.mod.score_asset("XOM")
+        self.assertEqual(r["sorpresa_resultados"]["ultima_sorpresa_pct"], -4.3478)
+        self.assertFalse(r["confluencia"]["detalle"]["ultima_sorpresa_positiva"])
+
+    def test_beats_mas_misses_no_supera_8_trimestres(self):
+        r = self.mod.score_asset("IBM")
+        total = r["sorpresa_resultados"]["ultimos_8_trimestres_beats"] + r["sorpresa_resultados"]["ultimos_8_trimestres_misses"]
+        self.assertLessEqual(total, 8)
 
 
 class TestThesisLedger(unittest.TestCase):
