@@ -65,6 +65,8 @@ def validate_metric_row(row):
         raise ContractError(f"campos no reconocidos por el Data Contract: {extra}")
     if row["source_priority"] not in (1, 2, 3, 4, 5):
         raise ContractError(f"source_priority fuera de rango: {row['source_priority']}")
+    _validate_pct_range(row, "confidence_pct")
+    _validate_pct_range(row, "data_quality_pct")
     da, ra = _parse_date(row["data_as_of"]), _parse_date(row["retrieved_at"])
     if da > ra:
         raise ContractError(f"data_as_of ({da}) no puede ser posterior a retrieved_at ({ra})")
@@ -74,6 +76,12 @@ def validate_metric_row(row):
     return True
 
 
+def _validate_pct_range(row, field):
+    val = row.get(field)
+    if val is not None and not (0 <= val <= 100):
+        raise ContractError(f"{field} fuera de rango 0-100: {val}")
+
+
 def validate_thesis_row(row):
     missing = THESIS_REQUIRED - set(k for k, v in row.items() if v is not None)
     if missing:
@@ -81,6 +89,7 @@ def validate_thesis_row(row):
     extra = set(row.keys()) - THESIS_FIELDS
     if extra:
         raise ContractError(f"campos no reconocidos por el Data Contract: {extra}")
+    _validate_pct_range(row, "confidence_pct")
     da, ra = _parse_date(row["data_as_of"]), _parse_date(row["retrieved_at"])
     if da > ra:
         raise ContractError(f"data_as_of ({da}) no puede ser posterior a retrieved_at ({ra})")

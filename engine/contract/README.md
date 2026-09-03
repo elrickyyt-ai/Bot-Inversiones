@@ -1,6 +1,14 @@
 # Data Contract (v1)
 
-Capa de visualización — ver `docs/03-arquitectura-visualizacion-y-acceso.md` para la planificación completa. Esta pieza cubre únicamente los pasos 1-3 del orden acordado con el usuario (Data Contract, adaptadores, tests) — **la Web App y Power BI todavía no se han construido**, quedan para cuando se autorice explícitamente.
+Capa de visualización — ver `docs/03-arquitectura-visualizacion-y-acceso.md` para la planificación general y `docs/04-modelo-power-bi.md` para el modelo de datos de Power BI (Fases B-G). Esta pieza cubre los pasos 1-3 del orden acordado con el usuario (Data Contract, adaptadores, tests) más la Fase A de diagnóstico (`qa.py`) — **la Web App y Power BI todavía no se han construido**, quedan para cuando se autorice explícitamente.
+
+## Diagnóstico (`qa.py`)
+
+```
+python3 engine/contract/qa.py
+```
+
+Lee `data/`, valida cada fila contra el contrato y produce un informe legible (no JSON crudo), con PASS/FAIL en cuatro bloques: esquema, privacidad, temporal (`data_as_of` vs. `retrieved_at`), fuentes. Ejecutarlo después de cada `build.py` para saber si el sistema funciona sin inspeccionar los ficheros a mano — ver `informes/2026-09-03_data_qa_v1.md` para la primera ejecución real, que encontró un hallazgo genuino (precio en EUR para cripto vs. USD para acciones) y un defecto real en `schema.py` (rango de `confidence_pct`/`data_quality_pct` sin validar, ya corregido).
 
 ## Qué hace
 

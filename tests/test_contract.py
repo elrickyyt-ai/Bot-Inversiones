@@ -123,5 +123,53 @@ class TestAdapters(unittest.TestCase):
             self.assertNotIn(hint, serialized)
 
 
+class TestQA(unittest.TestCase):
+    """Usa un DATA_DIR temporal con datos fabricados a mano -- nunca el
+    data/ real, para que la prueba sea determinista y no dependa de si
+    build.py se ha ejecutado antes."""
+
+    def setUp(self):
+        import shutil
+        import tempfile
+        self.tmpdir = tempfile.mkdtemp()
+        os.makedirs(os.path.join(self.tmpdir, "metrics"))
+        os.makedirs(os.path.join(self.tmpdir, "thesis"))
+        self.addCleanup(shutil.rmtree, self.tmpdir, ignore_errors=True)
+
+    def _write(self, subdir, fname, content):
+        import json
+        with open(os.path.join(self.tmpdir, subdir, fname), "w") as f:
+            json.dump(content, f)
+
+    def test_diagnostico_limpio_da_pass(self):
+        self._write("metrics", "BTC.json", [{
+            "asset_id": "BTC", "asset_type": "crypto", "domain": "tecnico",
+            "metric": "precio", "value": 100.0, "unit": "EUR",
+            "data_as_of": "2026-09-01", "retrieved_at": "2026-09-01T10:00:00Z",
+            "source": "Kraken", "source_priority": 2,
+            "confidence_pct": 80, "data_quality_pct": 90,
+            "calculation_method": None, "source_url": None,
+        }])
+        qa = _import_contract_module("qa")
+        qa.DATA_DIR = self.tmpdir
+        report, ok = qa.run_qa()
+        self.assertTrue(ok)
+        self.assertIn("PASS", report)
+
+    def test_diagnostico_detecta_incidencia_de_privacidad(self):
+        self._write("metrics", "BTC.json", [{
+            "asset_id": "BTC", "asset_type": "crypto", "domain": "tecnico",
+            "metric": "precio", "value": 100.0, "unit": "EUR",
+            "data_as_of": "2026-09-01", "retrieved_at": "2026-09-01T10:00:00Z",
+            "source": "Kraken", "source_priority": 2,
+            "confidence_pct": 80, "data_quality_pct": 90,
+            "calculation_method": None, "source_url": "ver CARTERA_A_posicion_neta_cripto.csv",
+        }])
+        qa = _import_contract_module("qa")
+        qa.DATA_DIR = self.tmpdir
+        report, ok = qa.run_qa()
+        self.assertFalse(ok, "una fila con hint de cartera privada debe hacer fallar el diagnóstico")
+
+
 if __name__ == "__main__":
     unittest.main()
