@@ -1,0 +1,92 @@
+name: Actualizar datos (cripto + macro)
+
+# Automatiza SOLO las fuentes que no requieren credenciales (Fase 5,
+# docs/03-arquitectura-visualizacion-y-acceso.md): Kraken, CoinGecko,
+# DefiLlama, FRED. Acciones/noticias (Alpha Vantage) siguen siendo
+# manuales -- el conector MCP solo es invocable desde una sesion de
+# Claude, ver engine/equity/README.md y engine/news/README.md.
+#
+# No usa ninguna clave/secreto: las 4 fuentes son APIs publicas sin
+# autenticacion, y el push usa el GITHUB_TOKEN automatico del propio
+# workflow (permissions: contents: write mas abajo), no un PAT.
+#
+# Por que un unico job, no varios workflows: build.py, qa.py y los
+# tests deben correr sobre el resultado conjunto de las 3 fuentes antes
+# de decidir si se commitea -- separarlo en workflows independientes
+# complicaria "no commitear si algo falla" sin ganar nada real (las 3
+# fuentes son rapidas y no comparten limites de tasa entre si).
+#
+# Por que una unica frecuencia (diaria) para las 3 fuentes, en vez de
+# una por fuente: la idempotencia de build.py (clave logica
+# asset_id+domain+metric+data_as_of+source, ver
+# engine/contract/README.md) ya garantiza que un dia sin dato nuevo de
+# verdad (ej. FRED no ha publicado el CPI mensual todavia) produce 0
+# filas nuevas -- no hace falta orquestar frecuencias distintas por
+# fuente, el propio contrato absorbe la diferencia de cadencia real
+# entre Kraken (diario), CoinGecko/DefiLlama (diario) y FRED (variable
+# segun la serie).
+
+on:
+  schedule:
+    - cron: "0 6 * * *"  # 06:00 UTC, diario
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: actualizar-datos-libres
+  cancel-in-progress: false
+
+jobs:
+  actualizar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          # Sin cache de pip: los 4 fetch_data.py y el Data Contract
+          # son Python estandar puro, cero dependencias externas.
+
+      - name: Descargar datos tecnicos de Kraken (cripto)
+        run: python3 engine/technical/fetch_data.py
+
+      - name: Descargar datos fundamentales de CoinGecko/DefiLlama (cripto)
+        run: python3 engine/crypto/fetch_data.py
+
+      - name: Descargar datos macro de FRED
+        run: python3 engine/macro/fetch_data.py
+
+      - name: Construir el Data Contract (cripto + macro, sin acciones/noticias)
+        run: python3 engine/contract/build.py --skip-equity
+
+      - name: Validar el Data Contract (qa.py)
+        run: python3 engine/contract/qa.py
+
+      - name: Ejecutar la suite de tests
+        run: python3 -m unittest discover -s tests -v
+
+      - name: Comprobar si hay cambios reales en data/
+        id: diff
+        run: |
+          if [ -n "$(git status --porcelain -- data/)" ]; then
+            echo "Cambios detectados en data/:"
+            git status --porcelain -- data/
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Sin cambios reales en data/ -- nada que commitear."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Commit y push
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/
+          git commit -m "Actualización automática de datos (cripto + macro) — $(date -u +%Y-%m-%d)"
+          git push

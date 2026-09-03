@@ -354,6 +354,40 @@ class TestBuildHistorizacion(unittest.TestCase):
         self.assertEqual((total, added, skipped), (0, 0, 0))
         self.assertFalse(os.path.exists(os.path.join(self.tmpdir, "news", "BTC.json")))
 
+    def _asset_row(self, currency="EUR"):
+        return {
+            "asset_id": "BTC", "asset_type": "crypto", "name": "Bitcoin",
+            "sector": "Cripto", "industry": None, "country": None,
+            "currency": currency, "exchange": None, "active": True,
+            "retrieved_at": "2026-09-03T10:00:00Z", "source": "CoinGecko",
+        }
+
+    def test_asset_row_no_reescribe_si_solo_cambia_retrieved_at(self):
+        """Automatizacion GitHub Actions (2026-09-03): una segunda pasada
+        sin cambios reales no debe tocar el fichero -- si no, un cron
+        diario generaria un commit cada dia solo por el timestamp."""
+        import json
+        import time
+        path = os.path.join(self.tmpdir, "assets", "BTC.json")
+        self.build._write_asset_row("BTC", self._asset_row())
+        primera_escritura = os.path.getmtime(path)
+        time.sleep(0.01)
+        otro_retrieved_at = dict(self._asset_row(), retrieved_at="2026-09-04T10:00:00Z")
+        self.build._write_asset_row("BTC", otro_retrieved_at)
+        segunda_escritura = os.path.getmtime(path)
+        self.assertEqual(primera_escritura, segunda_escritura, "no debio reescribir el fichero")
+        with open(path) as f:
+            contenido = json.load(f)
+        self.assertEqual(contenido["retrieved_at"], "2026-09-03T10:00:00Z", "conserva el retrieved_at original")
+
+    def test_asset_row_si_reescribe_si_cambia_algo_real(self):
+        import json
+        self.build._write_asset_row("BTC", self._asset_row(currency="EUR"))
+        self.build._write_asset_row("BTC", self._asset_row(currency="USD"))
+        with open(os.path.join(self.tmpdir, "assets", "BTC.json")) as f:
+            contenido = json.load(f)
+        self.assertEqual(contenido["currency"], "USD")
+
 
 if __name__ == "__main__":
     unittest.main()
