@@ -171,5 +171,64 @@ class TestQA(unittest.TestCase):
         self.assertFalse(ok, "una fila con hint de cartera privada debe hacer fallar el diagnóstico")
 
 
+class TestBuildHistorizacion(unittest.TestCase):
+    """engine/contract/build.py debe ser append-only e idempotente --
+    ejecutarlo dos veces con el mismo data_as_of no debe duplicar filas."""
+
+    def setUp(self):
+        import shutil
+        import tempfile
+        self.tmpdir = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.tmpdir, ignore_errors=True)
+        self.build = _import_contract_module("build")
+        self.build.DATA_DIR = self.tmpdir
+
+    def _metric_row(self, data_as_of):
+        return {
+            "asset_id": "BTC", "asset_type": "crypto", "domain": "tecnico",
+            "metric": "precio", "value": 100.0, "unit": "EUR",
+            "data_as_of": data_as_of, "retrieved_at": "2026-09-03T10:00:00Z",
+            "source": "Kraken", "source_priority": 2,
+            "confidence_pct": None, "data_quality_pct": None,
+            "calculation_method": None, "source_url": None,
+        }
+
+    def _thesis_row(self, data_as_of):
+        return {
+            "thesis_id": f"BTC_{data_as_of}_x", "asset_id": "BTC", "thesis_type": "crypto",
+            "bull_case": "b", "base_case": "b", "bear_case": "b",
+            "contradictions": [], "convergences": [], "divergences": [],
+            "invalidation_factors": [], "confidence_pct": 80,
+            "data_as_of": data_as_of, "retrieved_at": "2026-09-03T10:00:00Z",
+        }
+
+    def test_misma_ejecucion_dos_veces_no_duplica_metricas(self):
+        row = self._metric_row("2026-09-01")
+        total1, added1, skipped1 = self.build._write_metric_rows("BTC", [row])
+        total2, added2, skipped2 = self.build._write_metric_rows("BTC", [row])
+        self.assertEqual((total1, added1, skipped1), (1, 1, 0))
+        self.assertEqual((total2, added2, skipped2), (1, 0, 1))
+
+    def test_dia_distinto_si_se_acumula(self):
+        self.build._write_metric_rows("BTC", [self._metric_row("2026-09-01")])
+        total, added, skipped = self.build._write_metric_rows("BTC", [self._metric_row("2026-09-02")])
+        self.assertEqual((total, added, skipped), (2, 1, 0))
+
+    def test_thesis_no_duplica_mismo_data_as_of(self):
+        t1_total, t1_added = self.build._write_thesis_row("BTC", self._thesis_row("2026-09-01"))
+        t2_total, t2_added = self.build._write_thesis_row("BTC", self._thesis_row("2026-09-01"))
+        self.assertEqual((t1_total, t1_added), (1, 1))
+        self.assertEqual((t2_total, t2_added), (1, 0))
+
+    def test_thesis_formato_antiguo_objeto_unico_se_migra_sin_perderse(self):
+        import json
+        path = os.path.join(self.tmpdir, "thesis", "BTC.json")
+        os.makedirs(os.path.dirname(path))
+        with open(path, "w") as f:
+            json.dump(self._thesis_row("2026-08-01"), f)  # formato antiguo: objeto, no lista
+        total, added = self.build._write_thesis_row("BTC", self._thesis_row("2026-09-01"))
+        self.assertEqual((total, added), (2, 1), "la tesis antigua no debe perderse al migrar a formato historico")
+
+
 if __name__ == "__main__":
     unittest.main()

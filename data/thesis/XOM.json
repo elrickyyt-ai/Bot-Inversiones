@@ -1,21 +1,23 @@
-{
-  "thesis_id": "XOM_2026-09-03_2026-09-03T11:40:59Z",
-  "asset_id": "XOM",
-  "thesis_type": "equity",
-  "bull_case": "Si se confirma la confluencia técnica actual (mixto (2/3 señales alcistas)) y el consenso de analistas (objetivo 169.68, 3.4% de recorrido) se mantiene, hay margen de subida sin necesidad de una revisión al alza de estimaciones.",
-  "base_case": "Continuación de la tendencia de precio actual sin sorpresas — es la lectura más probable con los datos de hoy si no cambia el contexto macro.",
-  "bear_case": "Si el crecimiento de ingresos/BPA se desacelera más de lo que ya muestra el dato interanual, o el mercado deja de pagar el múltiplo actual (P/E 20.7), el precio objetivo de analistas quedaría en revisión a la baja.",
-  "contradictions": [
-    "El crecimiento de BPA interanual (+112.8%) parece fuerte, pero el último trimestre reportado falló el consenso de analistas (-4.3478%) — la cifra anual puede estar dominada por una base de comparación baja, no por el momento actual."
-  ],
-  "convergences": [],
-  "divergences": [],
-  "invalidation_factors": [
-    "Una revisión a la baja del precio objetivo o del consenso de analistas cambiaría la lectura de valoración.",
-    "Un cambio de régimen macro (Fed/BCE) alteraría el contexto que sostiene la lectura actual.",
-    "Sin cobertura de noticias para acciones en esta v1 — un evento no capturado aquí podría invalidar la tesis sin que el sistema lo detecte."
-  ],
-  "confidence_pct": 75,
-  "data_as_of": "2026-09-03",
-  "retrieved_at": "2026-09-03T11:40:59Z"
-}
+[
+  {
+    "thesis_id": "XOM_2026-09-03_2026-09-03T11:40:59Z",
+    "asset_id": "XOM",
+    "thesis_type": "equity",
+    "bull_case": "Si se confirma la confluencia técnica actual (mixto (2/3 señales alcistas)) y el consenso de analistas (objetivo 169.68, 3.4% de recorrido) se mantiene, hay margen de subida sin necesidad de una revisión al alza de estimaciones.",
+    "base_case": "Continuación de la tendencia de precio actual sin sorpresas — es la lectura más probable con los datos de hoy si no cambia el contexto macro.",
+    "bear_case": "Si el crecimiento de ingresos/BPA se desacelera más de lo que ya muestra el dato interanual, o el mercado deja de pagar el múltiplo actual (P/E 20.7), el precio objetivo de analistas quedaría en revisión a la baja.",
+    "contradictions": [
+      "El crecimiento de BPA interanual (+112.8%) parece fuerte, pero el último trimestre reportado falló el consenso de analistas (-4.3478%) — la cifra anual puede estar dominada por una base de comparación baja, no por el momento actual."
+    ],
+    "convergences": [],
+    "divergences": [],
+    "invalidation_factors": [
+      "Una revisión a la baja del precio objetivo o del consenso de analistas cambiaría la lectura de valoración.",
+      "Un cambio de régimen macro (Fed/BCE) alteraría el contexto que sostiene la lectura actual.",
+      "Sin cobertura de noticias para acciones en esta v1 — un evento no capturado aquí podría invalidar la tesis sin que el sistema lo detecte."
+    ],
+    "confidence_pct": 75,
+    "data_as_of": "2026-09-03",
+    "retrieved_at": "2026-09-03T11:40:59Z"
+  }
+]

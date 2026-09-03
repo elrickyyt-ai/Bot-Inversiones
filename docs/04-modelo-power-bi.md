@@ -2,9 +2,11 @@
 
 **Fecha:** 2026-09-03 · **Precede a:** `docs/03-arquitectura-visualizacion-y-acceso.md` (arquitectura general) · **Basado en:** el diagnóstico real de `engine/contract/qa.py`, no en suposiciones — ver `informes/2026-09-03_data_qa_v1.md`.
 
-## Hallazgo que condiciona todo lo demás — léelo antes de las fases
+## Hallazgo que condiciona todo lo demás — actualización 2026-09-03 (resuelto)
 
-**`data/metrics/{TICKER}.json` guarda solo el último snapshot, no una serie histórica.** Cada vez que se ejecuta `engine/contract/build.py`, el fichero de cada activo se **sobrescribe** con los datos del momento — no se acumula como sí hace el Thesis Ledger (`engine/reasoning/ledger/*.jsonl`, que es append-only). Esto significa que **hoy no existe ningún historial en el Data Contract**, y por tanto ninguna medida de variación (1D/7D/30D, Change %, Previous Value) es construible todavía, por mucho que Power BI las soporte de sobra. La solución (historizar `build.py` igual que ya se hizo con el Ledger) es sencilla, pero es un cambio de código fuera del alcance de esta fase (solo diseño) — queda marcada como pendiente de autorización, no la implemento aquí.
+**Este hallazgo ya está resuelto.** `engine/contract/build.py` ahora es append-only e idempotente (ver `engine/contract/README.md`, sección "Historización"). Las medidas de variación (Change %, 1D/7D/30D) siguen sin tener sentido *hoy* porque solo hay un día de historial acumulado, pero ya no están bloqueadas por diseño — se poblarán solas a medida que `build.py` se ejecute en días sucesivos. Se deja el análisis original abajo tal cual se escribió, porque documenta correctamente el problema y su causa.
+
+**Texto original (contexto):** `data/metrics/{TICKER}.json` guardaba solo el último snapshot, no una serie histórica. Cada vez que se ejecutaba `engine/contract/build.py`, el fichero de cada activo se sobrescribía con los datos del momento — no se acumulaba como sí hacía el Thesis Ledger (`engine/reasoning/ledger/*.jsonl`, que es append-only). Esto significaba que no existía ningún historial en el Data Contract, y por tanto ninguna medida de variación era construible.
 
 ## Fase B — Fact/Dim tables
 
@@ -134,9 +136,9 @@ La medida de incidencia automática es nueva respecto a lo que pediste, pero es 
 
 Market Overview · Asset Research · Fundamentals · Technical · Macro · News & Sentiment · Thesis — mismas 7 que ya estaban esbozadas con más detalle en `docs/03-arquitectura-visualizacion-y-acceso.md` §9. **News & Sentiment no tendrá contenido real hasta que exista el adaptador de noticias** — la página puede diseñarse, pero no poblarse. No se construye ninguna todavía.
 
-## Resumen de lo que queda pendiente de autorización (no lo hago sin que lo pidas)
+## Resumen de lo que quedó pendiente de autorización — estado 2026-09-03
 
-1. Historizar `build.py` (append en vez de overwrite) — desbloquea todas las medidas de variación.
-2. Adaptador de atributos estáticos de activo (`name`, `sector`, `country`, `currency`) para `DimAsset`.
-3. Ampliar `adapt_equity`/`adapt_technical` para incluir EPS, márgenes, SMA, ATR, volatilidad — ya calculados por los motores, solo falta extraerlos.
-4. Adaptador de `engine/news/` al Data Contract.
+1. ~~Historizar `build.py` (append en vez de overwrite)~~ — **hecho.**
+2. Adaptador de atributos estáticos de activo (`name`, `sector`, `country`, `currency`) para `DimAsset` — autorizado, en curso.
+3. Ampliar `adapt_equity`/`adapt_technical` para incluir EPS, márgenes, SMA, ATR, volatilidad — autorizado, en curso.
+4. Adaptador de `engine/news/` al Data Contract — autorizado, en curso.

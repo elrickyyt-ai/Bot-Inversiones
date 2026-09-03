@@ -1,0 +1,34 @@
+[
+  {
+    "asset_id": "EA",
+    "asset_type": "macro",
+    "domain": "macro",
+    "metric": "ecb_deposit_rate_pct",
+    "value": 2.25,
+    "unit": "%",
+    "data_as_of": "2026-09-03",
+    "retrieved_at": "2026-09-03T12:04:30Z",
+    "source": "FRED",
+    "source_priority": 1,
+    "confidence_pct": null,
+    "data_quality_pct": 70,
+    "calculation_method": "engine/macro/README.md",
+    "source_url": null
+  },
+  {
+    "asset_id": "EA",
+    "asset_type": "macro",
+    "domain": "macro",
+    "metric": "hicp_yoy_pct",
+    "value": 2.73,
+    "unit": "%",
+    "data_as_of": "2026-09-03",
+    "retrieved_at": "2026-09-03T12:04:30Z",
+    "source": "FRED",
+    "source_priority": 1,
+    "confidence_pct": null,
+    "data_quality_pct": 70,
+    "calculation_method": "engine/macro/README.md",
+    "source_url": null
+  }
+]
