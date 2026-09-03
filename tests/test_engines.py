@@ -156,6 +156,15 @@ class TestMotorDeRazonamiento(unittest.TestCase):
         for campo in ("bull_case", "base_case", "bear_case", "factores_que_invalidarian_la_tesis"):
             self.assertTrue(t[campo], f"falta {campo} en la tesis")
 
+    def test_xom_detecta_contradiccion_crecimiento_anual_vs_ultimo_trimestre(self):
+        t = self.mod.build_thesis_equity("XOM")
+        self.assertTrue(len(t["contradicciones"]) >= 1, "XOM debe detectar la contradicción entre BPA YoY fuerte y el fallo del último trimestre")
+
+    def test_thesis_equity_declara_los_tres_escenarios(self):
+        t = self.mod.build_thesis_equity("IBM")
+        for campo in ("bull_case", "base_case", "bear_case", "factores_que_invalidarian_la_tesis"):
+            self.assertTrue(t[campo], f"falta {campo} en la tesis de acciones")
+
 
 class TestEquityFundamentalsEngine(unittest.TestCase):
     @classmethod

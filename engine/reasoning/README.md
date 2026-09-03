@@ -23,4 +23,8 @@ Requiere los mismos datos descargados que `engine/scoring/consolidate.py`.
 
 - No decide comprar/vender/mantener — el proyecto excluyó deliberadamente esa conclusión desde la Fase 0.
 - No pondera domains entre sí más allá de la regla fundamental↔técnico — macro y noticias se presentan como contexto/hallazgo, no se fusionan numéricamente.
-- No tiene memoria histórica todavía (Fase 0, punto 21: comparar la tesis de hoy contra lo que ocurra después) — ese es el siguiente paso natural, el Thesis Ledger.
+- El Thesis Ledger (`ledger.py`) solo cubre cripto — extenderlo a acciones necesitaría una serie de precios diaria para calcular volatilidad histórica, que hoy no se descarga para `engine/equity/`.
+
+## Extensión a acciones (`build_thesis_equity`)
+
+Mismas reglas de convergencia/divergencia, aplicadas a `engine/equity/score.py` en vez de a cripto+técnico. Diferencia declarada: el dominio "técnico" es un proxy simplificado (SMA50/SMA200 + sorpresa de resultados, ya calculado por el propio motor de acciones), no el motor técnico completo con RSI/MACD/ATR. Cobertura de dominios 2/4 (fundamental + técnico-proxy), sin macro-por-activo ni noticias todavía. Incluye una regla nueva, específica de acciones: detecta contradicción cuando el crecimiento de BPA interanual es fuerte (>20%) pero el último trimestre reportado falló el consenso — automatiza lo que antes se señalaba a mano (ver `informes/2026-09-03_tesis_acciones_v1.md`, caso XOM).
