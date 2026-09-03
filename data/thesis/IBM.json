@@ -1,0 +1,21 @@
+{
+  "thesis_id": "IBM_2026-09-03_2026-09-03T11:40:59Z",
+  "asset_id": "IBM",
+  "thesis_type": "equity",
+  "bull_case": "Si se confirma la confluencia técnica actual (confluencia bajista) y el consenso de analistas (objetivo 244.91, 5.7% de recorrido) se mantiene, hay margen de subida sin necesidad de una revisión al alza de estimaciones.",
+  "base_case": "Continuación de la tendencia de precio actual sin sorpresas — es la lectura más probable con los datos de hoy si no cambia el contexto macro.",
+  "bear_case": "Si el crecimiento de ingresos/BPA se desacelera más de lo que ya muestra el dato interanual, o el mercado deja de pagar el múltiplo actual (P/E 20.57), el precio objetivo de analistas quedaría en revisión a la baja.",
+  "contradictions": [],
+  "convergences": [
+    "Posición cerca de mínimos de 52 semanas y confluencia técnica bajista apuntan en la misma dirección."
+  ],
+  "divergences": [],
+  "invalidation_factors": [
+    "Una revisión a la baja del precio objetivo o del consenso de analistas cambiaría la lectura de valoración.",
+    "Un cambio de régimen macro (Fed/BCE) alteraría el contexto que sostiene la lectura actual.",
+    "Sin cobertura de noticias para acciones en esta v1 — un evento no capturado aquí podría invalidar la tesis sin que el sistema lo detecte."
+  ],
+  "confidence_pct": 75,
+  "data_as_of": "2026-09-03",
+  "retrieved_at": "2026-09-03T11:40:59Z"
+}
