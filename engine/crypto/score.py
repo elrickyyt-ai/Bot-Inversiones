@@ -64,9 +64,19 @@ def score_asset(symbol, tvl_chain):
     if tvl_data_issue or dev_issue:
         data_quality = 45
 
+    # fecha_dato = fecha real que CoinGecko reporta para este snapshot
+    # (detail['last_updated']), NO datetime.now(). Comprobado en vivo:
+    # CoinGecko puede devolver un snapshot desactualizado para un activo
+    # concreto (visto con BTC/XRP, mismo dia ~45 dias de retraso que
+    # Kraken) -- usar la fecha de ejecucion etiquetaria ese dato antiguo
+    # como si fuera de hoy. Fallback a hoy solo si la fuente no trae el
+    # campo (no deberia faltar nunca en la practica).
+    last_updated = detail.get("last_updated")
+    fecha_dato = last_updated[:10] if last_updated else datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
     return {
         "activo": symbol,
-        "fecha_dato": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+        "fecha_dato": fecha_dato,
         "supply_pct_of_max": supply_pct_of_max,
         "fdv_mcap_ratio": fdv_mcap_ratio,
         "market_cap_percentile_365d": mcap_percentile,

@@ -28,6 +28,12 @@ def score_asset(symbol):
     ohlc = _load_ohlc(symbol)
     closes = [c["close"] for c in ohlc]
     price = closes[-1]
+    # fecha_dato = fecha real de la ultima vela usada, NO datetime.now().
+    # Kraken puede devolver una serie desactualizada para un par concreto
+    # (visto en vivo con BTC/XRP, ~45 dias de retraso) -- si se usara la
+    # fecha de ejecucion, ese precio antiguo quedaria etiquetado como si
+    # fuera de hoy. Detectado 2026-09-03, ver informe de la sesion.
+    fecha_dato = datetime.fromtimestamp(ohlc[-1]["time"], tz=timezone.utc).strftime("%Y-%m-%d")
 
     sma20 = sma(closes, 20)[-1]
     sma50 = sma(closes, 50)[-1]
@@ -67,7 +73,7 @@ def score_asset(symbol):
 
     return {
         "activo": symbol,
-        "fecha_dato": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+        "fecha_dato": fecha_dato,
         "precio": round(price, 6),
         "sma20": round(sma20, 6) if sma20 else None,
         "sma50": round(sma50, 6) if sma50 else None,

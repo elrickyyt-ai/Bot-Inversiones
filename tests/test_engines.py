@@ -80,6 +80,15 @@ class TestCryptoFundamentalsEngine(unittest.TestCase):
         r = self.mod.score_asset("XRP", None)
         self.assertFalse(r["posible_incidencia_datos"], "XRP sin TVL por diseño no debe marcarse como incidencia de datos")
 
+    def test_fecha_dato_es_la_de_coingecko_no_la_de_ejecucion(self):
+        """2026-09-03: fecha_dato debia ser detail['last_updated'], no
+        datetime.now() -- con datetime.now() esta prueba habria sido
+        indetectable (la fixture es fija, "hoy" cambia cada dia que se
+        ejecuta el test), que es precisamente como paso desapercibido el
+        bug real de BTC/XRP desactualizados en CoinGecko."""
+        r = self.mod.score_asset("BTC", None)
+        self.assertEqual(r["fecha_dato"], "2026-07-20", "fecha_dato debe venir de detail['last_updated'], fijo en la fixture")
+
 
 class TestTechnicalEngine(unittest.TestCase):
     @classmethod
@@ -96,6 +105,16 @@ class TestTechnicalEngine(unittest.TestCase):
         self.assertIn("sesgo", r["confluencia"])
         self.assertIn("confidence_pct", r["confluencia"])
         self.assertTrue(0 <= r["confluencia"]["confidence_pct"] <= 100)
+
+    def test_fecha_dato_es_la_de_la_ultima_vela_no_la_de_ejecucion(self):
+        """2026-09-03: fecha_dato debia ser la fecha real de la ultima
+        vela de Kraken (ohlc[-1][0]), no datetime.now() -- con
+        datetime.now() esta prueba habria sido indetectable (la fixture
+        es fija, "hoy" cambia cada dia que se ejecuta el test), que es
+        precisamente como paso desapercibido el bug real de BTC/XRP
+        desactualizados ~45 dias."""
+        r = self.mod.score_asset("BTC")
+        self.assertEqual(r["fecha_dato"], "2026-07-20", "fecha_dato debe venir de la ultima vela real de la fixture, no de hoy")
 
     def test_confluencia_nunca_mas_de_4_señales(self):
         r = self.mod.score_asset("XRP")
