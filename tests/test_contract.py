@@ -190,6 +190,41 @@ class TestAdapters(unittest.TestCase):
         self.assertNotIn("sma50", metrics, "30 velas no alcanzan para sma50 (necesita 50), no debe inventarse")
         self.assertNotIn("sma200", metrics)
 
+    def test_adapt_technical_backfill_equity_fuente_moneda_y_calendario(self):
+        """Bloque 4 (2026-09-04): adapt_technical_backfill() parametrizado
+        para acciones -- asset_type='equity' debe producir source='Yahoo
+        Finance' (nunca 'Coinbase'/'Kraken'/'Alpha Vantage'), moneda USD,
+        y usar el calendario de sesiones NYSE (un viernes->lunes en la
+        fixture no debe romper el tramo ni dejar sma20 en None).
+        Simbolo ficticio (ZZTEST) escrito directo a _data/, sin pasar por
+        _materialize_fixtures(), para no arriesgar clobbear la cache real
+        de un simbolo real (IBM/NVDA/XOM) en otra ejecucion de tests."""
+        import datetime as dt
+        d = dt.date(2026, 6, 1)  # lunes
+        fechas = []
+        while len(fechas) < 25:
+            if d.weekday() < 5:  # solo dias laborables -- suficiente para probar viernes->lunes sin festivos
+                fechas.append(d)
+            d += dt.timedelta(days=1)
+        rows = [[int(dt.datetime.combine(f, dt.time(), tzinfo=dt.timezone.utc).timestamp()),
+                 100.0 + i, 100.0 + i, 100.0 + i, 100.0 + i, 0, 1000.0, 0] for i, f in enumerate(fechas)]
+        equity_path = os.path.join(ENGINES_ROOT, "engine", "technical", "_data", "ZZTEST_ohlc_backfill.json")
+        os.makedirs(os.path.dirname(equity_path), exist_ok=True)
+        with open(equity_path, "w") as f:
+            json.dump(rows, f)
+        self.addCleanup(os.remove, equity_path)
+
+        rows_out = self.mod.adapt_technical_backfill("ZZTEST", asset_type="equity", source="Yahoo Finance", currency="USD")
+        self.assertGreater(len(rows_out), 0)
+        for row in rows_out:
+            schema.validate_metric_row(row)
+            self.assertEqual(row["source"], "Yahoo Finance")
+            self.assertEqual(row["asset_type"], "equity")
+            if row["metric"] in ("precio", "sma20", "sma50", "sma100", "sma200", "atr14"):
+                self.assertEqual(row["unit"], "USD")
+        metrics = {r["metric"] for r in rows_out}
+        self.assertIn("sma20", metrics, "25 sesiones laborables consecutivas alcanzan para sma20 sin que ningun viernes->lunes rompa el tramo")
+
     def test_adapt_asset_crypto_tiene_currency_documentada(self):
         row = self.mod.adapt_asset_crypto("BTC")
         schema.validate_asset_row(row)

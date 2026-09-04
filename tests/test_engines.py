@@ -295,6 +295,45 @@ class TestTechnicalEngine(unittest.TestCase):
         self.assertEqual(con_defecto, explicito)
         self.assertEqual(len(con_defecto), 721)
 
+    def test_equity_split_no_produce_caida_artificial(self):
+        """Bloque 4 (2026-09-04): datos REALES de Yahoo Finance para NVDA
+        alrededor de su split 10:1 del 2024-06-10 (jueves 06-06/viernes
+        06-07 antes, lunes 06-10 despues -- fin de semana entre medio).
+        Verificado en vivo que Yahoo ya devuelve 'close' ajustado
+        retroactivamente por el split -- esta prueba fija esos valores
+        reales como regresion: si algun dia el codigo empezara a usar el
+        precio sin ajustar (o 'adjclose', que ademas mezcla dividendos),
+        esta prueba detectaria la discontinuidad."""
+        rows = [
+            [1717594200, 118.37100219726562, 122.4489974975586, 117.46800231933594, 122.44000244140625, 0, 528402000, 0],
+            [1717680600, 124.0479965209961, 125.58699798583984, 118.31999969482422, 120.99800109863281, 0, 664696000, 0],
+            [1717767000, 119.7699966430664, 121.69200134277344, 118.02200317382812, 120.88800048828125, 0, 412386000, 0],
+            [1718026200, 120.37000274658203, 123.0999984741211, 117.01000213623047, 121.79000091552734, 0, 313434100, 0],
+            [1718112600, 121.7699966430664, 122.87000274658203, 118.73999786376953, 120.91000366210938, 0, 222551200, 0],
+            [1718199000, 123.05999755859375, 126.87999725341797, 122.56999969482422, 125.19999694824219, 0, 299595000, 0],
+        ]
+        path = os.path.join(tempfile.gettempdir(), "test_nvda_split.json")
+        with open(path, "w") as f:
+            json.dump(rows, f)
+        try:
+            ohlc = self.mod._load_ohlc("NVDA", path)
+            segmentos = self.mod._split_contiguous(ohlc, asset_type="equity")
+            self.assertEqual(len(segmentos), 1, "viernes 06-07 -> lunes 06-10 (dia del split) no debe romper el tramo")
+
+            out = self.mod.historical_series("NVDA", path, asset_type="equity")
+            self.assertEqual(len(out), 6)
+            precios = [r["precio"] for r in out]
+            for i in range(1, len(precios)):
+                variacion_pct = abs(precios[i] - precios[i - 1]) / precios[i - 1] * 100
+                self.assertLess(variacion_pct, 15,
+                                 f"variacion diaria de {variacion_pct:.1f}% en {out[i]['fecha_dato']} -- "
+                                 "un split sin ajustar produciria aqui una caida de ~90%")
+            # el precio del dia del split (2024-06-10) es del mismo orden de magnitud que el dia anterior
+            fecha_a_precio = {r["fecha_dato"]: r["precio"] for r in out}
+            self.assertAlmostEqual(fecha_a_precio["2024-06-10"], fecha_a_precio["2024-06-07"], delta=10)
+        finally:
+            os.remove(path)
+
 
 class TestTradingCalendar(unittest.TestCase):
     """engine/technical/trading_calendar.py -- pruebas unitarias

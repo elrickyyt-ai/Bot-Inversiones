@@ -161,26 +161,47 @@ def _existing_technical_dates(symbol):
     return {r["data_as_of"] for r in rows if r.get("domain") == "tecnico" and r.get("metric") == "precio"}
 
 
-def adapt_technical_backfill(symbol):
+def adapt_technical_backfill(symbol, asset_type="crypto", source="Coinbase", currency="EUR"):
     """Backfill historico (2026-09-04, Bloque 3; frontera corregida el
-    mismo dia -- ver _existing_technical_dates()) -- FASE DISTINTA de
-    adapt_technical() (que solo da "hoy" desde Kraken). Recorre TODO el
-    OHLC ya descargado/mantenido de Coinbase Exchange
+    mismo dia -- ver _existing_technical_dates(); generalizado a
+    acciones el mismo dia, Bloque 4) -- FASE DISTINTA de adapt_technical()
+    (que solo da "hoy"). Recorre TODO el OHLC ya descargado/mantenido
     (engine/technical/_data/{symbol}_ohlc_backfill.json, ver
-    engine/technical/fetch_backfill.py::update_cache()) y produce una
-    fila por fecha real para cada metrica -- misma metodologia que
-    adapt_technical(), via score.py::historical_series() (misma funcion
-    de sma/rsi/atr/volatilidad, solo que recorriendo todo el array en vez
-    de [-1]).
+    engine/technical/fetch_backfill.py::update_cache() para cripto o
+    engine/technical/fetch_backfill_equity.py::update_cache() para
+    acciones) y produce una fila por fecha real para cada metrica --
+    misma metodologia que adapt_technical(), via score.py::
+    historical_series() (misma funcion de sma/rsi/atr/volatilidad, solo
+    que recorriendo todo el array en vez de [-1]).
 
-    Fuente = "Coinbase", nunca "Kraken", para dejar constancia honesta de
-    que ese tramo del historico viene de una fuente distinta. Nunca se
-    solapan: solo se escriben fechas que el Data Contract NO tiene
-    todavia (de ninguna fuente) -- esto cierra cualquier hueco interno,
-    no solo uno antes de una frontera fija, y es lo que permite
-    reutilizar esta misma funcion como el mecanismo de "backfill bajo
-    demanda cuando se detecta un hueco" (ver detect_technical_gaps() en
-    engine/contract/backfill.py).
+    asset_type/source/currency parametrizan lo unico que difiere entre
+    cripto y acciones -- ninguna logica de calculo se duplica:
+    - cripto (por defecto, sin cambios de comportamiento): asset_type=
+      "crypto", source="Coinbase", currency="EUR". _split_contiguous()
+      (dentro de historical_series) usa el calendario 24/7.
+    - acciones: asset_type="equity", source="Yahoo Finance",
+      currency="USD". _split_contiguous() usa el calendario de sesiones
+      NYSE (trading_calendar.py) -- viernes->lunes o un festivo bursatil
+      no rompen el tramo, una sesion realmente ausente si.
+
+    Fuente nunca es "Kraken"/"Alpha Vantage" (las fuentes del flujo
+    incremental), para dejar constancia honesta de que ese tramo del
+    historico viene de una fuente distinta. Nunca se solapan: solo se
+    escriben fechas que el Data Contract NO tiene todavia (de ninguna
+    fuente) -- esto cierra cualquier hueco interno, no solo uno antes de
+    una frontera fija, y es lo que permite reutilizar esta misma funcion
+    como el mecanismo de "backfill bajo demanda cuando se detecta un
+    hueco" (ver detect_technical_gaps() en engine/contract/backfill.py).
+
+    Precio (acciones): Yahoo Finance da 'close' ya ajustado por splits
+    de forma retroactiva y continua (verificado en vivo -- el precio de
+    NVDA en fechas anteriores a su split 10:1 de 2024-06-10 ya viene
+    dividido por 10, sin necesidad de ningun ajuste manual aqui) pero
+    NO por dividendos ('adjclose' si los incluye, deliberadamente NO se
+    usa: una caida de precio en el ex-dividendo es una variacion real de
+    mercado, no un artefacto mecanico como un split, y adjclose ademas
+    se recalcularia con cada dividendo futuro -- 'close' es estable
+    frente a re-ejecuciones salvo que ocurra un split nuevo).
 
     Si no existe {symbol}_ohlc_backfill.json todavia (activo no
     backfillado), devuelve [] -- mismo patron defensivo que
@@ -194,31 +215,31 @@ def adapt_technical_backfill(symbol):
     method = "engine/technical/README.md"
 
     rows = []
-    for r in mod.historical_series(symbol, backfill_path):
+    for r in mod.historical_series(symbol, backfill_path, asset_type=asset_type):
         fecha = r["fecha_dato"]
         if fecha in ya_cubierto:
-            continue  # ya esta en el Data Contract (Kraken incremental u otra pasada de este backfill)
-        rows.append(_row(symbol, "crypto", "tecnico", "precio", r["precio"], "EUR",
-                          fecha, retrieved_at, "Coinbase", calculation_method=method))
-        rows.append(_row(symbol, "crypto", "tecnico", "volumen", r["volumen"], "unidades",
-                          fecha, retrieved_at, "Coinbase", calculation_method=method))
+            continue  # ya esta en el Data Contract (flujo incremental u otra pasada de este backfill)
+        rows.append(_row(symbol, asset_type, "tecnico", "precio", r["precio"], currency,
+                          fecha, retrieved_at, source, calculation_method=method))
+        rows.append(_row(symbol, asset_type, "tecnico", "volumen", r["volumen"], "unidades",
+                          fecha, retrieved_at, source, calculation_method=method))
         for sma_key in ("sma20", "sma50", "sma100", "sma200"):
             if r[sma_key] is not None:
-                rows.append(_row(symbol, "crypto", "tecnico", sma_key, r[sma_key], "EUR",
-                                  fecha, retrieved_at, "Coinbase", calculation_method=method))
+                rows.append(_row(symbol, asset_type, "tecnico", sma_key, r[sma_key], currency,
+                                  fecha, retrieved_at, source, calculation_method=method))
         if r["rsi14"] is not None:
-            rows.append(_row(symbol, "crypto", "tecnico", "rsi14", r["rsi14"], "indice",
-                              fecha, retrieved_at, "Coinbase", calculation_method=method))
+            rows.append(_row(symbol, asset_type, "tecnico", "rsi14", r["rsi14"], "indice",
+                              fecha, retrieved_at, source, calculation_method=method))
         if r["atr14"] is not None:
-            rows.append(_row(symbol, "crypto", "tecnico", "atr14", r["atr14"], "EUR",
-                              fecha, retrieved_at, "Coinbase", calculation_method=method))
+            rows.append(_row(symbol, asset_type, "tecnico", "atr14", r["atr14"], currency,
+                              fecha, retrieved_at, source, calculation_method=method))
         if r["atr14_pct_precio"] is not None:
-            rows.append(_row(symbol, "crypto", "tecnico", "atr14_pct_precio", r["atr14_pct_precio"], "%",
-                              fecha, retrieved_at, "Coinbase", calculation_method=method))
+            rows.append(_row(symbol, asset_type, "tecnico", "atr14_pct_precio", r["atr14_pct_precio"], "%",
+                              fecha, retrieved_at, source, calculation_method=method))
         if r["volatilidad_hist_30d_anualizada_pct"] is not None:
-            rows.append(_row(symbol, "crypto", "tecnico", "volatilidad_hist_30d_anualizada_pct",
+            rows.append(_row(symbol, asset_type, "tecnico", "volatilidad_hist_30d_anualizada_pct",
                               r["volatilidad_hist_30d_anualizada_pct"], "%",
-                              fecha, retrieved_at, "Coinbase", calculation_method=method))
+                              fecha, retrieved_at, source, calculation_method=method))
     return rows
 
 

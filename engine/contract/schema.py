@@ -67,6 +67,7 @@ SOURCE_PRIORITY = {
     "DefiLlama": 2,
     "Kraken": 2,
     "Coinbase": 2,
+    "Yahoo Finance": 2,
     "Alpha Vantage": 2,
 }
 

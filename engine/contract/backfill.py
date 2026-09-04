@@ -16,6 +16,7 @@ Uso:
     python3 engine/contract/backfill.py --macro
     python3 engine/contract/backfill.py --tvl
     python3 engine/contract/backfill.py --technical
+    python3 engine/contract/backfill.py --equity-technical
     python3 engine/contract/backfill.py --gaps        # solo diagnostico, no escribe nada
 """
 import json
@@ -24,7 +25,10 @@ import sys
 from datetime import datetime
 
 from adapters import adapt_macro_backfill, adapt_crypto_backfill, adapt_technical_backfill
-from build import _write_metric_rows, CRYPTO_ASSETS, DATA_DIR
+from build import _write_metric_rows, CRYPTO_ASSETS, EQUITY_ASSETS, DATA_DIR
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "technical"))
+from trading_calendar import sessions_skipped_between  # noqa: E402
 
 
 def backfill_macro():
@@ -48,16 +52,23 @@ def backfill_tvl():
         print(f"{symbol}: {total} filas históricas ({added} nuevas, {skipped} ya existían)")
 
 
-def detect_technical_gaps(symbol):
-    """Diagnostico (2026-09-04): lee data/metrics/{symbol}.json y
-    devuelve los huecos de calendario reales en la serie 'precio'
-    (domain=tecnico) ya escrita -- (fecha_antes, fecha_despues, dias)
-    para cada par de fechas consecutivas con mas de 1 dia de diferencia.
-    Es la misma nocion de "que ya tenemos" que usa
-    adapters.py::_existing_technical_dates() para decidir que backfillear
-    -- este es el lado de REPORTE, reusable para detectar huecos futuros
-    (ej. si el cron diario falla varios dias seguidos) sin tener que
-    volver a razonar la logica cada vez."""
+def detect_technical_gaps(symbol, asset_type="crypto"):
+    """Diagnostico (2026-09-04; generalizado a acciones el mismo dia,
+    Bloque 4): lee data/metrics/{symbol}.json y devuelve los huecos
+    REALES de sesion en la serie 'precio' (domain=tecnico) ya escrita --
+    (fecha_antes, fecha_despues, dias_naturales) para cada par de fechas
+    consecutivas donde faltan una o mas sesiones de trading esperadas
+    (ver engine/technical/trading_calendar.py). Para asset_type="crypto"
+    (por defecto) cualquier dia ausente cuenta -- para asset_type=
+    "equity" un fin de semana o festivo bursatil NO cuenta como hueco
+    (antes de este cambio, este diagnostico reportaba ~1500 "huecos"
+    falsos para una accion con decadas de historico, uno por cada fin de
+    semana/festivo -- util para cripto, inutil para acciones). Es la
+    misma nocion de "que ya tenemos" que usa adapters.py::
+    _existing_technical_dates() para decidir que backfillear -- este es
+    el lado de REPORTE, reusable para detectar huecos futuros (ej. si el
+    cron diario falla varios dias seguidos) sin tener que volver a
+    razonar la logica cada vez."""
     path = os.path.join(DATA_DIR, "metrics", f"{symbol}.json")
     if not os.path.exists(path):
         return []
@@ -66,17 +77,23 @@ def detect_technical_gaps(symbol):
     fechas = sorted({r["data_as_of"] for r in rows if r.get("domain") == "tecnico" and r.get("metric") == "precio"})
     gaps = []
     for i in range(1, len(fechas)):
-        d1 = datetime.strptime(fechas[i - 1], "%Y-%m-%d")
-        d2 = datetime.strptime(fechas[i], "%Y-%m-%d")
-        dias = (d2 - d1).days
-        if dias > 1:
-            gaps.append((fechas[i - 1], fechas[i], dias))
+        d1 = datetime.strptime(fechas[i - 1], "%Y-%m-%d").date()
+        d2 = datetime.strptime(fechas[i], "%Y-%m-%d").date()
+        if sessions_skipped_between(d1, d2, asset_type) > 0:
+            gaps.append((fechas[i - 1], fechas[i], (d2 - d1).days))
     return gaps
 
 
 def report_gaps():
     for symbol in CRYPTO_ASSETS:
-        gaps = detect_technical_gaps(symbol)
+        gaps = detect_technical_gaps(symbol, asset_type="crypto")
+        if not gaps:
+            print(f"{symbol}: sin huecos")
+            continue
+        for antes, despues, dias in gaps:
+            print(f"{symbol}: hueco {antes} -> {despues} ({dias} días)")
+    for symbol in EQUITY_ASSETS:
+        gaps = detect_technical_gaps(symbol, asset_type="equity")
         if not gaps:
             print(f"{symbol}: sin huecos")
             continue
@@ -84,8 +101,8 @@ def report_gaps():
             print(f"{symbol}: hueco {antes} -> {despues} ({dias} días)")
 
 
-def backfill_technical():
-    """Requiere engine/technical/fetch_backfill.py ya ejecutado (los
+def _backfill_technical_generic(symbols, asset_type, source, currency):
+    """Requiere el fetcher de OHLC correspondiente ya ejecutado (los
     ficheros _ohlc_backfill.json en _data/ son gitignored, no se
     descargan aqui). Si un activo no tiene ese fichero todavia,
     adapt_technical_backfill() devuelve [] -- no es un error, solo no hay
@@ -95,17 +112,29 @@ def backfill_technical():
     ausencia de datos) -- se distingue aqui para no confundir ambos casos
     en el mensaje."""
     cache_dir = os.path.join(os.path.dirname(DATA_DIR), "engine", "technical", "_data")
-    for symbol in CRYPTO_ASSETS:
+    for symbol in symbols:
         cache_path = os.path.join(cache_dir, f"{symbol}_ohlc_backfill.json")
-        rows = adapt_technical_backfill(symbol)
+        rows = adapt_technical_backfill(symbol, asset_type=asset_type, source=source, currency=currency)
         if not rows:
             if os.path.exists(cache_path):
                 print(f"{symbol}: 0 filas nuevas (todo lo que hay en la caché ya está en el Data Contract)")
             else:
-                print(f"{symbol}: sin fichero de backfill todavia (fetch_backfill.py)")
+                print(f"{symbol}: sin fichero de backfill todavia")
             continue
         total, added, skipped = _write_metric_rows(symbol, rows)
         print(f"{symbol}: {total} filas históricas ({added} nuevas, {skipped} ya existían)")
+
+
+def backfill_technical():
+    """Cripto -- fetch_backfill.py (Coinbase, EUR)."""
+    _backfill_technical_generic(CRYPTO_ASSETS, asset_type="crypto", source="Coinbase", currency="EUR")
+
+
+def backfill_equity_technical():
+    """Acciones (2026-09-04, Bloque 4) -- fetch_backfill_equity.py
+    (Yahoo Finance, USD). Mismo mecanismo que backfill_technical(),
+    parametrizado -- ninguna logica nueva de escritura."""
+    _backfill_technical_generic(EQUITY_ASSETS, asset_type="equity", source="Yahoo Finance", currency="USD")
 
 
 if __name__ == "__main__":
@@ -115,8 +144,10 @@ if __name__ == "__main__":
         backfill_tvl()
     elif "--technical" in sys.argv:
         backfill_technical()
+    elif "--equity-technical" in sys.argv:
+        backfill_equity_technical()
     elif "--gaps" in sys.argv:
         report_gaps()
     else:
-        print("Uso: python3 engine/contract/backfill.py [--macro|--tvl|--technical|--gaps]")
+        print("Uso: python3 engine/contract/backfill.py [--macro|--tvl|--technical|--equity-technical|--gaps]")
         sys.exit(1)
