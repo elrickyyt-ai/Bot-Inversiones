@@ -66,6 +66,18 @@ A diferencia de métricas y tesis, `data/assets/{ID}.json` **se sobrescribe** en
 
 **Historizado igual que métricas** (append-only, idempotente): clave lógica `(asset_id, news_id)`. Como el mismo artículo no cambia de contenido con el tiempo, ejecutar `build.py` varias veces solo añade artículos nuevos que hayan aparecido desde la última consulta.
 
+## Backfill histórico (desde 2026-09-04) — `engine/contract/backfill.py`
+
+Proceso **distinto** de `build.py`, no lo ejecuta el cron diario. `build.py` es incremental (cada ejecución añade solo "hoy"); `backfill.py` recorre TODA la historia ya disponible de una fuente y la escribe de una vez — se ejecuta una vez, o de forma ocasional si más adelante se amplía la profundidad de alguna fuente. Ver `informes/2026-09-04_estrategia_backfill_historico.md` para el análisis completo de qué profundidad da cada fuente.
+
+```
+python3 engine/contract/backfill.py --macro
+```
+
+Ambos procesos escriben por la **misma función idempotente** (`build.py::_write_metric_rows`, clave `asset_id+domain+metric+data_as_of+source`) — nunca pueden duplicar ni chocar entre sí, sin coordinación especial.
+
+**Macro (FRED)**: ya teníamos el histórico completo descargado en `_data/` (no hizo falta ninguna llamada nueva) — solo faltaba un adaptador que lo recorriera entero. `engine/macro/score.py::historical_series_us()/historical_series_ea()` reutilizan la misma fórmula de variación interanual que ya usaba `score_us()/score_ea()` (`_yoy_series()`, generalización de `_yoy()` a toda la serie, no una metodología nueva), aplicada a cada punto en vez de solo al último. **No incluyen `regimen_estimado`/`señales`** — eso es una síntesis de "hoy", no tiene sentido calcularlo retroactivamente para cada fecha pasada sin más cuidado, y no forma parte del Data Contract hoy. Resultado: EE.UU. desde 1948-01-01, Eurozona desde 1997-12-01, 12213 filas nuevas.
+
 ## `data_as_of` vs. `retrieved_at`
 
 La razón de separarlos (a petición explícita del usuario, y es correcta): un ratio fundamental de una acción corresponde al último trimestre reportado, no al momento en que se descarga. Ejemplo real de XOM en esta misma sesión: `precio` con `data_as_of=2026-09-02` (fecha de la cotización) y `pe_ratio` con `data_as_of=2026-06-30` (fecha del último trimestre) — ambos con el mismo `retrieved_at` (cuándo se ejecutó `build.py`). Sin esta distinción, un futuro backtesting (Fase 8) podría usar sin darse cuenta un dato que en la fecha simulada todavía no existía.

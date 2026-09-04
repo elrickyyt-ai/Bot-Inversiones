@@ -138,6 +138,31 @@ class TestMacroEngine(unittest.TestCase):
         self.assertTrue(r["regimen_estimado"])
         self.assertIn("gap", r, "el gap de desempleo/curva de la Eurozona debe seguir declarado")
 
+    def test_historical_series_us_misma_formula_que_yoy_actual(self):
+        """Backfill (2026-09-04): historical_series_us() debe dar, para
+        la fecha mas reciente, el mismo cpi_yoy_pct que score_us() -- es
+        la misma formula aplicada a toda la historia, no una nueva."""
+        actual = self.mod.score_us()["cpi_yoy_pct"]
+        historico = self.mod.historical_series_us()
+        cpi_rows = [(f, v) for m, f, v in historico if m == "cpi_yoy_pct"]
+        self.assertEqual(cpi_rows[-1][1], actual, "el ultimo punto del historico debe coincidir con el dato 'de hoy'")
+
+    def test_historical_series_us_empieza_un_anio_despues_del_origen(self):
+        """La fixture us_cpi.json empieza en 1947-01-01 -- el primer YoY
+        real solo puede calcularse a partir de 1948-01-01 (necesita un
+        punto de ~12 meses antes dentro de la propia serie)."""
+        historico = self.mod.historical_series_us()
+        cpi_rows = [(f, v) for m, f, v in historico if m == "cpi_yoy_pct"]
+        self.assertEqual(cpi_rows[0][0], "1948-01-01")
+
+    def test_historical_series_no_incluye_regimen_ni_señales(self):
+        """El backfill historico es solo dato -- ninguna sintesis de
+        'hoy' (regimen_estimado, señales, confidence) debe colarse ahi,
+        eso no tiene sentido por fecha pasada."""
+        historico = self.mod.historical_series_us() + self.mod.historical_series_ea()
+        metricas = {m for m, _, _ in historico}
+        self.assertEqual(metricas, {"cpi_yoy_pct", "fed_funds_pct", "hicp_yoy_pct", "ecb_deposit_rate_pct"})
+
 
 class TestScoringConsolidado(unittest.TestCase):
     @classmethod

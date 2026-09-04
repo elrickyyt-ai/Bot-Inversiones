@@ -140,6 +140,28 @@ def adapt_macro():
     return rows
 
 
+def adapt_macro_backfill():
+    """Backfill historico (2026-09-04) -- FASE DISTINTA de adapt_macro()
+    (que solo da "hoy"). Recorre TODA la serie ya descargada de FRED
+    (score.py::historical_series_us/ea, misma formula de YoY que ya usa
+    el flujo incremental) y produce una fila por fecha real -- no una
+    metodologia nueva, solo mas fechas de la que ya existia. NO incluye
+    regimen_estimado/señales (eso es sintesis de "hoy", no un dato
+    historico por fecha, y no forma parte del Data Contract hoy)."""
+    mod = _load_module("macro", "score")
+    retrieved_at = now_utc_iso()
+    rows = []
+    for metric, fecha, valor in mod.historical_series_us():
+        rows.append(_row("US", "macro", "macro", metric, valor, "%",
+                          fecha, retrieved_at, "FRED",
+                          calculation_method="engine/macro/README.md"))
+    for metric, fecha, valor in mod.historical_series_ea():
+        rows.append(_row("EA", "macro", "macro", metric, valor, "%",
+                          fecha, retrieved_at, "FRED",
+                          calculation_method="engine/macro/README.md"))
+    return rows
+
+
 def adapt_equity(symbol):
     """Fase 2, Bloque B -- engine/equity/score.py. Aqui SI hay una
     distincion real entre data_as_of y retrieved_at: los ratios

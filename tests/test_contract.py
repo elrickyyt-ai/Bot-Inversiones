@@ -151,6 +151,19 @@ class TestAdapters(unittest.TestCase):
         for row in rows:
             schema.validate_metric_row(row)
 
+    def test_adapt_macro_backfill_filas_validas_y_con_fechas_distintas(self):
+        """Backfill (2026-09-04): a diferencia de adapt_macro() (solo
+        'hoy', misma fecha en todas las filas), el backfill debe traer
+        muchas fechas distintas -- es la razon de ser del backfill."""
+        rows = self.mod.adapt_macro_backfill()
+        self.assertGreater(len(rows), 1000, "FRED ya tiene decadas de historia descargada")
+        for row in rows:
+            schema.validate_metric_row(row)
+        fechas = {r["data_as_of"] for r in rows}
+        self.assertGreater(len(fechas), 100, "el backfill debe cubrir muchas fechas distintas, no solo 'hoy'")
+        # cada activo declarado es US o EA, nunca uno inventado
+        self.assertEqual({r["asset_id"] for r in rows}, {"US", "EA"})
+
     def test_adapt_equity_distingue_data_as_of_de_retrieved_at(self):
         rows = self.mod.adapt_equity("IBM")
         for row in rows:

@@ -33,6 +33,49 @@ def _yoy(series):
     }
 
 
+def _yoy_series(series):
+    """Serie completa de variacion interanual -- misma formula que
+    _yoy(), aplicada a CADA punto de la serie (no solo al ultimo), para
+    el backfill historico (2026-09-04). Devuelve [(fecha, yoy_pct), ...]
+    solo para las fechas donde existe un valor de ~12 meses antes
+    disponible en la propia serie."""
+    out = []
+    for i, (d, v) in enumerate(series):
+        target = datetime.date.fromisoformat(d) - datetime.timedelta(days=365)
+        base = None
+        for d2, v2 in series[:i]:
+            if datetime.date.fromisoformat(d2) <= target:
+                base = v2
+        if base:
+            out.append((d, round((v / base - 1) * 100, 2)))
+    return out
+
+
+def historical_series_us():
+    """Backfill (2026-09-04): serie historica completa de las metricas
+    macro de EE.UU. que ya expone el Data Contract -- NO el
+    regimen_estimado/señales de score_us() (esa es una sintesis de
+    "hoy", no un dato historico por fecha). Devuelve
+    [(metric, fecha, valor), ...]. Misma formula de YoY que score_us(),
+    aplicada a toda la historia ya descargada de FRED en vez de solo al
+    ultimo punto."""
+    cpi = _load("us_cpi")
+    fedfunds = _load("us_fedfunds")
+    rows = [("cpi_yoy_pct", d, v) for d, v in _yoy_series(cpi)]
+    rows += [("fed_funds_pct", d, v) for d, v in fedfunds]
+    return rows
+
+
+def historical_series_ea():
+    """Backfill (2026-09-04): equivalente a historical_series_us() para
+    la Eurozona."""
+    hicp = _load("ea_hicp")
+    ecb = _load("ea_ecb_rate")
+    rows = [("hicp_yoy_pct", d, v) for d, v in _yoy_series(hicp)]
+    rows += [("ecb_deposit_rate_pct", d, v) for d, v in ecb]
+    return rows
+
+
 def _trend(series, lookback=6, flat_threshold=0.05):
     """Compara el valor actual con el de `lookback` observaciones atras."""
     if len(series) < lookback + 1:
