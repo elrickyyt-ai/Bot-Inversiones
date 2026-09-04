@@ -7,6 +7,7 @@ import os
 from datetime import datetime, timezone
 
 from indicators import sma, rsi, macd, atr, historical_volatility, historical_volatility_series, roc, swing_structure
+from trading_calendar import sessions_skipped_between
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "_data")
 
@@ -99,22 +100,35 @@ def score_asset(symbol):
     }
 
 
-def _split_contiguous(ohlc):
-    """Divide en tramos donde cada vela esta exactamente 1 dia despues de
-    la anterior. Un hueco real en la serie (ej. XRP: Coinbase lo
-    deslisto en EEUU entre 2021-01 y 2023-07 por el litigio con la SEC,
-    ~905 dias sin cotizacion en esa fuente) NO debe mezclarse dentro de
-    una misma ventana movil de SMA/RSI/ATR/volatilidad -- eso calcularia,
-    por ejemplo, un "SMA20" combinando un precio de 2023 con 19 precios
-    de antes del hueco, algo que no es una media movil de 20 dias real.
+def _split_contiguous(ohlc, asset_type="crypto"):
+    """Divide en tramos donde no falta ninguna sesión de trading
+    esperada entre una vela y la siguiente (ver trading_calendar.py).
+    Un hueco real en la serie (ej. XRP: Coinbase lo deslistó en EEUU
+    entre 2021-01 y 2023-07 por el litigio con la SEC, ~905 días sin
+    cotización en esa fuente) NO debe mezclarse dentro de una misma
+    ventana móvil de SMA/RSI/ATR/volatilidad -- eso calcularía, por
+    ejemplo, un "SMA20" combinando un precio de 2023 con 19 precios de
+    antes del hueco, algo que no es una media móvil de 20 días real.
     Cada tramo se trata como una serie independiente, con su propio
     periodo de calentamiento -- mismo principio que ya aplica al inicio
-    de cualquier serie con menos de N velas disponibles."""
+    de cualquier serie con menos de N velas disponibles.
+
+    asset_type="crypto" (por defecto, preserva el comportamiento previo
+    exacto): cotiza 24/7, cualquier día ausente es un hueco real, 0
+    sesiones esperadas entre dos fechas consecutivas equivale a estar
+    exactamente 1 día natural aparte -- mismo resultado que la
+    comprobación anterior (`== 86400`), ahora expresada como caso
+    particular de la misma función que también sirve para acciones.
+    asset_type="equity": un viernes seguido de un lunes, o un festivo
+    bursátil NYSE, no cuentan como sesión esperada -- no rompen el
+    tramo. Una sesión de trading real ausente sí lo rompe."""
     if not ohlc:
         return []
     segments = [[ohlc[0]]]
     for c in ohlc[1:]:
-        if c["time"] - segments[-1][-1]["time"] == 86400:
+        prev_date = datetime.fromtimestamp(segments[-1][-1]["time"], tz=timezone.utc).date()
+        curr_date = datetime.fromtimestamp(c["time"], tz=timezone.utc).date()
+        if sessions_skipped_between(prev_date, curr_date, asset_type) == 0:
             segments[-1].append(c)
         else:
             segments.append([c])
@@ -153,7 +167,7 @@ def _historical_series_segment(ohlc):
     return out
 
 
-def historical_series(symbol, path):
+def historical_series(symbol, path, asset_type="crypto"):
     """Backfill (2026-09-04): serie historica completa de precio/volumen/
     indicadores -- misma metodologia que score_asset() usa para "hoy"
     (mismas funciones de indicators.py: sma/rsi/atr/historical_volatility,
@@ -167,6 +181,12 @@ def historical_series(symbol, path):
     Exchange, ver fetch_backfill.py) -- nunca el fichero incremental de
     Kraken, para no re-procesar lo que el flujo incremental ya cubre.
 
+    `asset_type` (2026-09-04, Bloque 4): pasa directo a
+    _split_contiguous() -- "crypto" (por defecto, sin cambios de
+    comportamiento) trata cualquier dia de calendario ausente como
+    hueco; "equity" usa el calendario de sesiones NYSE (trading_calendar.py)
+    para no romper el tramo en fines de semana/festivos bursatiles.
+
     Los primeros ~200 puntos de cada tramo contiguo (ver
     _split_contiguous) no tendran sma200 (ni rsi14/atr14/volatilidad en
     sus propios primeros N puntos) por la misma razon que "hoy" tampoco
@@ -174,7 +194,7 @@ def historical_series(symbol, path):
     fallo."""
     ohlc = _load_ohlc(symbol, path=path)
     out = []
-    for segment in _split_contiguous(ohlc):
+    for segment in _split_contiguous(ohlc, asset_type=asset_type):
         out.extend(_historical_series_segment(segment))
     return out
 

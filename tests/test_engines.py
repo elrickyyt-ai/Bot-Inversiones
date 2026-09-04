@@ -226,6 +226,125 @@ class TestTechnicalEngine(unittest.TestCase):
             esperado = ind.historical_volatility(closes[:i + 1], 30)
             self.assertEqual(serie[i], esperado)
 
+    def _write_ohlc(self, dates_closes):
+        """dates_closes: lista de (date, close) -- vela plana (open=high=low=close),
+        volumen fijo. Devuelve la ruta del fichero temporal (forma cruda Kraken)."""
+        rows = [[int(datetime.datetime.combine(d, datetime.time(), tzinfo=datetime.timezone.utc).timestamp()),
+                 c, c, c, c, 0, 1.0, 0] for d, c in dates_closes]
+        path = os.path.join(tempfile.gettempdir(), "test_calendar_ohlc.json")
+        with open(path, "w") as f:
+            json.dump(rows, f)
+        return path
+
+    def test_equity_viernes_a_lunes_no_rompe_el_tramo(self):
+        """Bloque 4 (2026-09-04): _split_contiguous(asset_type='equity')
+        no debe tratar un fin de semana normal como hueco."""
+        d = datetime.date
+        # 2026-07-10 (viernes) -> 2026-07-13 (lunes), sin festivo de por medio
+        fechas = [d(2026, 7, 10), d(2026, 7, 13), d(2026, 7, 14)]
+        path = self._write_ohlc([(f, 100.0 + i) for i, f in enumerate(fechas)])
+        ohlc = self.mod._load_ohlc("TEST", path)
+        segmentos = self.mod._split_contiguous(ohlc, asset_type="equity")
+        self.assertEqual(len(segmentos), 1, "viernes->lunes no debe romper el tramo para acciones")
+        self.assertEqual(len(segmentos[0]), 3)
+
+    def test_equity_festivo_bursatil_no_rompe_el_tramo(self):
+        """2026-07-03 es el 4 de julio observado (cae en sábado, NYSE lo
+        observa el viernes anterior) -- jueves 07-02 -> lunes 07-06 no
+        debe romper el tramo (festivo + fin de semana, cero sesiones
+        esperadas de por medio)."""
+        d = datetime.date
+        fechas = [d(2026, 7, 1), d(2026, 7, 2), d(2026, 7, 6), d(2026, 7, 7)]
+        path = self._write_ohlc([(f, 100.0 + i) for i, f in enumerate(fechas)])
+        ohlc = self.mod._load_ohlc("TEST", path)
+        segmentos = self.mod._split_contiguous(ohlc, asset_type="equity")
+        self.assertEqual(len(segmentos), 1, "festivo bursátil (4 de julio observado) no debe romper el tramo")
+        self.assertEqual(len(segmentos[0]), 4)
+
+    def test_equity_sesion_realmente_ausente_rompe_el_tramo(self):
+        """Mismo rango que el test anterior, pero quitando 2026-07-08
+        (miércoles, sesión normal sin motivo de ausencia) -- eso SÍ debe
+        detectarse como hueco real, no ocultarse."""
+        d = datetime.date
+        fechas = [d(2026, 7, 6), d(2026, 7, 7), d(2026, 7, 9), d(2026, 7, 10)]  # falta el 07-08
+        path = self._write_ohlc([(f, 100.0 + i) for i, f in enumerate(fechas)])
+        ohlc = self.mod._load_ohlc("TEST", path)
+        segmentos = self.mod._split_contiguous(ohlc, asset_type="equity")
+        self.assertEqual(len(segmentos), 2, "una sesión de trading realmente ausente debe partir el tramo")
+        self.assertEqual([len(s) for s in segmentos], [2, 2])
+
+    def test_crypto_mantiene_su_comportamiento_actual_con_fin_de_semana(self):
+        """Diferencia clave con equity: para cripto, un fin de semana
+        SÍ es un hueco real (cotiza 24/7) -- asset_type='crypto' (por
+        defecto) no debe adoptar la tolerancia de calendario bursátil."""
+        d = datetime.date
+        fechas = [d(2026, 7, 10), d(2026, 7, 13)]  # viernes -> lunes, faltan sábado y domingo
+        path = self._write_ohlc([(f, 100.0 + i) for i, f in enumerate(fechas)])
+        ohlc = self.mod._load_ohlc("TEST", path)
+        segmentos = self.mod._split_contiguous(ohlc)  # asset_type por defecto
+        self.assertEqual(len(segmentos), 2, "para cripto, sábado/domingo ausentes siguen siendo un hueco real")
+
+    def test_indicadores_cripto_sin_cambios_tras_anadir_asset_type(self):
+        """Regresión explícita: historical_series() sobre la fixture real
+        de BTC (721 velas, sin huecos) debe dar EXACTAMENTE los mismos
+        resultados con o sin pasar asset_type -- el parámetro nuevo no
+        debe alterar el comportamiento por defecto de cripto."""
+        path = os.path.join(ROOT, "engine", "technical", "_data", "BTC_ohlc.json")
+        con_defecto = self.mod.historical_series("BTC", path)
+        explicito = self.mod.historical_series("BTC", path, asset_type="crypto")
+        self.assertEqual(con_defecto, explicito)
+        self.assertEqual(len(con_defecto), 721)
+
+
+class TestTradingCalendar(unittest.TestCase):
+    """engine/technical/trading_calendar.py -- pruebas unitarias
+    directas sobre el calculo de festivos NYSE y sesiones esperadas,
+    sin pasar por score.py."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.mod = _import("technical", "trading_calendar")
+
+    def test_festivos_nyse_2026_conocidos(self):
+        """Festivos verificados a mano contra el calendario NYSE real de
+        2026: Ano Nuevo, MLK, Presidents Day, Viernes Santo (Pascua
+        2026 = 5 de abril), Memorial Day, Juneteenth, 4 de julio
+        (observado el viernes 3, cae en sabado), Labor Day, Accion de
+        Gracias, Navidad -- 10 festivos, ninguno inventado."""
+        d = datetime.date
+        esperados = {
+            d(2026, 1, 1), d(2026, 1, 19), d(2026, 2, 16), d(2026, 4, 3),
+            d(2026, 5, 25), d(2026, 6, 19), d(2026, 7, 3), d(2026, 9, 7),
+            d(2026, 11, 26), d(2026, 12, 25),
+        }
+        self.assertEqual(self.mod.us_market_holidays(2026), esperados)
+
+    def test_juneteenth_no_es_festivo_antes_de_2022(self):
+        self.assertNotIn(datetime.date(2021, 6, 18), self.mod.us_market_holidays(2021))
+
+    def test_viernes_a_lunes_normal_cero_sesiones_esperadas(self):
+        self.assertEqual(
+            self.mod.sessions_skipped_between(datetime.date(2026, 7, 10), datetime.date(2026, 7, 13), "equity"), 0)
+
+    def test_festivo_mas_fin_de_semana_cero_sesiones_esperadas(self):
+        """4 de julio 2026 observado el viernes 3 -- jueves 07-02 a
+        lunes 07-06 no debe contar ninguna sesion esperada de por
+        medio."""
+        self.assertEqual(
+            self.mod.sessions_skipped_between(datetime.date(2026, 7, 2), datetime.date(2026, 7, 6), "equity"), 0)
+
+    def test_sesion_normal_ausente_cuenta_como_hueco(self):
+        self.assertEqual(
+            self.mod.sessions_skipped_between(datetime.date(2026, 7, 6), datetime.date(2026, 7, 8), "equity"), 1)
+
+    def test_cripto_cualquier_dia_ausente_cuenta_como_hueco(self):
+        """Para cripto (24/7), un fin de semana SI cuenta como sesion
+        esperada ausente -- no hay tolerancia de calendario bursatil."""
+        self.assertEqual(
+            self.mod.sessions_skipped_between(datetime.date(2026, 7, 3), datetime.date(2026, 7, 4), "crypto"), 0)
+        self.assertEqual(
+            self.mod.sessions_skipped_between(datetime.date(2026, 7, 3), datetime.date(2026, 7, 5), "crypto"), 1)
+
 
 class TestMacroEngine(unittest.TestCase):
     @classmethod
