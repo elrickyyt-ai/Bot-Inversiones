@@ -96,6 +96,12 @@ def adapt_technical(symbol):
     rows = [
         _row(symbol, "crypto", "tecnico", "precio", t["precio"], "EUR", data_as_of, retrieved_at,
              "Kraken", confidence_pct=conf, calculation_method=method),
+        # volumen: unidad "unidades" (no el ticker del activo, ej. "BTC")
+        # a proposito -- qa.py marca como incompatible una misma
+        # metrica+asset_type con mas de una unidad distinta, y cada
+        # cripto tendria su propio ticker como unidad si se usara aqui.
+        _row(symbol, "crypto", "tecnico", "volumen", t["volumen"], "unidades", data_as_of, retrieved_at,
+             "Kraken", confidence_pct=conf, calculation_method=method),
     ]
     if t["rsi14"] is not None:
         rows.append(_row(symbol, "crypto", "tecnico", "rsi14", t["rsi14"], "indice", data_as_of, retrieved_at,
@@ -125,6 +131,65 @@ def adapt_technical(symbol):
         rows.append(_row(symbol, "crypto", "tecnico", "volatilidad_hist_30d_anualizada_pct",
                           t["volatilidad_hist_30d_anualizada_pct"], "%", data_as_of, retrieved_at,
                           "Kraken", confidence_pct=conf, calculation_method=method))
+    return rows
+
+
+def adapt_technical_backfill(symbol):
+    """Backfill historico (2026-09-04, Bloque 3) -- FASE DISTINTA de
+    adapt_technical() (que solo da "hoy" desde Kraken). Recorre TODO el
+    OHLC ya descargado de Coinbase Exchange
+    (engine/technical/_data/{symbol}_ohlc_backfill.json, ver
+    engine/technical/fetch_backfill.py) y produce una fila por fecha real
+    para cada metrica -- misma metodologia que adapt_technical(), via
+    score.py::historical_series() (misma funcion de sma/rsi/atr/
+    volatilidad, solo que recorriendo todo el array en vez de [-1]).
+
+    Fuente = "Coinbase", nunca "Kraken", para dejar constancia honesta de
+    que ese tramo del historico viene de una fuente distinta. Nunca se
+    solapan: solo se escriben fechas ESTRICTAMENTE anteriores a la
+    primera vela ya cacheada de Kraken (misma frontera que ya respeta
+    fetch_backfill.py al descargar, aqui se vuelve a aplicar de forma
+    defensiva por si el fichero de backfill se regenera mas tarde con la
+    ventana de Kraken ya desplazada).
+
+    Si no existe {symbol}_ohlc_backfill.json todavia (activo no
+    backfillado), devuelve [] -- mismo patron defensivo que
+    adapt_news()."""
+    backfill_path = os.path.join(ROOT, "technical", "_data", f"{symbol}_ohlc_backfill.json")
+    if not os.path.exists(backfill_path):
+        return []
+    mod = _load_module("technical", "score")
+    boundary = mod._load_ohlc(symbol)[0]["time"]
+    boundary_fecha = datetime.utcfromtimestamp(boundary).strftime("%Y-%m-%d")
+    retrieved_at = now_utc_iso()
+    method = "engine/technical/README.md"
+
+    rows = []
+    for r in mod.historical_series(symbol, backfill_path):
+        fecha = r["fecha_dato"]
+        if fecha >= boundary_fecha:
+            continue  # defensivo: nunca solaparse con lo que ya cubre Kraken
+        rows.append(_row(symbol, "crypto", "tecnico", "precio", r["precio"], "EUR",
+                          fecha, retrieved_at, "Coinbase", calculation_method=method))
+        rows.append(_row(symbol, "crypto", "tecnico", "volumen", r["volumen"], "unidades",
+                          fecha, retrieved_at, "Coinbase", calculation_method=method))
+        for sma_key in ("sma20", "sma50", "sma100", "sma200"):
+            if r[sma_key] is not None:
+                rows.append(_row(symbol, "crypto", "tecnico", sma_key, r[sma_key], "EUR",
+                                  fecha, retrieved_at, "Coinbase", calculation_method=method))
+        if r["rsi14"] is not None:
+            rows.append(_row(symbol, "crypto", "tecnico", "rsi14", r["rsi14"], "indice",
+                              fecha, retrieved_at, "Coinbase", calculation_method=method))
+        if r["atr14"] is not None:
+            rows.append(_row(symbol, "crypto", "tecnico", "atr14", r["atr14"], "EUR",
+                              fecha, retrieved_at, "Coinbase", calculation_method=method))
+        if r["atr14_pct_precio"] is not None:
+            rows.append(_row(symbol, "crypto", "tecnico", "atr14_pct_precio", r["atr14_pct_precio"], "%",
+                              fecha, retrieved_at, "Coinbase", calculation_method=method))
+        if r["volatilidad_hist_30d_anualizada_pct"] is not None:
+            rows.append(_row(symbol, "crypto", "tecnico", "volatilidad_hist_30d_anualizada_pct",
+                              r["volatilidad_hist_30d_anualizada_pct"], "%",
+                              fecha, retrieved_at, "Coinbase", calculation_method=method))
     return rows
 
 

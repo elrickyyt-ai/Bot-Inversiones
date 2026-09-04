@@ -6,15 +6,22 @@ import json
 import os
 from datetime import datetime, timezone
 
-from indicators import sma, rsi, macd, atr, historical_volatility, roc, swing_structure
+from indicators import sma, rsi, macd, atr, historical_volatility, historical_volatility_series, roc, swing_structure
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "_data")
 
 ASSETS = ["BTC", "ETH", "ADA", "SOL", "DOT", "XRP"]
 
 
-def _load_ohlc(symbol):
-    with open(f"{DATA_DIR}/{symbol}_ohlc.json") as f:
+def _load_ohlc(symbol, path=None):
+    """path=None (por defecto): fichero incremental de Kraken, como
+    siempre. Backfill (2026-09-04): acepta una ruta alternativa (ej. el
+    fichero de Coinbase Exchange, engine/technical/fetch_backfill.py) para
+    reutilizar exactamente el mismo parseo -- ambos ficheros se guardan en
+    la misma forma cruda [time, open, high, low, close, vwap, volume,
+    count] precisamente para esto, sin duplicar logica de parseo."""
+    path = path or f"{DATA_DIR}/{symbol}_ohlc.json"
+    with open(path) as f:
         raw = json.load(f)
     # Kraken: [time, open, high, low, close, vwap, volume, count]
     return [
@@ -75,6 +82,7 @@ def score_asset(symbol):
         "activo": symbol,
         "fecha_dato": fecha_dato,
         "precio": round(price, 6),
+        "volumen": round(ohlc[-1]["volume"], 6),
         "sma20": round(sma20, 6) if sma20 else None,
         "sma50": round(sma50, 6) if sma50 else None,
         "sma100": round(sma100, 6) if sma100 else None,
@@ -89,6 +97,86 @@ def score_asset(symbol):
         "estructura": structure,
         "confluencia": {"detalle": checks, "sesgo": sesgo, "confidence_pct": confidence},
     }
+
+
+def _split_contiguous(ohlc):
+    """Divide en tramos donde cada vela esta exactamente 1 dia despues de
+    la anterior. Un hueco real en la serie (ej. XRP: Coinbase lo
+    deslisto en EEUU entre 2021-01 y 2023-07 por el litigio con la SEC,
+    ~905 dias sin cotizacion en esa fuente) NO debe mezclarse dentro de
+    una misma ventana movil de SMA/RSI/ATR/volatilidad -- eso calcularia,
+    por ejemplo, un "SMA20" combinando un precio de 2023 con 19 precios
+    de antes del hueco, algo que no es una media movil de 20 dias real.
+    Cada tramo se trata como una serie independiente, con su propio
+    periodo de calentamiento -- mismo principio que ya aplica al inicio
+    de cualquier serie con menos de N velas disponibles."""
+    if not ohlc:
+        return []
+    segments = [[ohlc[0]]]
+    for c in ohlc[1:]:
+        if c["time"] - segments[-1][-1]["time"] == 86400:
+            segments[-1].append(c)
+        else:
+            segments.append([c])
+    return segments
+
+
+def _historical_series_segment(ohlc):
+    closes = [c["close"] for c in ohlc]
+
+    sma20_s = sma(closes, 20)
+    sma50_s = sma(closes, 50)
+    sma100_s = sma(closes, 100)
+    sma200_s = sma(closes, 200)
+    rsi14_s = rsi(closes, 14)
+    atr14_s = atr(ohlc, 14)
+    hv30_s = historical_volatility_series(closes, 30)
+
+    out = []
+    for i, c in enumerate(ohlc):
+        fecha_dato = datetime.fromtimestamp(c["time"], tz=timezone.utc).strftime("%Y-%m-%d")
+        precio = closes[i]
+        atr14 = atr14_s[i]
+        out.append({
+            "fecha_dato": fecha_dato,
+            "precio": round(precio, 6),
+            "volumen": round(c["volume"], 6),
+            "sma20": round(sma20_s[i], 6) if sma20_s[i] is not None else None,
+            "sma50": round(sma50_s[i], 6) if sma50_s[i] is not None else None,
+            "sma100": round(sma100_s[i], 6) if sma100_s[i] is not None else None,
+            "sma200": round(sma200_s[i], 6) if sma200_s[i] is not None else None,
+            "rsi14": round(rsi14_s[i], 1) if rsi14_s[i] is not None else None,
+            "atr14": round(atr14, 6) if atr14 is not None else None,
+            "atr14_pct_precio": round(atr14 / precio * 100, 2) if atr14 else None,
+            "volatilidad_hist_30d_anualizada_pct": hv30_s[i],
+        })
+    return out
+
+
+def historical_series(symbol, path):
+    """Backfill (2026-09-04): serie historica completa de precio/volumen/
+    indicadores -- misma metodologia que score_asset() usa para "hoy"
+    (mismas funciones de indicators.py: sma/rsi/atr/historical_volatility,
+    sobre el mismo OHLC parseado por _load_ohlc), recorriendo TODO el
+    array que esas funciones ya devuelven en vez de descartar todo menos
+    el ultimo punto ([-1]). No introduce ningun calculo nuevo.
+
+    `path` (obligatorio, a diferencia de score_asset()): el fichero de
+    origen del backfill, normalmente
+    engine/technical/_data/{symbol}_ohlc_backfill.json (Coinbase
+    Exchange, ver fetch_backfill.py) -- nunca el fichero incremental de
+    Kraken, para no re-procesar lo que el flujo incremental ya cubre.
+
+    Los primeros ~200 puntos de cada tramo contiguo (ver
+    _split_contiguous) no tendran sma200 (ni rsi14/atr14/volatilidad en
+    sus propios primeros N puntos) por la misma razon que "hoy" tampoco
+    los tendria con menos de 200 velas disponibles -- honesto, no un
+    fallo."""
+    ohlc = _load_ohlc(symbol, path=path)
+    out = []
+    for segment in _split_contiguous(ohlc):
+        out.extend(_historical_series_segment(segment))
+    return out
 
 
 if __name__ == "__main__":

@@ -100,6 +100,18 @@ def historical_volatility(closes, window=30, periods_per_year=365):
     return round(math.sqrt(var) * math.sqrt(periods_per_year) * 100, 1)
 
 
+def historical_volatility_series(closes, window=30, periods_per_year=365):
+    """Backfill (2026-09-04): serie historica completa de volatilidad --
+    misma formula que historical_volatility() (retornos logaritmicos de la
+    ventana movil), aplicada en cada indice en vez de solo al ultimo.
+    Reutiliza la funcion existente sobre un prefijo de la serie en cada
+    paso, sin reescribir el calculo."""
+    out = [None] * len(closes)
+    for i in range(window, len(closes)):
+        out[i] = historical_volatility(closes[:i + 1], window, periods_per_year)
+    return out
+
+
 def roc(closes, period=12):
     if len(closes) < period + 1 or closes[-period - 1] == 0:
         return None

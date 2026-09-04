@@ -143,6 +143,89 @@ class TestTechnicalEngine(unittest.TestCase):
         alcistas = sum(1 for v in r["confluencia"]["detalle"].values() if v is True)
         self.assertLessEqual(alcistas, 4)
 
+    def test_score_asset_incluye_volumen(self):
+        """Bloque 3 (2026-09-04): volumen anadido a score_asset() para
+        que el backfill (que si lo necesita, es uno de los campos
+        pedidos explicitamente) no introduzca un campo que "hoy" no
+        tiene -- misma fuente (ohlc[-1]['volume']), ya descargada, sin
+        llamada nueva."""
+        r = self.mod.score_asset("BTC")
+        self.assertGreater(r["volumen"], 0)
+
+    def test_historical_series_btc_fixture_conteo_y_esquema(self):
+        """tests/fixtures/technical/BTC_ohlc.json: 721 velas reales de
+        Kraken, sin huecos -- historical_series() debe devolver una fila
+        por vela, con las mismas claves para todas las fechas (algunas
+        con valor None hasta acumular suficiente ventana, nunca una clave
+        ausente)."""
+        path = os.path.join(ROOT, "engine", "technical", "_data", "BTC_ohlc.json")
+        out = self.mod.historical_series("BTC", path)
+        self.assertEqual(len(out), 721)
+        self.assertEqual(out[0]["fecha_dato"], "2024-07-30")
+        self.assertEqual(out[-1]["fecha_dato"], "2026-07-20")
+        claves_esperadas = {
+            "fecha_dato", "precio", "volumen", "sma20", "sma50", "sma100", "sma200",
+            "rsi14", "atr14", "atr14_pct_precio", "volatilidad_hist_30d_anualizada_pct",
+        }
+        for r in out:
+            self.assertEqual(claves_esperadas, set(r.keys()))
+        # con 721 velas hay de sobra para sma200 en las ultimas filas
+        self.assertIsNotNone(out[-1]["sma200"])
+        # las primeras 199 no pueden tenerlo (ventana insuficiente, honesto)
+        self.assertIsNone(out[0]["sma200"])
+
+    def test_historical_series_respeta_huecos_no_mezcla_ventanas(self):
+        """2026-09-04: un hueco real en la serie (encontrado en el
+        backfill real de XRP -- Coinbase deslisto XRP en EEUU entre
+        2021-01 y 2023-07 por el litigio con la SEC, ~905 dias) no debe
+        producir una SMA/RSI/ATR que mezcle precios de antes y despues
+        del hueco. Fixture sintetica: 25 velas seguidas, hueco de 5 dias,
+        25 velas mas a un nivel de precio totalmente distinto -- si el
+        codigo mezclara ventanas, sma20 en la primera vela del segundo
+        tramo no seria None (tendria de sobra con las 19 ultimas del
+        primer tramo)."""
+        base = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
+        rows = []
+        for i in range(25):
+            t = int((base + datetime.timedelta(days=i)).timestamp())
+            c = 100.0 + i
+            rows.append([t, c, c, c, c, 0, 1.0, 0])
+        gap_start = base + datetime.timedelta(days=25 + 5)  # 5 dias de hueco
+        for i in range(25):
+            t = int((gap_start + datetime.timedelta(days=i)).timestamp())
+            c = 100000.0 + i  # nivel de precio totalmente distinto, no confundible
+            rows.append([t, c, c, c, c, 0, 1.0, 0])
+
+        tmp_path = os.path.join(tempfile.gettempdir(), "test_gap_ohlc.json")
+        with open(tmp_path, "w") as f:
+            json.dump(rows, f)
+        try:
+            segments = self.mod._split_contiguous(self.mod._load_ohlc("GAP", path=tmp_path))
+            self.assertEqual([len(s) for s in segments], [25, 25])
+
+            out = self.mod.historical_series("GAP", tmp_path)
+            self.assertEqual(len(out), 50)
+            primera_del_segundo_tramo = out[25]
+            self.assertIsNone(primera_del_segundo_tramo["sma20"],
+                               "el segundo tramo debe empezar su propia ventana, no heredar la del primero")
+            self.assertEqual(primera_del_segundo_tramo["precio"], 100000.0)
+
+            ultima = out[-1]  # vela #20 (indice 19) del segundo tramo -> sma20 ya valida
+            self.assertIsNotNone(ultima["sma20"])
+            # media de las 20 ultimas del SEGUNDO tramo unicamente (100005..100024)
+            self.assertAlmostEqual(ultima["sma20"], sum(range(100005, 100025)) / 20, places=3)
+        finally:
+            os.remove(tmp_path)
+
+    def test_historical_volatility_series_misma_formula_que_historical_volatility(self):
+        ind = _import("technical", "indicators")
+        closes = [100.0 + (i % 7) * 3.1 for i in range(80)]  # serie no trivial, deterministica
+        serie = ind.historical_volatility_series(closes, 30)
+        self.assertEqual(len(serie), len(closes))
+        for i in range(len(closes)):
+            esperado = ind.historical_volatility(closes[:i + 1], 30)
+            self.assertEqual(serie[i], esperado)
+
 
 class TestMacroEngine(unittest.TestCase):
     @classmethod

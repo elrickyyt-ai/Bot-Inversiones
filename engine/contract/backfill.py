@@ -15,10 +15,11 @@ ninguna coordinacion especial entre los dos procesos.
 Uso:
     python3 engine/contract/backfill.py --macro
     python3 engine/contract/backfill.py --tvl
+    python3 engine/contract/backfill.py --technical
 """
 import sys
 
-from adapters import adapt_macro_backfill, adapt_crypto_backfill
+from adapters import adapt_macro_backfill, adapt_crypto_backfill, adapt_technical_backfill
 from build import _write_metric_rows, CRYPTO_ASSETS
 
 
@@ -43,11 +44,28 @@ def backfill_tvl():
         print(f"{symbol}: {total} filas históricas ({added} nuevas, {skipped} ya existían)")
 
 
+def backfill_technical():
+    """Requiere engine/technical/fetch_backfill.py ya ejecutado (los
+    ficheros _ohlc_backfill.json en _data/ son gitignored, no se
+    descargan aqui). Si un activo no tiene ese fichero todavia,
+    adapt_technical_backfill() devuelve [] -- no es un error, solo
+    no hay nada que escribir para ese activo en esta pasada."""
+    for symbol in CRYPTO_ASSETS:
+        rows = adapt_technical_backfill(symbol)
+        if not rows:
+            print(f"{symbol}: sin fichero de backfill todavia (fetch_backfill.py)")
+            continue
+        total, added, skipped = _write_metric_rows(symbol, rows)
+        print(f"{symbol}: {total} filas históricas ({added} nuevas, {skipped} ya existían)")
+
+
 if __name__ == "__main__":
     if "--macro" in sys.argv:
         backfill_macro()
     elif "--tvl" in sys.argv:
         backfill_tvl()
+    elif "--technical" in sys.argv:
+        backfill_technical()
     else:
-        print("Uso: python3 engine/contract/backfill.py [--macro|--tvl]")
+        print("Uso: python3 engine/contract/backfill.py [--macro|--tvl|--technical]")
         sys.exit(1)

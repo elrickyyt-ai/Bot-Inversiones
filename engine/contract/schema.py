@@ -66,6 +66,7 @@ SOURCE_PRIORITY = {
     "CoinGecko": 2,
     "DefiLlama": 2,
     "Kraken": 2,
+    "Coinbase": 2,
     "Alpha Vantage": 2,
 }
 

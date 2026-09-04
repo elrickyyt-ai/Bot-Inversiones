@@ -126,6 +126,47 @@ class TestAdapters(unittest.TestCase):
                           "atr14_pct_precio", "volatilidad_hist_30d_anualizada_pct"):
             self.assertIn(expected, metrics)
 
+    def test_adapt_technical_incluye_volumen(self):
+        """Bloque 3 (2026-09-04): volumen es uno de los campos pedidos
+        explicitamente para el historico, anadido tambien a "hoy" para
+        que no diverjan."""
+        rows = self.mod.adapt_technical("BTC")
+        by_metric = {r["metric"]: r for r in rows}
+        self.assertIn("volumen", by_metric)
+        self.assertEqual(by_metric["volumen"]["unit"], "unidades")
+        self.assertGreater(by_metric["volumen"]["value"], 0)
+
+    def test_adapt_technical_backfill_vacio_sin_fichero(self):
+        """Un activo sin {ID}_ohlc_backfill.json debe devolver [] en vez
+        de fallar, mismo patron que adapt_news(). Simbolo inexistente a
+        proposito (no XRP/ETH/...): esta sesion ya ejecuto el backfill
+        real para los 6 activos de CRYPTO_ASSETS, y _materialize_fixtures()
+        no limpia _data/ antes de copiar -- un simbolo real tendria su
+        fichero real de esta sesion, no el vacio que prueba este test."""
+        self.assertEqual(self.mod.adapt_technical_backfill("ZZZ"), [])
+
+    def test_adapt_technical_backfill_filas_validas_fuente_y_frontera(self):
+        """tests/fixtures/technical/BTC_ohlc_backfill.json: 30 velas
+        sinteticas, 2024-06-30 -> 2024-07-29 -- un dia antes de la
+        primera vela de tests/fixtures/technical/BTC_ohlc.json
+        (2024-07-30, la frontera de Kraken). Ninguna fila debe caer en
+        o despues de esa frontera (nunca dos fuentes para la misma
+        fecha), y la fuente debe ser "Coinbase", nunca "Kraken"."""
+        rows = self.mod.adapt_technical_backfill("BTC")
+        self.assertGreater(len(rows), 0)
+        for row in rows:
+            schema.validate_metric_row(row)
+            self.assertEqual(row["source"], "Coinbase")
+            self.assertLess(row["data_as_of"], "2024-07-30", "no debe solaparse con la frontera de Kraken")
+        metrics = {r["metric"] for r in rows}
+        self.assertIn("precio", metrics)
+        self.assertIn("volumen", metrics)
+        self.assertIn("sma20", metrics, "30 velas alcanzan para sma20 (necesita 20)")
+        self.assertNotIn("sma50", metrics, "30 velas no alcanzan para sma50 (necesita 50), no debe inventarse")
+        self.assertNotIn("sma200", metrics)
+        fechas = {r["data_as_of"] for r in rows if r["metric"] == "precio"}
+        self.assertEqual(len(fechas), 30, "una fila de precio por cada una de las 30 velas de la fixture")
+
     def test_adapt_asset_crypto_tiene_currency_documentada(self):
         row = self.mod.adapt_asset_crypto("BTC")
         schema.validate_asset_row(row)
