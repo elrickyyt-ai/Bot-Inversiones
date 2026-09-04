@@ -5,6 +5,7 @@ Usa las mismas fixtures congeladas que tests/test_engines.py, con el
 mismo cuidado de no depender de red ni de las carpetas _data reales.
 """
 import datetime
+import json
 import os
 import sys
 import unittest
@@ -138,34 +139,56 @@ class TestAdapters(unittest.TestCase):
 
     def test_adapt_technical_backfill_vacio_sin_fichero(self):
         """Un activo sin {ID}_ohlc_backfill.json debe devolver [] en vez
-        de fallar, mismo patron que adapt_news(). Simbolo inexistente a
-        proposito (no XRP/ETH/...): esta sesion ya ejecuto el backfill
-        real para los 6 activos de CRYPTO_ASSETS, y _materialize_fixtures()
-        no limpia _data/ antes de copiar -- un simbolo real tendria su
-        fichero real de esta sesion, no el vacio que prueba este test."""
+        de fallar, mismo patron que adapt_news()."""
         self.assertEqual(self.mod.adapt_technical_backfill("ZZZ"), [])
 
-    def test_adapt_technical_backfill_filas_validas_fuente_y_frontera(self):
-        """tests/fixtures/technical/BTC_ohlc_backfill.json: 30 velas
-        sinteticas, 2024-06-30 -> 2024-07-29 -- un dia antes de la
-        primera vela de tests/fixtures/technical/BTC_ohlc.json
-        (2024-07-30, la frontera de Kraken). Ninguna fila debe caer en
-        o despues de esa frontera (nunca dos fuentes para la misma
-        fecha), y la fuente debe ser "Coinbase", nunca "Kraken"."""
+    def test_adapt_technical_backfill_excluye_fechas_ya_en_el_data_contract(self):
+        """Corregido 2026-09-04 (hueco de proceso detectado en Power BI):
+        adapt_technical_backfill() ya no excluye por una frontera fija
+        (la cache rotativa de Kraken, que no reflejaba lo que el Data
+        Contract tenia escrito de verdad) -- ahora excluye cualquier
+        fecha que YA este en data/metrics/{symbol}.json, sin importar en
+        que posicion caiga. Fixture: tests/fixtures/technical/
+        BTC_ohlc_backfill.json (30 velas, 2024-06-30 -> 2024-07-29).
+        Simulamos un Data Contract existente con dos fechas YA cubiertas
+        en mitad del rango (no en un extremo) -- exactamente el patron
+        de bug real: el cron solo escribe "hoy" cada vez que corre, deja
+        huecos internos, no una frontera limpia."""
+        import shutil
+        import tempfile
+        tmpdir = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, tmpdir, ignore_errors=True)
+        os.makedirs(os.path.join(tmpdir, "metrics"))
+        ya_cubiertas = ["2024-07-10", "2024-07-20"]
+        existing_rows = [
+            {"asset_id": "BTC", "asset_type": "crypto", "domain": "tecnico", "metric": "precio",
+             "value": 1.0, "unit": "EUR", "data_as_of": f, "retrieved_at": "2026-09-04T00:00:00Z",
+             "source": "Kraken", "source_priority": 2, "confidence_pct": None, "data_quality_pct": None,
+             "calculation_method": None, "source_url": None}
+            for f in ya_cubiertas
+        ]
+        with open(os.path.join(tmpdir, "metrics", "BTC.json"), "w") as f:
+            json.dump(existing_rows, f)
+
+        original_dir = self.mod.DATA_CONTRACT_DIR
+        self.mod.DATA_CONTRACT_DIR = tmpdir
+        self.addCleanup(setattr, self.mod, "DATA_CONTRACT_DIR", original_dir)
+
         rows = self.mod.adapt_technical_backfill("BTC")
         self.assertGreater(len(rows), 0)
         for row in rows:
             schema.validate_metric_row(row)
             self.assertEqual(row["source"], "Coinbase")
-            self.assertLess(row["data_as_of"], "2024-07-30", "no debe solaparse con la frontera de Kraken")
+        fechas = {r["data_as_of"] for r in rows if r["metric"] == "precio"}
+        self.assertEqual(len(fechas), 28, "30 velas de la fixture menos las 2 ya cubiertas por Kraken")
+        for f in ya_cubiertas:
+            self.assertNotIn(f, fechas, "una fecha ya cubierta por Kraken no debe reescribirse desde Coinbase")
         metrics = {r["metric"] for r in rows}
         self.assertIn("precio", metrics)
         self.assertIn("volumen", metrics)
         self.assertIn("sma20", metrics, "30 velas alcanzan para sma20 (necesita 20)")
         self.assertNotIn("sma50", metrics, "30 velas no alcanzan para sma50 (necesita 50), no debe inventarse")
         self.assertNotIn("sma200", metrics)
-        fechas = {r["data_as_of"] for r in rows if r["metric"] == "precio"}
-        self.assertEqual(len(fechas), 30, "una fila de precio por cada una de las 30 velas de la fixture")
 
     def test_adapt_asset_crypto_tiene_currency_documentada(self):
         row = self.mod.adapt_asset_crypto("BTC")
@@ -472,6 +495,72 @@ class TestBuildHistorizacion(unittest.TestCase):
         with open(os.path.join(self.tmpdir, "assets", "BTC.json")) as f:
             contenido = json.load(f)
         self.assertEqual(contenido["currency"], "USD")
+
+
+class TestDetectTechnicalGaps(unittest.TestCase):
+    """engine/contract/backfill.py::detect_technical_gaps() -- el lado de
+    diagnostico/reporte de la correccion de 2026-09-04 (hueco de proceso
+    detectado en Power BI)."""
+
+    def setUp(self):
+        import shutil
+        import tempfile
+        self.tmpdir = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.tmpdir, ignore_errors=True)
+        os.makedirs(os.path.join(self.tmpdir, "metrics"))
+        self.backfill = _import_contract_module("backfill")
+        self.backfill.DATA_DIR = self.tmpdir
+
+    def _write_precio_dates(self, symbol, fechas):
+        rows = [
+            {"asset_id": symbol, "asset_type": "crypto", "domain": "tecnico", "metric": "precio",
+             "value": 1.0, "unit": "EUR", "data_as_of": f, "retrieved_at": "2026-09-04T00:00:00Z",
+             "source": "Kraken", "source_priority": 2, "confidence_pct": None, "data_quality_pct": None,
+             "calculation_method": None, "source_url": None}
+            for f in fechas
+        ]
+        with open(os.path.join(self.tmpdir, "metrics", f"{symbol}.json"), "w") as f:
+            json.dump(rows, f)
+
+    def test_sin_fichero_no_da_huecos(self):
+        self.assertEqual(self.backfill.detect_technical_gaps("BTC"), [])
+
+    def test_fechas_consecutivas_sin_huecos(self):
+        self._write_precio_dates("BTC", ["2026-01-01", "2026-01-02", "2026-01-03"])
+        self.assertEqual(self.backfill.detect_technical_gaps("BTC"), [])
+
+    def test_detecta_un_hueco_interno(self):
+        """El patron real del bug: dos fechas 'sueltas' con un hueco
+        grande en medio -- no una frontera limpia en un extremo."""
+        self._write_precio_dates("BTC", ["2024-07-29", "2026-07-20", "2026-09-04"])
+        gaps = self.backfill.detect_technical_gaps("BTC")
+        self.assertEqual(gaps, [
+            ("2024-07-29", "2026-07-20", 721),
+            ("2026-07-20", "2026-09-04", 46),
+        ])
+
+    def test_ignora_otras_metricas_y_dominios(self):
+        """Solo debe mirar domain=tecnico, metric=precio -- otras filas
+        (sma20, o de otro dominio) no deben contarse como fechas de la
+        serie de precio."""
+        rows = [
+            {"asset_id": "BTC", "asset_type": "crypto", "domain": "tecnico", "metric": "precio",
+             "value": 1.0, "unit": "EUR", "data_as_of": "2026-01-01", "retrieved_at": "2026-09-04T00:00:00Z",
+             "source": "Kraken", "source_priority": 2, "confidence_pct": None, "data_quality_pct": None,
+             "calculation_method": None, "source_url": None},
+            {"asset_id": "BTC", "asset_type": "crypto", "domain": "tecnico", "metric": "sma20",
+             "value": 1.0, "unit": "EUR", "data_as_of": "2026-06-01", "retrieved_at": "2026-09-04T00:00:00Z",
+             "source": "Kraken", "source_priority": 2, "confidence_pct": None, "data_quality_pct": None,
+             "calculation_method": None, "source_url": None},
+            {"asset_id": "BTC", "asset_type": "crypto", "domain": "fundamental", "metric": "precio",
+             "value": 1.0, "unit": "EUR", "data_as_of": "2026-03-01", "retrieved_at": "2026-09-04T00:00:00Z",
+             "source": "CoinGecko", "source_priority": 2, "confidence_pct": None, "data_quality_pct": None,
+             "calculation_method": None, "source_url": None},
+        ]
+        with open(os.path.join(self.tmpdir, "metrics", "BTC.json"), "w") as f:
+            json.dump(rows, f)
+        # solo hay UNA fecha de domain=tecnico+metric=precio -- sin pares, sin huecos que detectar
+        self.assertEqual(self.backfill.detect_technical_gaps("BTC"), [])
 
 
 if __name__ == "__main__":

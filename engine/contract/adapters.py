@@ -134,23 +134,53 @@ def adapt_technical(symbol):
     return rows
 
 
+DATA_CONTRACT_DIR = os.path.join(os.path.dirname(ROOT), "data")  # ROOT aqui es engine/, no la raiz del repo (a diferencia de build.py::ROOT)
+
+
+def _existing_technical_dates(symbol):
+    """Fechas de 'precio' (domain=tecnico) ya escritas en
+    data/metrics/{symbol}.json, de CUALQUIER fuente -- es la referencia
+    real de "que ya tenemos". Corregido 2026-09-04: antes se usaba la
+    primera vela de la cache ROTATIVA de Kraken (_ohlc.json, que solo
+    guarda los ultimos ~720 dias desde HOY) como frontera, asumiendo que
+    eso reflejaba lo que el Data Contract ya tenia escrito -- pero el
+    cron incremental solo escribe UN punto por ejecucion (el "hoy" de
+    cada dia que corrio), nunca toda la ventana de Kraken. Eso dejo un
+    hueco real de ~2 anios en data/metrics/ entre el final del primer
+    backfill y el primer dia real en que empezo a correr el cron diario,
+    sin que ningun fichero _ohlc.json lo reflejara (detectado por el
+    usuario en Power BI). Usar el propio Data Contract como fuente de
+    verdad de "que fechas ya tenemos" es la correccion: cierra
+    automaticamente cualquier hueco de proceso, no solo el que se
+    conocia al escribir este codigo."""
+    path = os.path.join(DATA_CONTRACT_DIR, "metrics", f"{symbol}.json")
+    if not os.path.exists(path):
+        return set()
+    with open(path, encoding="utf-8") as fh:
+        rows = json.load(fh)
+    return {r["data_as_of"] for r in rows if r.get("domain") == "tecnico" and r.get("metric") == "precio"}
+
+
 def adapt_technical_backfill(symbol):
-    """Backfill historico (2026-09-04, Bloque 3) -- FASE DISTINTA de
+    """Backfill historico (2026-09-04, Bloque 3; frontera corregida el
+    mismo dia -- ver _existing_technical_dates()) -- FASE DISTINTA de
     adapt_technical() (que solo da "hoy" desde Kraken). Recorre TODO el
-    OHLC ya descargado de Coinbase Exchange
+    OHLC ya descargado/mantenido de Coinbase Exchange
     (engine/technical/_data/{symbol}_ohlc_backfill.json, ver
-    engine/technical/fetch_backfill.py) y produce una fila por fecha real
-    para cada metrica -- misma metodologia que adapt_technical(), via
-    score.py::historical_series() (misma funcion de sma/rsi/atr/
-    volatilidad, solo que recorriendo todo el array en vez de [-1]).
+    engine/technical/fetch_backfill.py::update_cache()) y produce una
+    fila por fecha real para cada metrica -- misma metodologia que
+    adapt_technical(), via score.py::historical_series() (misma funcion
+    de sma/rsi/atr/volatilidad, solo que recorriendo todo el array en vez
+    de [-1]).
 
     Fuente = "Coinbase", nunca "Kraken", para dejar constancia honesta de
     que ese tramo del historico viene de una fuente distinta. Nunca se
-    solapan: solo se escriben fechas ESTRICTAMENTE anteriores a la
-    primera vela ya cacheada de Kraken (misma frontera que ya respeta
-    fetch_backfill.py al descargar, aqui se vuelve a aplicar de forma
-    defensiva por si el fichero de backfill se regenera mas tarde con la
-    ventana de Kraken ya desplazada).
+    solapan: solo se escriben fechas que el Data Contract NO tiene
+    todavia (de ninguna fuente) -- esto cierra cualquier hueco interno,
+    no solo uno antes de una frontera fija, y es lo que permite
+    reutilizar esta misma funcion como el mecanismo de "backfill bajo
+    demanda cuando se detecta un hueco" (ver detect_technical_gaps() en
+    engine/contract/backfill.py).
 
     Si no existe {symbol}_ohlc_backfill.json todavia (activo no
     backfillado), devuelve [] -- mismo patron defensivo que
@@ -159,16 +189,15 @@ def adapt_technical_backfill(symbol):
     if not os.path.exists(backfill_path):
         return []
     mod = _load_module("technical", "score")
-    boundary = mod._load_ohlc(symbol)[0]["time"]
-    boundary_fecha = datetime.utcfromtimestamp(boundary).strftime("%Y-%m-%d")
+    ya_cubierto = _existing_technical_dates(symbol)
     retrieved_at = now_utc_iso()
     method = "engine/technical/README.md"
 
     rows = []
     for r in mod.historical_series(symbol, backfill_path):
         fecha = r["fecha_dato"]
-        if fecha >= boundary_fecha:
-            continue  # defensivo: nunca solaparse con lo que ya cubre Kraken
+        if fecha in ya_cubierto:
+            continue  # ya esta en el Data Contract (Kraken incremental u otra pasada de este backfill)
         rows.append(_row(symbol, "crypto", "tecnico", "precio", r["precio"], "EUR",
                           fecha, retrieved_at, "Coinbase", calculation_method=method))
         rows.append(_row(symbol, "crypto", "tecnico", "volumen", r["volumen"], "unidades",
