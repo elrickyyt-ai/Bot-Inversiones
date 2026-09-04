@@ -89,6 +89,28 @@ class TestCryptoFundamentalsEngine(unittest.TestCase):
         r = self.mod.score_asset("BTC", None)
         self.assertEqual(r["fecha_dato"], "2026-07-20", "fecha_dato debe venir de detail['last_updated'], fijo en la fixture")
 
+    def test_historical_tvl_percentile_vacio_sin_cadena_tvl(self):
+        self.assertEqual(self.mod.historical_tvl_percentile("BTC", None), [])
+        self.assertEqual(self.mod.historical_tvl_percentile("XRP", None), [])
+
+    def test_historical_tvl_percentile_misma_formula_que_pct_in_window(self):
+        """tests/fixtures/crypto/ETH_tvl.json: 15 puntos diarios fijos,
+        pensados para que la ventana movil de 365 dias sea valida a partir
+        del 10o punto (indice 9, _pct_in_window exige >=10 valores) --
+        valores calculados a mano y verificados contra la formula ya
+        existente en _pct_in_window, ninguna metodologia nueva."""
+        out = self.mod.historical_tvl_percentile("ETH", "Ethereum")
+        self.assertEqual(len(out), 6, "9 primeros puntos sin ventana suficiente, quedan 15-9=6")
+        esperado = [
+            ("2023-11-23", 87.5),
+            ("2023-11-24", 25.0),
+            ("2023-11-25", 100.0),
+            ("2023-11-26", 90.0),
+            ("2023-11-27", 10.0),
+            ("2023-11-28", 100.0),
+        ]
+        self.assertEqual(out, esperado)
+
 
 class TestTechnicalEngine(unittest.TestCase):
     @classmethod

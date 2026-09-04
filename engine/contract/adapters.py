@@ -67,6 +67,23 @@ def adapt_crypto(symbol, tvl_chain):
     return rows
 
 
+def adapt_crypto_backfill(symbol, tvl_chain):
+    """Backfill historico (2026-09-04) -- FASE DISTINTA de adapt_crypto()
+    (que solo da "hoy"). Recorre TODA la serie de TVL ya descargada de
+    DefiLlama (score.py::historical_tvl_percentile, misma formula de
+    percentil-en-ventana-de-365-dias que ya usa el flujo incremental) y
+    produce una fila de tvl_percentile_365d por fecha real. Vacio para
+    BTC/XRP (sin cadena de TVL, por diseno)."""
+    mod = _load_module("crypto", "score")
+    retrieved_at = now_utc_iso()
+    rows = []
+    for fecha, pct in mod.historical_tvl_percentile(symbol, tvl_chain):
+        rows.append(_row(symbol, "crypto", "fundamental", "tvl_percentile_365d", pct, "%",
+                          fecha, retrieved_at, "DefiLlama",
+                          calculation_method="engine/crypto/README.md"))
+    return rows
+
+
 def adapt_technical(symbol):
     """Fase 3 -- engine/technical/score.py. Snapshot en vivo tambien."""
     mod = _load_module("technical", "score")

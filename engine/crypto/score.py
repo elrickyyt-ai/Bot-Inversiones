@@ -25,6 +25,30 @@ def _pct_in_window(values):
     return round((current - lo) / (hi - lo) * 100, 1)
 
 
+def historical_tvl_percentile(symbol, tvl_chain):
+    """Backfill (2026-09-04): serie historica completa de
+    tvl_percentile_365d -- misma formula que score_asset() ya usa para
+    "hoy" (_pct_in_window sobre una ventana movil de 365 dias), aplicada
+    a cada punto de la serie de DefiLlama ya descargada en vez de solo
+    al ultimo. Devuelve [] para activos sin cadena de TVL (BTC/XRP, por
+    diseno -- ver ASSETS_TVL) y [] tambien para los primeros ~365 dias
+    de cada cadena, donde todavia no hay ventana suficiente
+    (_pct_in_window exige al menos 10 puntos, igual que en "hoy")."""
+    if not tvl_chain:
+        return []
+    with open(f"{DATA_DIR}/{symbol}_tvl.json") as f:
+        tvl_series = json.load(f)
+    valores = [r["tvl"] for r in tvl_series]
+    fechas = [datetime.fromtimestamp(r["date"], tz=timezone.utc).strftime("%Y-%m-%d") for r in tvl_series]
+    out = []
+    for i in range(len(valores)):
+        ventana = valores[max(0, i - 364):i + 1]
+        pct = _pct_in_window(ventana)
+        if pct is not None:
+            out.append((fechas[i], pct))
+    return out
+
+
 def score_asset(symbol, tvl_chain):
     with open(f"{DATA_DIR}/{symbol}_detail.json") as f:
         detail = json.load(f)

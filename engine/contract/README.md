@@ -72,19 +72,22 @@ Proceso **distinto** de `build.py`, no lo ejecuta el cron diario. `build.py` es 
 
 ```
 python3 engine/contract/backfill.py --macro
+python3 engine/contract/backfill.py --tvl
 ```
 
 Ambos procesos escriben por la **misma función idempotente** (`build.py::_write_metric_rows`, clave `asset_id+domain+metric+data_as_of+source`) — nunca pueden duplicar ni chocar entre sí, sin coordinación especial.
 
-**Macro (FRED)**: ya teníamos el histórico completo descargado en `_data/` (no hizo falta ninguna llamada nueva) — solo faltaba un adaptador que lo recorriera entero. `engine/macro/score.py::historical_series_us()/historical_series_ea()` reutilizan la misma fórmula de variación interanual que ya usaba `score_us()/score_ea()` (`_yoy_series()`, generalización de `_yoy()` a toda la serie, no una metodología nueva), aplicada a cada punto en vez de solo al último. **No incluyen `regimen_estimado`/`señales`** — eso es una síntesis de "hoy", no tiene sentido calcularlo retroactivamente para cada fecha pasada sin más cuidado, y no forma parte del Data Contract hoy. Resultado: EE.UU. desde 1948-01-01, Eurozona desde 1997-12-01, 12213 filas nuevas.
+**Bloque 1 — Macro (FRED)**: ya teníamos el histórico completo descargado en `_data/` (no hizo falta ninguna llamada nueva) — solo faltaba un adaptador que lo recorriera entero. `engine/macro/score.py::historical_series_us()/historical_series_ea()` reutilizan la misma fórmula de variación interanual que ya usaba `score_us()/score_ea()` (`_yoy_series()`, generalización de `_yoy()` a toda la serie, no una metodología nueva), aplicada a cada punto en vez de solo al último. **No incluyen `regimen_estimado`/`señales`** — eso es una síntesis de "hoy", no tiene sentido calcularlo retroactivamente para cada fecha pasada sin más cuidado, y no forma parte del Data Contract hoy. Resultado: EE.UU. desde 1948-01-01, Eurozona desde 1997-12-01, 12213 filas nuevas.
+
+**Bloque 2 — TVL (DefiLlama)**: mismo patrón — `engine/crypto/score.py::historical_tvl_percentile()` generaliza la fórmula ya existente en `_pct_in_window()` (percentil dentro de una ventana móvil de 365 días) a cada punto de la serie de TVL en vez de solo al último. `adapt_crypto_backfill()` recorre esa función y escribe una fila `tvl_percentile_365d` por fecha real. Vacío para BTC/XRP (sin cadena de TVL, por diseño) y para los primeros ~365 días de cada chain (ventana insuficiente, igual que en "hoy"). Resultado real: ETH desde 2018-02-12 (3127 filas), SOL desde 2021-03-26 (1989 filas), ADA desde 2022-01-11 (1698 filas) — 6814 filas nuevas en total. **DOT dio 0 filas**: no es un fallo del backfill, es una incidencia de datos ya conocida y marcada por `score_asset()` (`posible_incidencia_datos=True`) — DefiLlama devuelve TVL=0 en absolutamente todos los puntos de la serie de Polkadot (min=max=0), así que `_pct_in_window()` no puede calcular ningún percentil (misma razón por la que "hoy" tampoco lo calcula). Verificado idempotente (segunda ejecución: 0 filas nuevas en los 4 activos).
 
 ## `data_as_of` vs. `retrieved_at`
 
 La razón de separarlos (a petición explícita del usuario, y es correcta): un ratio fundamental de una acción corresponde al último trimestre reportado, no al momento en que se descarga. Ejemplo real de XOM en esta misma sesión: `precio` con `data_as_of=2026-09-02` (fecha de la cotización) y `pe_ratio` con `data_as_of=2026-06-30` (fecha del último trimestre) — ambos con el mismo `retrieved_at` (cuándo se ejecutó `build.py`). Sin esta distinción, un futuro backtesting (Fase 8) podría usar sin darse cuenta un dato que en la fecha simulada todavía no existía.
 
-## Gap conocido: macro
+## Gap corregido: macro (2026-09-04)
 
-`adapt_macro()` usa la fecha de descarga como `data_as_of` en vez de la fecha real del último dato publicado (ej. el mes exacto del CPI) — `engine/macro/score.py` no expone todavía esa fecha en su valor de retorno. Corregirlo es un cambio pequeño pero está fuera del alcance acordado para esta pieza (solo Data Contract + adaptadores, sin tocar los motores). Documentado también en el código.
+`adapt_macro()` usaba la fecha de descarga como `data_as_of` en vez de la fecha real del último dato publicado (ej. el mes exacto del CPI) — mismo patrón de bug ya corregido el mismo día para BTC/XRP. Corregido reutilizando `historical_series_us()/historical_series_ea()` (las mismas funciones del backfill) y tomando de cada una la fila más reciente por métrica — con la mejora adicional de que `cpi_yoy_pct`/`fed_funds_pct` (o `hicp_yoy_pct`/`ecb_deposit_rate_pct`) ya no comparten una única fecha, cuando en realidad pueden publicarse en fechas distintas. Corrección histórica aplicada: 8 filas con fecha incorrecta (`2026-09-03`/`2026-09-04`) eliminadas de `data/metrics/US.json` y `data/metrics/EA.json` — no hizo falta regenerarlas, el backfill del Bloque 1 ya había escrito las filas correctas para esas mismas métricas.
 
 ## Regla de privacidad (aplicada en el propio validador, no solo en la documentación)
 

@@ -176,6 +176,25 @@ class TestAdapters(unittest.TestCase):
         # cada activo declarado es US o EA, nunca uno inventado
         self.assertEqual({r["asset_id"] for r in rows}, {"US", "EA"})
 
+    def test_adapt_crypto_backfill_vacio_sin_cadena_tvl(self):
+        self.assertEqual(self.mod.adapt_crypto_backfill("BTC", None), [])
+        self.assertEqual(self.mod.adapt_crypto_backfill("XRP", None), [])
+
+    def test_adapt_crypto_backfill_filas_validas_y_con_fechas_distintas(self):
+        """Bloque 2 (2026-09-04): igual que adapt_macro_backfill(), a
+        diferencia de adapt_crypto() (solo 'hoy') el backfill debe traer
+        varias fechas distintas -- tests/fixtures/crypto/ETH_tvl.json
+        tiene 15 puntos diarios fijos."""
+        rows = self.mod.adapt_crypto_backfill("ETH", "Ethereum")
+        self.assertEqual(len(rows), 6, "9 primeros puntos sin ventana de 365d suficiente")
+        for row in rows:
+            schema.validate_metric_row(row)
+            self.assertEqual(row["asset_id"], "ETH")
+            self.assertEqual(row["metric"], "tvl_percentile_365d")
+            self.assertEqual(row["source"], "DefiLlama")
+        fechas = {r["data_as_of"] for r in rows}
+        self.assertEqual(len(fechas), 6, "cada fila debe tener una fecha real distinta")
+
     def test_adapt_equity_distingue_data_as_of_de_retrieved_at(self):
         rows = self.mod.adapt_equity("IBM")
         for row in rows:
