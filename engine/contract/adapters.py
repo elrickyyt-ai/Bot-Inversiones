@@ -112,29 +112,38 @@ def adapt_technical(symbol):
 
 
 def adapt_macro():
-    """Fase 5 -- engine/macro/score.py. GAP CONOCIDO (documentado en
-    docs/03): usa fecha_dato (fecha de descarga) como data_as_of por
-    ahora, porque score_us()/score_ea() no exponen todavia la fecha real
-    del ultimo dato macro publicado (ej. el mes del CPI). Corregirlo
-    requeriria un cambio pequeno en engine/macro/score.py, fuera del
-    alcance acordado para esta pieza (solo Data Contract + adaptadores).
-    """
+    """Fase 5 -- engine/macro/score.py. data_as_of por metrica es la
+    fecha real del ultimo dato publicado en FRED, no la fecha de
+    descarga -- reutiliza historical_series_us()/historical_series_ea()
+    (las mismas funciones que usa el backfill, ver
+    adapt_macro_backfill() mas abajo), tomando de cada una la fila mas
+    reciente. Corregido 2026-09-04: mismo patron de bug ya corregido
+    para BTC/XRP el mismo dia (fecha de ejecucion en vez de fecha real
+    del dato) -- aqui ademas cpi_yoy_pct/fed_funds_pct (o
+    hicp_yoy_pct/ecb_deposit_rate_pct) pueden tener fechas reales
+    distintas entre si, por eso ya no comparten un unico fecha_dato."""
     mod = _load_module("macro", "score")
     us, ea = mod.score_us(), mod.score_ea()
     retrieved_at = now_utc_iso()
 
+    # ultima fila de cada metrica (las listas van de mas antigua a mas
+    # reciente, asi que un dict quedandose con la ultima ocurrencia da
+    # exactamente el punto mas reciente de cada serie).
+    us_ultimo = {m: (f, v) for m, f, v in mod.historical_series_us()}
+    ea_ultimo = {m: (f, v) for m, f, v in mod.historical_series_ea()}
+
     rows = [
-        _row("US", "macro", "macro", "cpi_yoy_pct", us["cpi_yoy_pct"], "%",
-             us["fecha_dato"], retrieved_at, "FRED", data_quality_pct=us["data_quality_pct"],
+        _row("US", "macro", "macro", "cpi_yoy_pct", us_ultimo["cpi_yoy_pct"][1], "%",
+             us_ultimo["cpi_yoy_pct"][0], retrieved_at, "FRED", data_quality_pct=us["data_quality_pct"],
              calculation_method="engine/macro/README.md"),
-        _row("US", "macro", "macro", "fed_funds_pct", us["fed_funds_pct"], "%",
-             us["fecha_dato"], retrieved_at, "FRED", data_quality_pct=us["data_quality_pct"],
+        _row("US", "macro", "macro", "fed_funds_pct", us_ultimo["fed_funds_pct"][1], "%",
+             us_ultimo["fed_funds_pct"][0], retrieved_at, "FRED", data_quality_pct=us["data_quality_pct"],
              calculation_method="engine/macro/README.md"),
-        _row("EA", "macro", "macro", "hicp_yoy_pct", ea["hicp_yoy_pct"], "%",
-             ea["fecha_dato"], retrieved_at, "FRED", data_quality_pct=ea["data_quality_pct"],
+        _row("EA", "macro", "macro", "hicp_yoy_pct", ea_ultimo["hicp_yoy_pct"][1], "%",
+             ea_ultimo["hicp_yoy_pct"][0], retrieved_at, "FRED", data_quality_pct=ea["data_quality_pct"],
              calculation_method="engine/macro/README.md"),
-        _row("EA", "macro", "macro", "ecb_deposit_rate_pct", ea["ecb_deposit_rate_pct"], "%",
-             ea["fecha_dato"], retrieved_at, "FRED", data_quality_pct=ea["data_quality_pct"],
+        _row("EA", "macro", "macro", "ecb_deposit_rate_pct", ea_ultimo["ecb_deposit_rate_pct"][1], "%",
+             ea_ultimo["ecb_deposit_rate_pct"][0], retrieved_at, "FRED", data_quality_pct=ea["data_quality_pct"],
              calculation_method="engine/macro/README.md"),
     ]
     return rows

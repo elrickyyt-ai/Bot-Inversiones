@@ -151,6 +151,18 @@ class TestAdapters(unittest.TestCase):
         for row in rows:
             schema.validate_metric_row(row)
 
+    def test_adapt_macro_data_as_of_es_la_fecha_real_no_la_de_ejecucion(self):
+        """2026-09-04: mismo bug que se corrigio para BTC/XRP el mismo
+        dia -- data_as_of debia ser la fecha real del ultimo dato de
+        FRED, no datetime.now(). Con datetime.now() esta prueba habria
+        sido indetectable (fixture fija, 'hoy' cambia cada dia)."""
+        rows = self.mod.adapt_macro()
+        by_metric = {r["metric"]: r for r in rows}
+        self.assertEqual(by_metric["cpi_yoy_pct"]["data_as_of"], "2026-06-01")
+        self.assertEqual(by_metric["fed_funds_pct"]["data_as_of"], "2026-06-01")
+        self.assertEqual(by_metric["hicp_yoy_pct"]["data_as_of"], "2026-06-01")
+        self.assertEqual(by_metric["ecb_deposit_rate_pct"]["data_as_of"], "2026-07-22")
+
     def test_adapt_macro_backfill_filas_validas_y_con_fechas_distintas(self):
         """Backfill (2026-09-04): a diferencia de adapt_macro() (solo
         'hoy', misma fecha en todas las filas), el backfill debe traer
