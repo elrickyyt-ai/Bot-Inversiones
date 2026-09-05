@@ -9,6 +9,7 @@ import os
 import sys
 from datetime import datetime
 
+import storage
 from schema import now_utc_iso, SOURCE_PRIORITY
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -152,13 +153,13 @@ def _existing_technical_dates(symbol):
     usuario en Power BI). Usar el propio Data Contract como fuente de
     verdad de "que fechas ya tenemos" es la correccion: cierra
     automaticamente cualquier hueco de proceso, no solo el que se
-    conocia al escribir este codigo."""
-    path = os.path.join(DATA_CONTRACT_DIR, "metrics", f"{symbol}.json")
-    if not os.path.exists(path):
-        return set()
-    with open(path, encoding="utf-8") as fh:
-        rows = json.load(fh)
-    return {r["data_as_of"] for r in rows if r.get("domain") == "tecnico" and r.get("metric") == "precio"}
+    conocia al escribir este codigo.
+
+    Migracion 2026-09-05: la fuente sigue siendo el Data Contract, pero
+    ahora son sus tres capas (history/ + incoming/ + incoming/late) en vez
+    del JSON unico. La nocion de "que ya tenemos" no cambia -- cambia solo
+    donde esta almacenado."""
+    return storage.technical_dates(symbol)
 
 
 def adapt_technical_backfill(symbol, asset_type="crypto", source="Coinbase", currency="EUR"):

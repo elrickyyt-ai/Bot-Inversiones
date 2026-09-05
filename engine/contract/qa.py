@@ -1,7 +1,8 @@
 """Herramienta de diagnostico del Data Contract -- Fase A de la
 preparacion de Power BI (docs/03-arquitectura-visualizacion-y-acceso.md).
 
-Lee data/metrics/*.json y data/thesis/*.json, valida cada fila contra
+Lee el Data Contract (history/ + incoming/ resueltos, y data/thesis/,
+data/assets/, data/news/), valida cada fila contra
 schema.py, y produce un informe legible por una persona -- nada de JSON
 crudo. No modifica ningun motor ni el propio data/, solo lo inspecciona.
 
@@ -13,6 +14,7 @@ import json
 import os
 import re
 
+import storage
 from schema import (
     validate_metric_row, validate_thesis_row, validate_asset_row, validate_news_row, ContractError,
     METRIC_FIELDS, THESIS_FIELDS, ASSET_FIELDS, NEWS_FIELDS,
@@ -45,19 +47,110 @@ def _fmt_pass_fail(ok):
     return "PASS" if ok else "FAIL"
 
 
+def _assets_en_contract():
+    """Activos presentes en la estructura nueva (history/ o incoming/)."""
+    ids = set()
+    if os.path.isdir(storage.HISTORY_DIR):
+        for t in os.listdir(storage.HISTORY_DIR):
+            d = os.path.join(storage.HISTORY_DIR, t)
+            if os.path.isdir(d):
+                ids.update(os.listdir(d))
+    if os.path.isdir(storage.INCOMING_DIR):
+        for f in os.listdir(storage.INCOMING_DIR):
+            if f.endswith(".csv"):
+                ids.add(f.rsplit("_", 1)[0])
+    return sorted(ids)
+
+
+def _validar_manifiestos():
+    """Septimo bloque: la inmutabilidad de history/ como propiedad
+    verificada, no como convencion de nombres.
+
+    Seis comprobaciones, cada una con un diagnostico distinto:
+    hash (la particion cambio), filas (truncamiento), rango temporal (una
+    fila archivada en el anio equivocado), schema (columnas o tipos que ya
+    no son los del contrato), duplicado logico (la resolucion de revisiones
+    esta rota) y secuencia de revisiones (manifiesto y disco divergen).
+    """
+    fallos = []
+    revisado = 0
+    if not os.path.isdir(storage.HISTORY_DIR):
+        return fallos, revisado
+    for tipo in sorted(os.listdir(storage.HISTORY_DIR)):
+        tdir = os.path.join(storage.HISTORY_DIR, tipo)
+        if not os.path.isdir(tdir):
+            continue
+        for asset_id in sorted(os.listdir(tdir)):
+            d = os.path.join(tdir, asset_id)
+            man = storage.read_manifest(tipo, asset_id)
+            registrados = {e["fichero"] for e in man["particiones"]}
+            en_disco = {f for f in os.listdir(d) if f.endswith(".parquet")}
+            for f in sorted(en_disco - registrados):
+                fallos.append(f"  [{asset_id}] {f}: en disco pero NO en el manifiesto")
+            for f in sorted(registrados - en_disco):
+                fallos.append(f"  [{asset_id}] {f}: en el manifiesto pero NO en disco")
+
+            claves = set()
+            for e in man["particiones"]:
+                path = os.path.join(d, e["fichero"])
+                if not os.path.exists(path):
+                    continue
+                revisado += 1
+                if storage.sha256_file(path) != e["sha256"]:
+                    fallos.append(f"  [{asset_id}] {e['fichero']}: HASH DISTINTO — "
+                                  f"una particion cerrada ha cambiado")
+                    continue
+                rows = storage.read_parquet(path)
+                if len(rows) != e["filas"]:
+                    fallos.append(f"  [{asset_id}] {e['fichero']}: {len(rows)} filas, "
+                                  f"el manifiesto dice {e['filas']}")
+                fuera = [r for r in rows if r["data_as_of"].year != e["anio"]]
+                if fuera:
+                    fallos.append(f"  [{asset_id}] {e['fichero']}: {len(fuera)} filas "
+                                  f"fuera del anio {e['anio']}")
+                for r in rows:
+                    if set(r.keys()) != set(storage.COLUMNS):
+                        fallos.append(f"  [{asset_id}] {e['fichero']}: schema distinto del contrato")
+                        break
+                if e["revision"] == 1:
+                    claves |= {storage.logical_key(r) for r in rows}
+
+            revisiones = sorted((e["anio"], e["revision"]) for e in man["particiones"])
+            por_anio = {}
+            for anio, rev in revisiones:
+                por_anio.setdefault(anio, []).append(rev)
+            for anio, revs in sorted(por_anio.items()):
+                if revs != list(range(1, len(revs) + 1)):
+                    fallos.append(f"  [{asset_id}] anio {anio}: secuencia de revisiones "
+                                  f"con huecos o repeticiones: {revs}")
+
+            resueltas = storage.read_asset(asset_id, tipo)
+            if len({storage.logical_key(r) for r in resueltas}) != len(resueltas):
+                fallos.append(f"  [{asset_id}] DUPLICADO LOGICO tras resolver revisiones")
+    return fallos, revisado
+
+
 def run_qa():
     lines = []
     p = lines.append
 
-    metrics_files = _load_json_files("metrics")
     thesis_files = _load_json_files("thesis")
     assets_files = _load_json_files("assets")
     news_files = _load_json_files("news")
 
+    # Metricas: desde history/ + incoming/ resueltos por clave logica
+    # (migracion 2026-09-05). Se validan las filas del ESTADO LOGICO, no
+    # las fisicas: una clave corregida por una revision debe validarse una
+    # sola vez, con su valor vigente.
+    metrics_files = {}
     all_metric_rows = []
-    for fname, rows in metrics_files.items():
+    for asset_id in _assets_en_contract():
+        rows = storage.read_asset(asset_id)
+        if not rows:
+            continue
+        metrics_files[asset_id] = rows
         for row in rows:
-            all_metric_rows.append((fname, row))
+            all_metric_rows.append((asset_id, storage.to_contract_row(row)))
 
     all_thesis_rows = []
     for fname, content in thesis_files.items():
@@ -291,11 +384,24 @@ def run_qa():
     p(f"RESULTADO: {_fmt_pass_fail(not news_schema_errors and not news_privacy_issues and not news_duplicates and not news_no_source)}")
     p("")
 
+    # --- VALIDACIÓN DE INTEGRIDAD DE history/ (manifiesto) ---
+    p("## VALIDACIÓN DE INTEGRIDAD DE history/ (manifiesto)")
+    manifest_errors, particiones_revisadas = _validar_manifiestos()
+    p(f"Particiones verificadas:  {particiones_revisadas}")
+    p("Comprueba, por partición: hash SHA-256, número de filas, rango temporal,")
+    p("schema, secuencia de revisiones y ausencia de duplicados lógicos.")
+    p(f"Incidencias de integridad: {len(manifest_errors)}")
+    for e in manifest_errors[:20]:
+        p(e)
+    p(f"RESULTADO: {_fmt_pass_fail(not manifest_errors)}")
+    p("")
+
     p("=" * 70)
     overall = (
         not schema_errors and not duplicates and not incompatible and not privacy_issues and not no_source
         and not asset_schema_errors and not asset_privacy_issues and not no_currency
         and not news_schema_errors and not news_privacy_issues and not news_duplicates and not news_no_source
+        and not manifest_errors
     )
     p(f"DIAGNÓSTICO GENERAL: {_fmt_pass_fail(overall)}")
     p("=" * 70)

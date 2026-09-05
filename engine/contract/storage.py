@@ -359,6 +359,63 @@ def _incoming_files(asset_id):
     return out
 
 
+def to_contract_row(row):
+    """Fila interna -> fila con fechas en texto, para validarla con schema.py
+    y para los consumidores que ya esperaban ese formato."""
+    out = dict(row)
+    out["data_as_of"] = row["data_as_of"].isoformat()
+    out["retrieved_at"] = row["retrieved_at"].strftime("%Y-%m-%dT%H:%M:%SZ")
+    return out
+
+
+def asset_type_of(asset_id):
+    """Localiza el asset_type de un activo.
+
+    Mira primero history/ (por su carpeta) y, si no esta ahi, incoming/
+    (por el campo asset_type de sus propias filas). Un activo dado de alta
+    a mitad de anio SOLO tiene incoming hasta el primer cierre de anio:
+    resolverlo unicamente por history/ lo dejaria invisible para qa.py y
+    para la materializacion.
+    """
+    if os.path.isdir(HISTORY_DIR):
+        for t in sorted(os.listdir(HISTORY_DIR)):
+            if os.path.isdir(os.path.join(HISTORY_DIR, t, asset_id)):
+                return t
+    for p in sorted(_incoming_files(asset_id)):
+        for r in read_incoming(p):
+            return r["asset_type"]
+    return None
+
+
+def read_asset(asset_id, asset_type=None):
+    """Estado logico completo de un activo, resuelto por clave logica."""
+    asset_type = asset_type or asset_type_of(asset_id)
+    if asset_type is None:
+        return []
+    return resolve(all_layers(asset_type, asset_id))
+
+
+def technical_dates(asset_id):
+    """Fechas de 'precio' (domain=tecnico) ya presentes en CUALQUIER capa.
+
+    Es la referencia de "que ya tenemos" que usan el backfill (para no
+    reintroducir filas) y el diagnostico de huecos. Lee el manifiesto y el
+    CSV de incoming sin materializar nada, para no cargar el histórico
+    entero solo para responder a esto.
+    """
+    fechas = set()
+    asset_type = asset_type_of(asset_id)
+    if asset_type is not None:
+        for r in read_history(asset_type, asset_id):
+            if r["domain"] == "tecnico" and r["metric"] == "precio":
+                fechas.add(r["data_as_of"].isoformat())
+    for p in _incoming_files(asset_id):
+        for r in read_incoming(p):
+            if r["domain"] == "tecnico" and r["metric"] == "precio":
+                fechas.add(r["data_as_of"].isoformat())
+    return fechas
+
+
 def materialize(asset_type, asset_id):
     """Regenera current/{ID}.parquet desde history/ + incoming/.
 

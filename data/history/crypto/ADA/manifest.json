@@ -10,7 +10,7 @@
       "filas": 2452,
       "data_as_of_min": "2021-03-18",
       "data_as_of_max": "2021-12-31",
-      "created_at": "2026-09-05T17:40:22Z"
+      "created_at": "2026-09-05T17:59:28Z"
     },
     {
       "fichero": "2022.parquet",
@@ -20,7 +20,7 @@
       "filas": 4005,
       "data_as_of_min": "2022-01-01",
       "data_as_of_max": "2022-12-31",
-      "created_at": "2026-09-05T17:40:22Z"
+      "created_at": "2026-09-05T17:59:28Z"
     },
     {
       "fichero": "2023.parquet",
@@ -30,7 +30,7 @@
       "filas": 4015,
       "data_as_of_min": "2023-01-01",
       "data_as_of_max": "2023-12-31",
-      "created_at": "2026-09-05T17:40:22Z"
+      "created_at": "2026-09-05T17:59:28Z"
     },
     {
       "fichero": "2024.parquet",
@@ -40,7 +40,7 @@
       "filas": 4026,
       "data_as_of_min": "2024-01-01",
       "data_as_of_max": "2024-12-31",
-      "created_at": "2026-09-05T17:40:22Z"
+      "created_at": "2026-09-05T17:59:28Z"
     },
     {
       "fichero": "2025.parquet",
@@ -50,7 +50,7 @@
       "filas": 4015,
       "data_as_of_min": "2025-01-01",
       "data_as_of_max": "2025-12-31",
-      "created_at": "2026-09-05T17:40:22Z"
+      "created_at": "2026-09-05T17:59:28Z"
     }
   ]
 }

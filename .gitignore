@@ -3,3 +3,9 @@
 engine/*/_data/
 __pycache__/
 *.pyc
+
+# current/ es un artefacto DERIVADO de history/ + incoming/, no una fuente
+# de verdad: se regenera con engine/contract/materializar.py y por eso no se
+# versiona. Medido: versionarlo costaria 65,1 KB/dia de historial de git por
+# activo (255 MB/anio con 11 activos), frente a 0,84 KB/dia sin el.
+data/current/

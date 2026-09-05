@@ -14,8 +14,14 @@ mercado y de analisis. Ver FORBIDDEN_KEYS mas abajo.
 """
 import datetime
 
+# value_text es el desdoble del campo categorico que docs/04-modelo-power-bi.md
+# ya habia decidido ("value es texto en algunas filas y numerico en otras -- no
+# fuerces un tipo unico"). Con el almacenamiento tipado (history/ en parquet)
+# esa decision deja de ser una recomendacion para Power Query y pasa a ser
+# estructural: value es numerico, value_text guarda la etiqueta categorica.
+# Es opcional -- las filas numericas, que son el 99,997%, lo dejan a None.
 METRIC_FIELDS = {
-    "asset_id", "asset_type", "domain", "metric", "value", "unit",
+    "asset_id", "asset_type", "domain", "metric", "value", "value_text", "unit",
     "data_as_of", "retrieved_at", "source", "source_priority",
     "confidence_pct", "data_quality_pct", "calculation_method", "source_url",
 }
@@ -52,7 +58,11 @@ NEWS_FIELDS = {
 }
 
 # Requeridos de verdad (el resto puede ser None si el motor de origen no lo tiene)
-METRIC_REQUIRED = {"asset_id", "asset_type", "domain", "metric", "value", "data_as_of", "retrieved_at", "source", "source_priority"}
+# value NO esta aqui: una fila lleva value (numerica) O value_text
+# (categorica), y la exclusividad se comprueba aparte en
+# validate_metric_row(). Exigir "value" a secas dejaria fuera las filas
+# categoricas; no exigir ninguno de los dos permitiria una fila sin dato.
+METRIC_REQUIRED = {"asset_id", "asset_type", "domain", "metric", "data_as_of", "retrieved_at", "source", "source_priority"}
 THESIS_REQUIRED = {"thesis_id", "asset_id", "thesis_type", "data_as_of", "retrieved_at"}
 ASSET_REQUIRED = {"asset_id", "asset_type", "name", "currency", "retrieved_at", "source"}
 NEWS_REQUIRED = {"news_id", "asset_id", "asset_type", "data_as_of", "retrieved_at",
@@ -95,6 +105,16 @@ def validate_metric_row(row):
         raise ContractError(f"campos no reconocidos por el Data Contract: {extra}")
     if row["source_priority"] not in (1, 2, 3, 4, 5):
         raise ContractError(f"source_priority fuera de rango: {row['source_priority']}")
+    # Exactamente uno de value / value_text. Una fila sin ninguno de los dos
+    # no transporta dato; una con ambos seria ambigua sobre cual es el valor.
+    tiene_num = row.get("value") is not None
+    tiene_txt = row.get("value_text") is not None
+    if tiene_num and tiene_txt:
+        raise ContractError(
+            f"value y value_text no pueden venir los dos: {row['metric']} "
+            f"= {row['value']!r} / {row['value_text']!r}")
+    if not tiene_num and not tiene_txt:
+        raise ContractError(f"fila sin dato: ni value ni value_text en {row['metric']}")
     _validate_pct_range(row, "confidence_pct")
     _validate_pct_range(row, "data_quality_pct")
     da, ra = _parse_date(row["data_as_of"]), _parse_date(row["retrieved_at"])

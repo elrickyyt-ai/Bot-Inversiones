@@ -229,6 +229,16 @@ class TestCurrent(unittest.TestCase):
         filas = storage.read_parquet(os.path.join(storage.CURRENT_DIR, "TEST.parquet"))
         self.assertEqual(filas[0]["value"], 2.0)
 
+    def test_activo_solo_en_incoming_es_visible(self):
+        """Un activo dado de alta a mitad de anio no tiene ninguna particion
+        cerrada todavia. Resolver su asset_type solo por la carpeta de
+        history/ lo dejaba invisible para qa.py y para la materializacion
+        -- detectado por el test de privacidad de qa durante la migracion."""
+        storage.append_incoming(storage.incoming_path("NUEVO", 2026),
+                                [fila(asset_id="NUEVO", ts="2026-03-01T06:00:00Z")])
+        self.assertEqual(storage.asset_type_of("NUEVO"), "equity")
+        self.assertEqual(len(storage.read_asset("NUEVO")), 1)
+
     def test_no_deja_fichero_temporal(self):
         storage.write_partition("equity", "TEST", 2024, [fila()])
         storage.materialize("equity", "TEST")

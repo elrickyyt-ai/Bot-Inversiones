@@ -25,6 +25,7 @@ import sys
 from datetime import datetime
 
 from adapters import adapt_macro_backfill, adapt_crypto_backfill, adapt_technical_backfill
+import storage
 from build import _write_metric_rows, CRYPTO_ASSETS, EQUITY_ASSETS, DATA_DIR
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "technical"))
@@ -54,7 +55,8 @@ def backfill_tvl():
 
 def detect_technical_gaps(symbol, asset_type="crypto"):
     """Diagnostico (2026-09-04; generalizado a acciones el mismo dia,
-    Bloque 4): lee data/metrics/{symbol}.json y devuelve los huecos
+    Bloque 4): lee el Data Contract (history/ + incoming/, migracion
+    2026-09-05) y devuelve los huecos
     REALES de sesion en la serie 'precio' (domain=tecnico) ya escrita --
     (fecha_antes, fecha_despues, dias_naturales) para cada par de fechas
     consecutivas donde faltan una o mas sesiones de trading esperadas
@@ -69,12 +71,7 @@ def detect_technical_gaps(symbol, asset_type="crypto"):
     el lado de REPORTE, reusable para detectar huecos futuros (ej. si el
     cron diario falla varios dias seguidos) sin tener que volver a
     razonar la logica cada vez."""
-    path = os.path.join(DATA_DIR, "metrics", f"{symbol}.json")
-    if not os.path.exists(path):
-        return []
-    with open(path, encoding="utf-8") as f:
-        rows = json.load(f)
-    fechas = sorted({r["data_as_of"] for r in rows if r.get("domain") == "tecnico" and r.get("metric") == "precio"})
+    fechas = sorted(storage.technical_dates(symbol))
     gaps = []
     for i in range(1, len(fechas)):
         d1 = datetime.strptime(fechas[i - 1], "%Y-%m-%d").date()
