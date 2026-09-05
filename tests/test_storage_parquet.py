@@ -158,3 +158,53 @@ class TestCurrent(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+@unittest.skipUnless(HAY_PYARROW, RAZON_SKIP)
+class TestCompactacion(unittest.TestCase):
+    """El cierre de anio se ejecuta una vez cada doce meses: es justo el
+    procedimiento que estara roto cuando haga falta si no se prueba."""
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp()
+        self._orig = (storage.HISTORY_DIR, storage.INCOMING_DIR, storage.CURRENT_DIR)
+        storage.HISTORY_DIR = os.path.join(self.tmp, "history")
+        storage.INCOMING_DIR = os.path.join(self.tmp, "incoming")
+        storage.CURRENT_DIR = os.path.join(self.tmp, "current")
+        import compactar
+        self.compactar = compactar
+
+    def tearDown(self):
+        storage.HISTORY_DIR, storage.INCOMING_DIR, storage.CURRENT_DIR = self._orig
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def _sembrar(self, n=5):
+        filas = [fila(metric=f"m{i}", dia=f"2024-03-{i+1:02d}", value=float(i)) for i in range(n)]
+        storage.append_incoming(storage.incoming_path("TEST", 2024), filas)
+        return filas
+
+    def test_dry_run_no_escribe_ni_vacia(self):
+        self._sembrar()
+        estado, _ = self.compactar.compactar_activo("TEST", 2024, dry_run=True)
+        self.assertEqual(estado, "OK")
+        self.assertFalse(os.path.isdir(storage.history_dir("equity", "TEST")))
+        self.assertEqual(len(storage.read_incoming(storage.incoming_path("TEST", 2024))), 5)
+
+    def test_real_escribe_verifica_y_vacia(self):
+        self._sembrar()
+        estado, det = self.compactar.compactar_activo("TEST", 2024)
+        self.assertEqual(estado, "OK")
+        self.assertEqual(det["filas"], 5)
+        self.assertFalse(os.path.exists(storage.incoming_path("TEST", 2024)),
+                         "el CSV se vacia solo despues de verificar")
+        man = storage.read_manifest("equity", "TEST")
+        self.assertEqual(man["particiones"][0]["filas"], 5)
+
+    def test_rechaza_filas_del_anio_equivocado(self):
+        storage.append_incoming(storage.incoming_path("TEST", 2024),
+                                [fila(dia="2025-01-01")])
+        estado, det = self.compactar.compactar_activo("TEST", 2024)
+        self.assertEqual(estado, "FAIL")
+        self.assertIn("fuera de 2024", det["motivo"])
+        self.assertTrue(os.path.exists(storage.incoming_path("TEST", 2024)),
+                        "si falla, el CSV NO se toca")
