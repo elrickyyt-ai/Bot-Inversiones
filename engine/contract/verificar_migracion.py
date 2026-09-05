@@ -13,6 +13,7 @@ Uso:
 """
 import collections
 import json
+import math
 import os
 import sys
 
@@ -31,7 +32,10 @@ def _destino(asset_type, asset_id):
 
 
 def _suma(filas):
-    return sum(r["value"] for r in filas if r["value"] is not None)
+    """Total independiente del orden de acumulacion. math.fsum lleva un
+    acumulador exacto, asi que sumar las mismas filas en cualquier orden da
+    siempre el mismo resultado -- a diferencia de sum(), que no."""
+    return math.fsum(r["value"] for r in filas if r["value"] is not None)
 
 
 def _nulos(filas):
@@ -72,10 +76,31 @@ def verificar_activo(asset_id):
     if len(kd) != len(dest):
         fallos.append(f"duplicados en destino: {len(dest) - len(kd)} claves repetidas")
 
-    # 4. suma de value -- delta exacto 0
+    # 4. VALORES -- comparacion valor a valor por clave logica, 0 diferencias.
+    #
+    # No se comparan sumas acumuladas: sum() sobre float NO es asociativo, asi
+    # que sumar los MISMOS numeros en el orden del JSON y en el orden canonico
+    # da resultados distintos en el ultimo bit (medido: delta de 1,2e-7 en BTC).
+    # Eso mide el orden de acumulacion, no la equivalencia de los datos, y
+    # produciria un FAIL donde no hay ningun fallo.
+    #
+    # La comparacion por clave es mas estricta: exige identidad exacta de cada
+    # valor, no que un agregado cuadre. Como control adicional del total se usa
+    # math.fsum, que si es independiente del orden.
+    io = {storage.logical_key(r): r for r in orig}
+    idd = {storage.logical_key(r): r for r in dest}
+    for campo in ("value", "value_text", "data_as_of", "retrieved_at",
+                  "unit", "source_priority", "confidence_pct",
+                  "data_quality_pct", "calculation_method", "source_url"):
+        distintos = [k for k in io if k in idd and io[k][campo] != idd[k][campo]]
+        if distintos:
+            k = distintos[0]
+            fallos.append(f"{campo}: {len(distintos)} valores distintos "
+                          f"(ej. {k}: {io[k][campo]!r} != {idd[k][campo]!r})")
+
     so, sd = _suma(orig), _suma(dest)
     if so != sd:
-        fallos.append(f"suma de value: origen {so:.6f} != destino {sd:.6f} (delta {abs(so - sd):.10f})")
+        fallos.append(f"total fsum de value: origen {so:.6f} != destino {sd:.6f}")
 
     # 5. min/max de data_as_of
     for etiqueta, fn in (("min", min), ("max", max)):
