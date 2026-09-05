@@ -212,6 +212,18 @@ def append_incoming(path, rows):
 # Parquet (history / current) -- import perezoso, fuera del cron diario
 # --------------------------------------------------------------------------
 
+def hay_pyarrow():
+    """PyArrow no esta en el camino critico de ingesta: la ingesta diaria
+    solo escribe CSV. Esta funcion permite que quien lo necesite (qa.py,
+    los tests) declare EXPLICITAMENTE que no pudo abrir los parquet, en vez
+    de degradar la garantia en silencio."""
+    try:
+        import pyarrow  # noqa: F401
+        return True
+    except ImportError:
+        return False
+
+
 def _pa():
     import pyarrow as pa
     return pa
@@ -347,6 +359,87 @@ def all_layers(asset_type, asset_id):
     for p in sorted(_incoming_files(asset_id)):
         rows += read_incoming(p)
     return rows
+
+
+def read_incoming_rows(asset_id):
+    """Solo las filas de incoming/ (CSV), resueltas entre si. Sin PyArrow.
+
+    Es lo que puede validar el nivel CORE de qa.py: las filas RECIEN
+    ingeridas, que son las unicas que el cron acaba de escribir. Las de
+    history/ ya se validaron cuando se escribieron, y que no hayan
+    cambiado desde entonces lo comprueba el hash del manifiesto -- pero
+    eso NO equivale a validar su contenido, que es trabajo del nivel
+    PARQUET.
+    """
+    rows = []
+    for p in sorted(_incoming_files(asset_id)):
+        rows += read_incoming(p)
+    return resolve(rows)
+
+
+def assets_en_incoming():
+    if not os.path.isdir(INCOMING_DIR):
+        return []
+    ids = set()
+    for f in os.listdir(INCOMING_DIR):
+        if f.endswith(".csv"):
+            ids.add(f.rsplit("_", 1)[0])
+    return sorted(ids)
+
+
+def assets_en_history():
+    if not os.path.isdir(HISTORY_DIR):
+        return []
+    ids = set()
+    for t in os.listdir(HISTORY_DIR):
+        d = os.path.join(HISTORY_DIR, t)
+        if os.path.isdir(d):
+            ids.update(os.listdir(d))
+    return sorted(ids)
+
+
+def verificar_hashes_manifiesto():
+    """Comprueba SHA-256, numero de filas registrado y presencia de cada
+    particion SIN abrir ningun parquet -- solo metadatos y bytes.
+
+    Detecta que una particion cerrada ha cambiado, que falta un fichero o
+    que sobra uno sin registrar. NO demuestra que el contenido del parquet
+    sea correcto (schema, valores, claves): eso exige leerlo, y es lo que
+    hace el nivel PARQUET de qa.py.
+    """
+    fallos = []
+    revisadas = 0
+    if not os.path.isdir(HISTORY_DIR):
+        return fallos, revisadas
+    for tipo in sorted(os.listdir(HISTORY_DIR)):
+        tdir = os.path.join(HISTORY_DIR, tipo)
+        if not os.path.isdir(tdir):
+            continue
+        for asset_id in sorted(os.listdir(tdir)):
+            d = os.path.join(tdir, asset_id)
+            man = read_manifest(tipo, asset_id)
+            registrados = {e["fichero"] for e in man["particiones"]}
+            en_disco = {f for f in os.listdir(d) if f.endswith(".parquet")}
+            for f in sorted(en_disco - registrados):
+                fallos.append(f"  [{asset_id}] {f}: en disco pero NO en el manifiesto")
+            for f in sorted(registrados - en_disco):
+                fallos.append(f"  [{asset_id}] {f}: en el manifiesto pero NO en disco")
+            for e in man["particiones"]:
+                path = os.path.join(d, e["fichero"])
+                if not os.path.exists(path):
+                    continue
+                revisadas += 1
+                if sha256_file(path) != e["sha256"]:
+                    fallos.append(f"  [{asset_id}] {e['fichero']}: HASH DISTINTO — "
+                                  f"una particion cerrada ha cambiado")
+            por_anio = {}
+            for e in man["particiones"]:
+                por_anio.setdefault(e["anio"], []).append(e["revision"])
+            for anio, revs in sorted(por_anio.items()):
+                if sorted(revs) != list(range(1, len(revs) + 1)):
+                    fallos.append(f"  [{asset_id}] anio {anio}: secuencia de revisiones "
+                                  f"con huecos o repeticiones: {sorted(revs)}")
+    return fallos, revisadas
 
 
 def _incoming_files(asset_id):

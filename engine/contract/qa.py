@@ -6,8 +6,22 @@ data/assets/, data/news/), valida cada fila contra
 schema.py, y produce un informe legible por una persona -- nada de JSON
 crudo. No modifica ningun motor ni el propio data/, solo lo inspecciona.
 
+Dos niveles, con estados explicitos:
+
+    QA-CORE     siempre, solo biblioteca estandar, obligatorio.
+                Valida las filas de incoming/ y la integridad de history/
+                por hash del manifiesto, sin abrir ningun parquet.
+
+    QA-PARQUET  solo si PyArrow esta disponible. Abre cada particion y
+                comprueba schema, filas, rango y duplicados logicos.
+
+El resultado global es VERIFIED, UNVERIFIED o FAIL -- nunca un PASS cuando
+una comprobacion no se ha podido ejecutar. "No se pudo verificar" no es
+"verificado correctamente", y el informe lo dice con esas palabras.
+
 Uso:
-    python3 engine/contract/qa.py
+    python3 engine/contract/qa.py                     ingesta (CORE obligatorio)
+    python3 engine/contract/qa.py --require-parquet   mantenimiento/CI (exige ambos)
 """
 import datetime
 import json
@@ -130,7 +144,7 @@ def _validar_manifiestos():
     return fallos, revisado
 
 
-def run_qa():
+def run_qa(require_parquet=False):
     lines = []
     p = lines.append
 
@@ -138,14 +152,16 @@ def run_qa():
     assets_files = _load_json_files("assets")
     news_files = _load_json_files("news")
 
-    # Metricas: desde history/ + incoming/ resueltos por clave logica
-    # (migracion 2026-09-05). Se validan las filas del ESTADO LOGICO, no
-    # las fisicas: una clave corregida por una revision debe validarse una
-    # sola vez, con su valor vigente.
+    # Metricas. CON PyArrow se valida el ESTADO LOGICO completo (history/ +
+    # incoming/ resueltos por clave logica). SIN PyArrow solo se validan las
+    # filas de incoming/ -- las recien ingeridas, que son las unicas que el
+    # cron acaba de escribir. Lo que NO se puede comprobar queda declarado
+    # como tal en el informe, nunca como PASS.
+    hay_parquet = storage.hay_pyarrow()
     metrics_files = {}
     all_metric_rows = []
     for asset_id in _assets_en_contract():
-        rows = storage.read_asset(asset_id)
+        rows = storage.read_asset(asset_id) if hay_parquet else storage.read_incoming_rows(asset_id)
         if not rows:
             continue
         metrics_files[asset_id] = rows
@@ -384,32 +400,71 @@ def run_qa():
     p(f"RESULTADO: {_fmt_pass_fail(not news_schema_errors and not news_privacy_issues and not news_duplicates and not news_no_source)}")
     p("")
 
-    # --- VALIDACIÓN DE INTEGRIDAD DE history/ (manifiesto) ---
-    p("## VALIDACIÓN DE INTEGRIDAD DE history/ (manifiesto)")
-    manifest_errors, particiones_revisadas = _validar_manifiestos()
-    p(f"Particiones verificadas:  {particiones_revisadas}")
-    p("Comprueba, por partición: hash SHA-256, número de filas, rango temporal,")
-    p("schema, secuencia de revisiones y ausencia de duplicados lógicos.")
-    p(f"Incidencias de integridad: {len(manifest_errors)}")
-    for e in manifest_errors[:20]:
+    # --- QA-CORE: integridad de history/ por hash, SIN abrir los parquet ---
+    p("## INTEGRIDAD DE history/ — nivel CORE (hash, sin abrir los parquet)")
+    hash_errors, particiones_hasheadas = storage.verificar_hashes_manifiesto()
+    p(f"Particiones comprobadas por hash: {particiones_hasheadas}")
+    p("Detecta que una partición cerrada ha cambiado, que falta un fichero o que")
+    p("sobra uno sin registrar. NO demuestra que su contenido sea correcto.")
+    p(f"Incidencias: {len(hash_errors)}")
+    for e in hash_errors[:20]:
         p(e)
-    p(f"RESULTADO: {_fmt_pass_fail(not manifest_errors)}")
+    p(f"RESULTADO: {_fmt_pass_fail(not hash_errors)}")
     p("")
 
-    p("=" * 70)
-    overall = (
+    core_ok = (
         not schema_errors and not duplicates and not incompatible and not privacy_issues and not no_source
         and not asset_schema_errors and not asset_privacy_issues and not no_currency
         and not news_schema_errors and not news_privacy_issues and not news_duplicates and not news_no_source
-        and not manifest_errors
+        and not hash_errors
     )
-    p(f"DIAGNÓSTICO GENERAL: {_fmt_pass_fail(overall)}")
+
+    # --- QA-PARQUET: contenido real de las particiones. Solo con PyArrow. ---
+    p("## CONTENIDO DE history/ — nivel PARQUET (abre cada partición)")
+    if not hay_parquet:
+        manifest_errors = []
+        parquet_estado = "NOT RUN"
+        p("NO EJECUTADO — PyArrow no está disponible en este entorno.")
+        p("Sin abrir los parquet NO se ha comprobado: schema, número real de filas,")
+        p("rango temporal de cada partición ni duplicados lógicos tras resolver")
+        p("revisiones. El hash del nivel CORE detecta que los bytes cambiaron, pero")
+        p("no sustituye a esta comprobación.")
+        p(f"Alcance de las métricas validadas arriba: solo incoming/ ({len(all_metric_rows)} filas).")
+    else:
+        manifest_errors, particiones_revisadas = _validar_manifiestos()
+        parquet_estado = "PASS" if not manifest_errors else "FAIL"
+        p(f"Particiones abiertas y verificadas: {particiones_revisadas}")
+        p("Comprueba schema, número real de filas, rango temporal y ausencia de")
+        p("duplicados lógicos tras resolver revisiones.")
+        p(f"Incidencias: {len(manifest_errors)}")
+        for e in manifest_errors[:20]:
+            p(e)
+    p(f"RESULTADO: {parquet_estado}")
+    p("")
+
+    # Tres estados, nunca dos. "No se pudo verificar" no es "verificado".
+    if not core_ok or parquet_estado == "FAIL":
+        estado = "FAIL"
+    elif parquet_estado == "NOT RUN":
+        estado = "UNVERIFIED"
+    else:
+        estado = "VERIFIED"
+
+    p("=" * 70)
+    p(f"QA CORE:    {_fmt_pass_fail(core_ok)}")
+    p(f"QA PARQUET: {parquet_estado}" + ("" if hay_parquet else "   (REASON: PyArrow unavailable)"))
+    p(f"STATUS:     {estado}")
     p("=" * 70)
 
-    return "\n".join(lines), overall
+    # ok=False solo bloquea. UNVERIFIED no bloquea la ingesta -- sus filas
+    # (incoming/) SI se han validado por completo -- pero tampoco se declara
+    # verificada. Con require_parquet=True (CI de mantenimiento) tambien falla.
+    ok = estado == "VERIFIED" or (estado == "UNVERIFIED" and not require_parquet)
+    return "\n".join(lines), ok
 
 
 if __name__ == "__main__":
-    report, ok = run_qa()
+    import sys
+    report, ok = run_qa(require_parquet="--require-parquet" in sys.argv)
     print(report)
     raise SystemExit(0 if ok else 1)
