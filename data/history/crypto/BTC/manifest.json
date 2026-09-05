@@ -1,0 +1,116 @@
+{
+  "asset_id": "BTC",
+  "asset_type": "crypto",
+  "particiones": [
+    {
+      "fichero": "2015.parquet",
+      "anio": 2015,
+      "revision": 1,
+      "sha256": "f1877589d53a8633f4cff126ca21ce0582bde82fe981a449b5ffc1a3f3caa4b3",
+      "filas": 2056,
+      "data_as_of_min": "2015-04-23",
+      "data_as_of_max": "2015-12-31",
+      "created_at": "2026-09-05T17:40:23Z"
+    },
+    {
+      "fichero": "2016.parquet",
+      "anio": 2016,
+      "revision": 1,
+      "sha256": "47381a6c058a7cae43d2f815338f27a95f49781b8bc0ef505e6ac3e67102d732",
+      "filas": 3239,
+      "data_as_of_min": "2016-01-01",
+      "data_as_of_max": "2016-12-31",
+      "created_at": "2026-09-05T17:40:23Z"
+    },
+    {
+      "fichero": "2017.parquet",
+      "anio": 2017,
+      "revision": 1,
+      "sha256": "425fc1cbae75d0baa774280876c616cfc72040cb6fa145236798037012e18da4",
+      "filas": 3623,
+      "data_as_of_min": "2017-01-01",
+      "data_as_of_max": "2017-12-31",
+      "created_at": "2026-09-05T17:40:23Z"
+    },
+    {
+      "fichero": "2018.parquet",
+      "anio": 2018,
+      "revision": 1,
+      "sha256": "c2907b554c69887f78dcbc1b58045c3224ae90075d162987afe84170864856e1",
+      "filas": 3650,
+      "data_as_of_min": "2018-01-01",
+      "data_as_of_max": "2018-12-31",
+      "created_at": "2026-09-05T17:40:23Z"
+    },
+    {
+      "fichero": "2019.parquet",
+      "anio": 2019,
+      "revision": 1,
+      "sha256": "96736259d25c9c33b1e77eac6d4e3ea22cff3bbabba24a62ac39151e3ff3488b",
+      "filas": 3650,
+      "data_as_of_min": "2019-01-01",
+      "data_as_of_max": "2019-12-31",
+      "created_at": "2026-09-05T17:40:23Z"
+    },
+    {
+      "fichero": "2020.parquet",
+      "anio": 2020,
+      "revision": 1,
+      "sha256": "6b056cf62265002d8a7abcc81f2bbcacc9f1acd48c3cfaf5a027572e7d7fc565",
+      "filas": 3660,
+      "data_as_of_min": "2020-01-01",
+      "data_as_of_max": "2020-12-31",
+      "created_at": "2026-09-05T17:40:23Z"
+    },
+    {
+      "fichero": "2021.parquet",
+      "anio": 2021,
+      "revision": 1,
+      "sha256": "82e9c8af2c8651cc49f539d0602702c3a73286417b1579492bf1f61f41263f3d",
+      "filas": 3650,
+      "data_as_of_min": "2021-01-01",
+      "data_as_of_max": "2021-12-31",
+      "created_at": "2026-09-05T17:40:23Z"
+    },
+    {
+      "fichero": "2022.parquet",
+      "anio": 2022,
+      "revision": 1,
+      "sha256": "bf463b4752b2fd7757117eaaad1a960b63f017d846e82313a9df2fe4534a32ec",
+      "filas": 3650,
+      "data_as_of_min": "2022-01-01",
+      "data_as_of_max": "2022-12-31",
+      "created_at": "2026-09-05T17:40:23Z"
+    },
+    {
+      "fichero": "2023.parquet",
+      "anio": 2023,
+      "revision": 1,
+      "sha256": "a8f457ca3d8a3cdc3446d749e52d5ae4dbc7de54b0a57a961d2ce2bd4387b407",
+      "filas": 3650,
+      "data_as_of_min": "2023-01-01",
+      "data_as_of_max": "2023-12-31",
+      "created_at": "2026-09-05T17:40:23Z"
+    },
+    {
+      "fichero": "2024.parquet",
+      "anio": 2024,
+      "revision": 1,
+      "sha256": "4e44d67922fffccedbdb9d8de38d5bef91176463dfdf4724e542b7b4410feb3d",
+      "filas": 3660,
+      "data_as_of_min": "2024-01-01",
+      "data_as_of_max": "2024-12-31",
+      "created_at": "2026-09-05T17:40:23Z"
+    },
+    {
+      "fichero": "2025.parquet",
+      "anio": 2025,
+      "revision": 1,
+      "sha256": "c3a4e9284c248fdd12bc0b56b45e1e6779ffe72507739c83aa1fa8acebaa4ae1",
+      "filas": 3650,
+      "data_as_of_min": "2025-01-01",
+      "data_as_of_max": "2025-12-31",
+      "created_at": "2026-09-05T17:40:23Z"
+    }
+  ]
+}

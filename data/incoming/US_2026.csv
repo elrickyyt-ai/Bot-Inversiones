@@ -1,0 +1,13 @@
+asset_id,asset_type,domain,metric,value,value_text,unit,data_as_of,retrieved_at,source,source_priority,confidence_pct,data_quality_pct,calculation_method,source_url
+US,macro,macro,cpi_yoy_pct,2.39,,%,2026-01-01,2026-09-04T11:58:43Z,FRED,1,,,engine/macro/README.md,
+US,macro,macro,cpi_yoy_pct,2.43,,%,2026-02-01,2026-09-04T11:58:43Z,FRED,1,,,engine/macro/README.md,
+US,macro,macro,cpi_yoy_pct,3.29,,%,2026-03-01,2026-09-04T11:58:43Z,FRED,1,,,engine/macro/README.md,
+US,macro,macro,cpi_yoy_pct,3.78,,%,2026-04-01,2026-09-04T11:58:43Z,FRED,1,,,engine/macro/README.md,
+US,macro,macro,cpi_yoy_pct,4.17,,%,2026-05-01,2026-09-04T11:58:43Z,FRED,1,,,engine/macro/README.md,
+US,macro,macro,cpi_yoy_pct,3.46,,%,2026-06-01,2026-09-04T11:58:43Z,FRED,1,,,engine/macro/README.md,
+US,macro,macro,fed_funds_pct,3.64,,%,2026-01-01,2026-09-04T11:58:43Z,FRED,1,,,engine/macro/README.md,
+US,macro,macro,fed_funds_pct,3.64,,%,2026-02-01,2026-09-04T11:58:43Z,FRED,1,,,engine/macro/README.md,
+US,macro,macro,fed_funds_pct,3.64,,%,2026-03-01,2026-09-04T11:58:43Z,FRED,1,,,engine/macro/README.md,
+US,macro,macro,fed_funds_pct,3.64,,%,2026-04-01,2026-09-04T11:58:43Z,FRED,1,,,engine/macro/README.md,
+US,macro,macro,fed_funds_pct,3.63,,%,2026-05-01,2026-09-04T11:58:43Z,FRED,1,,,engine/macro/README.md,
+US,macro,macro,fed_funds_pct,3.63,,%,2026-06-01,2026-09-04T11:58:43Z,FRED,1,,,engine/macro/README.md,
