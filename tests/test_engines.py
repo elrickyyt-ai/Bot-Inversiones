@@ -401,6 +401,40 @@ class TestMacroEngine(unittest.TestCase):
         self.assertTrue(r["regimen_estimado"])
         self.assertIn("gap", r, "el gap de desempleo/curva de la Eurozona debe seguir declarado")
 
+    def test_us_fecha_dato_es_la_del_dato_no_la_de_ejecucion(self):
+        """2026-09-06 (P1): score_us() etiquetaba con datetime.now(), asi
+        que un IPC de junio salia fechado hoy. Las fixtures de FRED estan
+        congeladas en el pasado, asi que estas fechas son estables; si
+        alguien reintroduce datetime.now(), este test falla el mismo dia."""
+        r = self.mod.score_us()
+        self.assertEqual(r["fecha_dato"], "2026-06-01")
+        self.assertEqual(r["fechas_dato"], {
+            "cpi_yoy_pct": "2026-06-01",
+            "fed_funds_pct": "2026-06-01",
+            "desempleo_pct": "2026-06-01",
+            "spread_10y2y_pct": "2026-07-21",
+        })
+
+    def test_ea_fecha_dato_es_la_del_dato_no_la_de_ejecucion(self):
+        r = self.mod.score_ea()
+        self.assertEqual(r["fecha_dato"], "2026-06-01")
+        self.assertEqual(r["fechas_dato"], {
+            "hicp_yoy_pct": "2026-06-01",
+            "ecb_deposit_rate_pct": "2026-07-22",
+        })
+
+    def test_fecha_dato_es_la_del_componente_mas_antiguo_no_la_del_mas_reciente(self):
+        """La regla no es "la fecha del bloque es la del ultimo dato": es
+        la del PEOR componente. En la Eurozona el tipo del BCE es diario
+        (2026-07-22) y el HICP mensual (2026-06-01) -- si el bloque se
+        fechara con el maximo, un HICP de junio quedaria presentado como
+        contemporaneo de un tipo de julio."""
+        for r in (self.mod.score_us(), self.mod.score_ea()):
+            self.assertEqual(r["fecha_dato"], min(r["fechas_dato"].values()))
+            self.assertNotEqual(r["fecha_dato"], max(r["fechas_dato"].values()),
+                                "las fixtures tienen componentes con fechas distintas: "
+                                "si min y max coinciden, el test ha dejado de probar nada")
+
     def test_historical_series_us_misma_formula_que_yoy_actual(self):
         """Backfill (2026-09-04): historical_series_us() debe dar, para
         la fecha mas reciente, el mismo cpi_yoy_pct que score_us() -- es
@@ -487,6 +521,37 @@ class TestEquityFundamentalsEngine(unittest.TestCase):
         self.assertTrue(0 <= r["data_quality_pct"] <= 100)
         self.assertTrue(r["confluencia"]["sesgo"])
 
+    def test_fecha_dato_separa_precio_de_fundamental(self):
+        """2026-09-06 (P1): score_asset() etiquetaba con datetime.now().
+        Este motor mezcla dos relojes -- la cotizacion es del ultimo dia
+        de mercado (quote['latestDay']) y los fundamentales del ultimo
+        trimestre cerrado (overview['LatestQuarter']) -- y las fixtures
+        los tienen deliberadamente distintos, con 64 dias de separacion."""
+        r = self.mod.score_asset("IBM")
+        self.assertEqual(r["fechas_dato"], {"precio": "2026-09-02", "fundamental": "2026-06-30"})
+        self.assertEqual(r["fecha_dato"], "2026-06-30",
+                         "la fecha del bloque es la del componente mas antiguo")
+
+    def test_sin_trimestre_declarado_la_fecha_del_bloque_es_desconocida(self):
+        """Si falta LatestQuarter, el bloque NO se fecha con la del precio
+        (seria optimista por construccion) ni con la de hoy: es None, y
+        fechas_dato deja ver cual es el componente sin fecha."""
+        import copy
+        original = self.mod._load
+        def _load_sin_trimestre(symbol, kind):
+            d = copy.deepcopy(original(symbol, kind))
+            if kind == "overview":
+                d.pop("LatestQuarter", None)
+            return d
+        self.mod._load = _load_sin_trimestre
+        try:
+            r = self.mod.score_asset("IBM")
+        finally:
+            self.mod._load = original
+        self.assertIsNone(r["fecha_dato"])
+        self.assertIsNone(r["fechas_dato"]["fundamental"])
+        self.assertEqual(r["fechas_dato"]["precio"], "2026-09-02")
+
     def test_xom_detecta_el_fallo_del_ultimo_trimestre(self):
         r = self.mod.score_asset("XOM")
         self.assertEqual(r["sorpresa_resultados"]["ultima_sorpresa_pct"], -4.3478)
@@ -534,6 +599,64 @@ class TestThesisLedger(unittest.TestCase):
         evaluadas = self.mod.evaluate_pending("BTC", precio_actual=precio_inicial * 3, hoy=futuro)
         self.assertEqual(len(evaluadas), 1)
         self.assertEqual(evaluadas[0]["evaluacion"]["veredicto"], "bull_case")
+
+
+class TestIntegridadTemporalDeLosMotores(unittest.TestCase):
+    """Guardia transversal (P1, 2026-09-06).
+
+    Los tests de fecha_dato de cada motor comprueban un valor concreto y
+    por tanto solo cubren el motor que ya conocian. Este comprueba la
+    CLASE de defecto en los cinco a la vez, y ademas se vuelve mas
+    exigente con el tiempo en vez de menos: compara contra la fecha de
+    hoy, que avanza, mientras las fixtures siguen congeladas en el
+    pasado. Un motor nuevo que etiquete con datetime.now() lo rompe el
+    dia que se anada, sin que nadie tenga que acordarse de escribirle su
+    propio test.
+
+    Premisa explicita: TODAS las fixtures de tests/fixtures/ estan
+    congeladas en fechas anteriores a hoy. Si alguien las regenerase con
+    datos del dia, este test dejaria de discriminar -- por eso lo
+    primero que comprueba es esa premisa."""
+
+    @classmethod
+    def setUpClass(cls):
+        _materialize_fixtures()
+
+    def _fechas_de_todos_los_motores(self):
+        crypto = _import("crypto", "score")
+        technical = _import("technical", "score")
+        macro = _import("macro", "score")
+        equity = _import("equity", "score")
+        return {
+            "crypto.score_asset(BTC)": crypto.score_asset("BTC", None)["fecha_dato"],
+            "technical.score_asset(BTC)": technical.score_asset("BTC")["fecha_dato"],
+            "macro.score_us()": macro.score_us()["fecha_dato"],
+            "macro.score_ea()": macro.score_ea()["fecha_dato"],
+            "equity.score_asset(IBM)": equity.score_asset("IBM")["fecha_dato"],
+        }
+
+    def test_ningun_motor_etiqueta_con_la_fecha_de_ejecucion(self):
+        hoy = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d")
+        fechas = self._fechas_de_todos_los_motores()
+        for origen, fecha in fechas.items():
+            self.assertIsNotNone(fecha, f"{origen} no declara fecha_dato")
+            self.assertNotEqual(
+                fecha, hoy,
+                f"{origen} devuelve la fecha de HOY sobre una fixture congelada en el "
+                f"pasado: esta etiquetando con datetime.now() en vez de con la fecha "
+                f"real del dato")
+            self.assertLess(
+                fecha, hoy,
+                f"{origen} devuelve una fecha futura ({fecha}) -- un dato no puede ser "
+                f"posterior al momento en que se lee")
+
+    def test_las_fixtures_siguen_congeladas_en_el_pasado(self):
+        """Sin esta premisa el test anterior no discrimina nada."""
+        hoy = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d")
+        for origen, fecha in self._fechas_de_todos_los_motores().items():
+            self.assertLess(fecha, hoy,
+                            f"la fixture que alimenta {origen} ha dejado de estar "
+                            f"congelada en el pasado")
 
 
 if __name__ == "__main__":

@@ -91,7 +91,8 @@ def _trend(series, lookback=6, flat_threshold=0.05):
 
 
 def score_us():
-    cpi_yoy = _yoy(_load("us_cpi"))["yoy_pct"]
+    cpi = _yoy(_load("us_cpi"))
+    cpi_yoy = cpi["yoy_pct"]
     fedfunds = _load("us_fedfunds")
     fedfunds_trend = _trend(fedfunds, lookback=6, flat_threshold=0.1)
     unrate = _load("us_unemployment")
@@ -116,9 +117,25 @@ def score_us():
     else:
         regimen = "mixto — sin confluencia clara"
 
+    # Cada serie de FRED se publica con su propio calendario y su propio
+    # retraso: el IPC es mensual y sale con semanas de demora, la pendiente
+    # 10a-2a es diaria. Una unica fecha para todo el bloque macro no puede
+    # ser cierta -- por eso se declara una por metrica.
+    fechas_dato = {
+        "cpi_yoy_pct": cpi["fecha"],
+        "fed_funds_pct": fedfunds[-1][0],
+        "desempleo_pct": unrate[-1][0],
+        "spread_10y2y_pct": spread[-1][0],
+    }
+
     return {
         "region": "EE.UU.",
-        "fecha_dato": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d"),
+        # La fecha del bloque es la del componente MAS ANTIGUO, no la del
+        # mas reciente: "todo lo que hay aqui es al menos de esta fecha".
+        # Antes era datetime.now(), que etiquetaba un IPC de junio como si
+        # fuera de hoy (corregido 2026-09-06, P1).
+        "fecha_dato": min(fechas_dato.values()),
+        "fechas_dato": fechas_dato,
         "cpi_yoy_pct": cpi_yoy,
         "fed_funds_pct": fedfunds[-1][1],
         "fed_funds_tendencia_6m": fedfunds_trend,
@@ -144,7 +161,8 @@ def _rate_n_days_ago(series, days):
 
 
 def score_ea():
-    hicp_yoy = _yoy(_load("ea_hicp"))["yoy_pct"]
+    hicp = _yoy(_load("ea_hicp"))
+    hicp_yoy = hicp["yoy_pct"]
     ecb = _load("ea_ecb_rate")
     rate_now = ecb[-1][1]
     rate_3m = _rate_n_days_ago(ecb, 90)
@@ -167,9 +185,17 @@ def score_ea():
     else:
         regimen = "sin subida de tipos reciente"
 
+    # Mismo motivo que en score_us(): el HICP es mensual con retraso de
+    # publicacion y el tipo de deposito del BCE es una serie diaria.
+    fechas_dato = {
+        "hicp_yoy_pct": hicp["fecha"],
+        "ecb_deposit_rate_pct": ecb[-1][0],
+    }
+
     return {
         "region": "Eurozona",
-        "fecha_dato": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d"),
+        "fecha_dato": min(fechas_dato.values()),
+        "fechas_dato": fechas_dato,
         "hicp_yoy_pct": hicp_yoy,
         "ecb_deposit_rate_pct": rate_now,
         "ecb_rate_hace_3m_pct": rate_3m,

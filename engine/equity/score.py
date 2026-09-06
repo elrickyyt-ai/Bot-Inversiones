@@ -18,7 +18,6 @@ Vantage, no calculado a mano).
 """
 import json
 import os
-from datetime import datetime, timezone
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "_data")
 
@@ -75,9 +74,28 @@ def score_asset(symbol):
     else:
         sesgo = f"mixto ({alcistas}/{len(validos)} señales alcistas)"
 
+    # Este motor mezcla dos relojes: la cotizacion es del ultimo dia de
+    # mercado y los fundamentales son del ultimo trimestre CERRADO. No
+    # comparten fecha y no puede haber una sola que sea cierta para ambos.
+    fechas_dato = {
+        "precio": quote["latestDay"],
+        "fundamental": ov.get("LatestQuarter"),
+    }
+    # La fecha del bloque es la del componente mas antiguo. Si algun
+    # componente no trae fecha, el bloque no tiene fecha: None, nunca la
+    # fecha del componente que si la trae (seria optimista por
+    # construccion) y nunca datetime.now(), que era lo que habia antes y
+    # etiquetaba unos fundamentales de junio como si fueran de hoy
+    # (corregido 2026-09-06, P1). El modulo ya no importa datetime: volver
+    # a fechar con la hora de ejecucion seria ahora un NameError, no un
+    # dato mal etiquetado en silencio.
+    conocidas = [f for f in fechas_dato.values() if f]
+    fecha_dato = min(conocidas) if len(conocidas) == len(fechas_dato) else None
+
     return {
         "activo": symbol,
-        "fecha_dato": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+        "fecha_dato": fecha_dato,
+        "fechas_dato": fechas_dato,
         "fuente_ultima_cotizacion": quote["latestDay"],
         "precio": price,
         "market_cap_usd": int(ov["MarketCapitalization"]),
