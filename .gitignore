@@ -17,3 +17,10 @@ data/current/
 # corresponde a ningun cambio real (mismo motivo por el que _write_asset_row
 # dejo de reescribir DimAsset por solo retrieved_at).
 data/coverage.json
+
+# Evidence es una VISTA DERIVADA del Data Contract y de data/news/: se
+# regenera entera con engine/evidence/construir.py y por defecto ni
+# siquiera se escribe. Materializarla es opcional (--materializar) y su
+# sitio es este, sin versionar: un artefacto derivado que se versiona
+# deja de ser derivado. Medido: 507.430 filas.
+data/evidence/
