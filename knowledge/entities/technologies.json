@@ -1,0 +1,12 @@
+[
+ {
+  "entity_id": "tech:defi-smart-contracts",
+  "type": "technology",
+  "nombre": "Contratos inteligentes de finanzas descentralizadas",
+  "status": "ACTIVE",
+  "asset_id": null,
+  "aliases": [],
+  "source_id": "src:cadencias-no-aplica",
+  "nota": "Necesaria para poder AFIRMAR una ausencia (polarity DENIES) en vez de dejar una casilla vacia."
+ }
+]

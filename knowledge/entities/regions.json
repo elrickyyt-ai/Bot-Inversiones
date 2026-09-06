@@ -1,0 +1,40 @@
+[
+ {
+  "entity_id": "reg:US",
+  "type": "region",
+  "nombre": "Estados Unidos",
+  "status": "ACTIVE",
+  "asset_id": "US",
+  "aliases": [
+   {
+    "scheme": "ticker",
+    "value": "US",
+    "venue": null,
+    "valid_from": null,
+    "valid_to": null,
+    "source_id": "src:dimasset-equity"
+   }
+  ],
+  "source_id": "src:dimasset-equity",
+  "nota": "Hoy es un asset_id de tipo macro en el Data Contract. No es un activo: nadie compra Estados Unidos."
+ },
+ {
+  "entity_id": "reg:EA",
+  "type": "region",
+  "nombre": "Eurozona",
+  "status": "ACTIVE",
+  "asset_id": "EA",
+  "aliases": [
+   {
+    "scheme": "ticker",
+    "value": "EA",
+    "venue": null,
+    "valid_from": null,
+    "valid_to": null,
+    "source_id": "src:dimasset-equity"
+   }
+  ],
+  "source_id": "src:dimasset-equity",
+  "nota": "Mismo caso que reg:US."
+ }
+]

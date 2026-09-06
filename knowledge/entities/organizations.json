@@ -1,0 +1,48 @@
+[
+ {
+  "entity_id": "org:ibm",
+  "type": "organization",
+  "nombre": "International Business Machines",
+  "status": "ACTIVE",
+  "asset_id": null,
+  "aliases": [],
+  "source_id": "src:dimasset-equity"
+ },
+ {
+  "entity_id": "org:nvidia",
+  "type": "organization",
+  "nombre": "NVIDIA Corporation",
+  "status": "ACTIVE",
+  "asset_id": null,
+  "aliases": [],
+  "source_id": "src:dimasset-equity"
+ },
+ {
+  "entity_id": "org:exxonmobil",
+  "type": "organization",
+  "nombre": "Exxon Mobil Corp",
+  "status": "ACTIVE",
+  "asset_id": null,
+  "aliases": [],
+  "source_id": "src:dimasset-equity"
+ },
+ {
+  "entity_id": "org:alpha-vantage",
+  "type": "organization",
+  "nombre": "Alpha Vantage",
+  "status": "ACTIVE",
+  "asset_id": null,
+  "aliases": [],
+  "source_id": "src:dimasset-equity",
+  "nota": "Presente porque es el publisher de una fuente: la procedencia de una afirmacion es una entidad, no un entero."
+ },
+ {
+  "entity_id": "org:coingecko",
+  "type": "organization",
+  "nombre": "CoinGecko",
+  "status": "ACTIVE",
+  "asset_id": null,
+  "aliases": [],
+  "source_id": "src:dimasset-crypto"
+ }
+]

@@ -1,0 +1,34 @@
+[
+ {
+  "relationship_id": "rel:0044",
+  "subject": "sec:BTC",
+  "predicate": "DEPENDS_ON",
+  "object": "tech:defi-smart-contracts",
+  "polarity": "DENIES",
+  "nature": "ASSERTED",
+  "status": "VERIFIED",
+  "support_level": "MEDIO",
+  "source_id": "src:cadencias-no-aplica",
+  "statement": "engine/crypto/fetch_data.py declara tvl_chain=None para BTC, y cadencias.NO_APLICA registra la ausencia de TVL como estructural y no como hueco de datos.",
+  "valid_from": "2026-09-06",
+  "valid_to": null,
+  "last_verified": "2026-09-06",
+  "verification_method": "lectura del codigo y de la tabla NO_APLICA; comprobacion de que no es un fallo de descarga"
+ },
+ {
+  "relationship_id": "rel:0045",
+  "subject": "sec:XRP",
+  "predicate": "DEPENDS_ON",
+  "object": "tech:defi-smart-contracts",
+  "polarity": "DENIES",
+  "nature": "ASSERTED",
+  "status": "VERIFIED",
+  "support_level": "MEDIO",
+  "source_id": "src:cadencias-no-aplica",
+  "statement": "engine/crypto/fetch_data.py declara tvl_chain=None para XRP, y cadencias.NO_APLICA registra la ausencia de TVL como estructural y no como hueco de datos.",
+  "valid_from": "2026-09-06",
+  "valid_to": null,
+  "last_verified": "2026-09-06",
+  "verification_method": "lectura del codigo y de la tabla NO_APLICA; comprobacion de que no es un fallo de descarga"
+ }
+]

@@ -1,0 +1,389 @@
+[
+ {
+  "entity_id": "sec:BTC",
+  "type": "security",
+  "nombre": "Bitcoin",
+  "status": "ACTIVE",
+  "asset_id": "BTC",
+  "aliases": [
+   {
+    "scheme": "ticker",
+    "value": "BTC",
+    "venue": null,
+    "valid_from": null,
+    "valid_to": null,
+    "source_id": "src:dimasset-crypto"
+   },
+   {
+    "scheme": "kraken_pair",
+    "value": "XBTEUR",
+    "venue": "ven:kraken",
+    "valid_from": null,
+    "valid_to": null,
+    "source_id": "src:kraken-pairs"
+   },
+   {
+    "scheme": "coinbase_product",
+    "value": "BTC-EUR",
+    "venue": "ven:coinbase",
+    "valid_from": null,
+    "valid_to": null,
+    "source_id": "src:coinbase-products"
+   },
+   {
+    "scheme": "coingecko_id",
+    "value": "bitcoin",
+    "venue": null,
+    "valid_from": null,
+    "valid_to": null,
+    "source_id": "src:coingecko-ids"
+   }
+  ],
+  "source_id": "src:dimasset-crypto"
+ },
+ {
+  "entity_id": "sec:ETH",
+  "type": "security",
+  "nombre": "Ethereum",
+  "status": "ACTIVE",
+  "asset_id": "ETH",
+  "aliases": [
+   {
+    "scheme": "ticker",
+    "value": "ETH",
+    "venue": null,
+    "valid_from": null,
+    "valid_to": null,
+    "source_id": "src:dimasset-crypto"
+   },
+   {
+    "scheme": "kraken_pair",
+    "value": "ETHEUR",
+    "venue": "ven:kraken",
+    "valid_from": null,
+    "valid_to": null,
+    "source_id": "src:kraken-pairs"
+   },
+   {
+    "scheme": "coinbase_product",
+    "value": "ETH-EUR",
+    "venue": "ven:coinbase",
+    "valid_from": null,
+    "valid_to": null,
+    "source_id": "src:coinbase-products"
+   },
+   {
+    "scheme": "coingecko_id",
+    "value": "ethereum",
+    "venue": null,
+    "valid_from": null,
+    "valid_to": null,
+    "source_id": "src:coingecko-ids"
+   },
+   {
+    "scheme": "defillama_chain",
+    "value": "Ethereum",
+    "venue": null,
+    "valid_from": null,
+    "valid_to": null,
+    "source_id": "src:coingecko-ids"
+   }
+  ],
+  "source_id": "src:dimasset-crypto"
+ },
+ {
+  "entity_id": "sec:ADA",
+  "type": "security",
+  "nombre": "Cardano",
+  "status": "ACTIVE",
+  "asset_id": "ADA",
+  "aliases": [
+   {
+    "scheme": "ticker",
+    "value": "ADA",
+    "venue": null,
+    "valid_from": null,
+    "valid_to": null,
+    "source_id": "src:dimasset-crypto"
+   },
+   {
+    "scheme": "kraken_pair",
+    "value": "ADAEUR",
+    "venue": "ven:kraken",
+    "valid_from": null,
+    "valid_to": null,
+    "source_id": "src:kraken-pairs"
+   },
+   {
+    "scheme": "coinbase_product",
+    "value": "ADA-EUR",
+    "venue": "ven:coinbase",
+    "valid_from": null,
+    "valid_to": null,
+    "source_id": "src:coinbase-products"
+   },
+   {
+    "scheme": "coingecko_id",
+    "value": "cardano",
+    "venue": null,
+    "valid_from": null,
+    "valid_to": null,
+    "source_id": "src:coingecko-ids"
+   },
+   {
+    "scheme": "defillama_chain",
+    "value": "Cardano",
+    "venue": null,
+    "valid_from": null,
+    "valid_to": null,
+    "source_id": "src:coingecko-ids"
+   }
+  ],
+  "source_id": "src:dimasset-crypto"
+ },
+ {
+  "entity_id": "sec:SOL",
+  "type": "security",
+  "nombre": "Solana",
+  "status": "ACTIVE",
+  "asset_id": "SOL",
+  "aliases": [
+   {
+    "scheme": "ticker",
+    "value": "SOL",
+    "venue": null,
+    "valid_from": null,
+    "valid_to": null,
+    "source_id": "src:dimasset-crypto"
+   },
+   {
+    "scheme": "kraken_pair",
+    "value": "SOLEUR",
+    "venue": "ven:kraken",
+    "valid_from": null,
+    "valid_to": null,
+    "source_id": "src:kraken-pairs"
+   },
+   {
+    "scheme": "coinbase_product",
+    "value": "SOL-EUR",
+    "venue": "ven:coinbase",
+    "valid_from": null,
+    "valid_to": null,
+    "source_id": "src:coinbase-products"
+   },
+   {
+    "scheme": "coingecko_id",
+    "value": "solana",
+    "venue": null,
+    "valid_from": null,
+    "valid_to": null,
+    "source_id": "src:coingecko-ids"
+   },
+   {
+    "scheme": "defillama_chain",
+    "value": "Solana",
+    "venue": null,
+    "valid_from": null,
+    "valid_to": null,
+    "source_id": "src:coingecko-ids"
+   }
+  ],
+  "source_id": "src:dimasset-crypto"
+ },
+ {
+  "entity_id": "sec:DOT",
+  "type": "security",
+  "nombre": "Polkadot",
+  "status": "ACTIVE",
+  "asset_id": "DOT",
+  "aliases": [
+   {
+    "scheme": "ticker",
+    "value": "DOT",
+    "venue": null,
+    "valid_from": null,
+    "valid_to": null,
+    "source_id": "src:dimasset-crypto"
+   },
+   {
+    "scheme": "kraken_pair",
+    "value": "DOTEUR",
+    "venue": "ven:kraken",
+    "valid_from": null,
+    "valid_to": null,
+    "source_id": "src:kraken-pairs"
+   },
+   {
+    "scheme": "coinbase_product",
+    "value": "DOT-EUR",
+    "venue": "ven:coinbase",
+    "valid_from": null,
+    "valid_to": null,
+    "source_id": "src:coinbase-products"
+   },
+   {
+    "scheme": "coingecko_id",
+    "value": "polkadot",
+    "venue": null,
+    "valid_from": null,
+    "valid_to": null,
+    "source_id": "src:coingecko-ids"
+   },
+   {
+    "scheme": "defillama_chain",
+    "value": "Polkadot",
+    "venue": null,
+    "valid_from": null,
+    "valid_to": null,
+    "source_id": "src:coingecko-ids"
+   }
+  ],
+  "source_id": "src:dimasset-crypto"
+ },
+ {
+  "entity_id": "sec:XRP",
+  "type": "security",
+  "nombre": "XRP",
+  "status": "ACTIVE",
+  "asset_id": "XRP",
+  "aliases": [
+   {
+    "scheme": "ticker",
+    "value": "XRP",
+    "venue": null,
+    "valid_from": null,
+    "valid_to": null,
+    "source_id": "src:dimasset-crypto"
+   },
+   {
+    "scheme": "kraken_pair",
+    "value": "XRPEUR",
+    "venue": "ven:kraken",
+    "valid_from": null,
+    "valid_to": null,
+    "source_id": "src:kraken-pairs"
+   },
+   {
+    "scheme": "coinbase_product",
+    "value": "XRP-EUR",
+    "venue": "ven:coinbase",
+    "valid_from": null,
+    "valid_to": null,
+    "source_id": "src:coinbase-products"
+   },
+   {
+    "scheme": "coingecko_id",
+    "value": "ripple",
+    "venue": null,
+    "valid_from": null,
+    "valid_to": null,
+    "source_id": "src:coingecko-ids"
+   }
+  ],
+  "source_id": "src:dimasset-crypto",
+  "nota": "El coingecko_id es 'ripple', el nombre de la ORGANIZACION emisora, usado para identificar el VALOR. Son dos entidades distintas y el alias las confunde; se registra tal cual porque es lo que la fuente devuelve."
+ },
+ {
+  "entity_id": "sec:IBM.NYSE",
+  "type": "security",
+  "nombre": "International Business Machines (acciones ordinarias)",
+  "status": "ACTIVE",
+  "asset_id": "IBM",
+  "aliases": [
+   {
+    "scheme": "ticker",
+    "value": "IBM",
+    "venue": "ven:NYSE",
+    "valid_from": null,
+    "valid_to": null,
+    "source_id": "src:dimasset-equity"
+   },
+   {
+    "scheme": "alphavantage_symbol",
+    "value": "IBM",
+    "venue": null,
+    "valid_from": null,
+    "valid_to": null,
+    "source_id": "src:dimasset-equity"
+   },
+   {
+    "scheme": "yahoo_symbol",
+    "value": "IBM",
+    "venue": null,
+    "valid_from": null,
+    "valid_to": null,
+    "source_id": "src:dimasset-equity"
+   }
+  ],
+  "source_id": "src:dimasset-equity"
+ },
+ {
+  "entity_id": "sec:NVDA.NASDAQ",
+  "type": "security",
+  "nombre": "NVIDIA Corporation (acciones ordinarias)",
+  "status": "ACTIVE",
+  "asset_id": "NVDA",
+  "aliases": [
+   {
+    "scheme": "ticker",
+    "value": "NVDA",
+    "venue": "ven:NASDAQ",
+    "valid_from": null,
+    "valid_to": null,
+    "source_id": "src:dimasset-equity"
+   },
+   {
+    "scheme": "alphavantage_symbol",
+    "value": "NVDA",
+    "venue": null,
+    "valid_from": null,
+    "valid_to": null,
+    "source_id": "src:dimasset-equity"
+   },
+   {
+    "scheme": "yahoo_symbol",
+    "value": "NVDA",
+    "venue": null,
+    "valid_from": null,
+    "valid_to": null,
+    "source_id": "src:dimasset-equity"
+   }
+  ],
+  "source_id": "src:dimasset-equity"
+ },
+ {
+  "entity_id": "sec:XOM.NYSE",
+  "type": "security",
+  "nombre": "Exxon Mobil Corp (acciones ordinarias)",
+  "status": "ACTIVE",
+  "asset_id": "XOM",
+  "aliases": [
+   {
+    "scheme": "ticker",
+    "value": "XOM",
+    "venue": "ven:NYSE",
+    "valid_from": null,
+    "valid_to": null,
+    "source_id": "src:dimasset-equity"
+   },
+   {
+    "scheme": "alphavantage_symbol",
+    "value": "XOM",
+    "venue": null,
+    "valid_from": null,
+    "valid_to": null,
+    "source_id": "src:dimasset-equity"
+   },
+   {
+    "scheme": "yahoo_symbol",
+    "value": "XOM",
+    "venue": null,
+    "valid_from": null,
+    "valid_to": null,
+    "source_id": "src:dimasset-equity"
+   }
+  ],
+  "source_id": "src:dimasset-equity"
+ }
+]

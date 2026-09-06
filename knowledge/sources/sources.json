@@ -1,0 +1,90 @@
+[
+ {
+  "source_id": "src:dimasset-equity",
+  "tipo": "DATA_PROVIDER",
+  "publisher": "org:alpha-vantage",
+  "titulo": "COMPANY_OVERVIEW de Alpha Vantage, materializado en DimAsset",
+  "localizador": "data/assets/{IBM,NVDA,XOM}.json",
+  "fecha_publicacion": "2026-09-03",
+  "fecha_consulta": "2026-09-06",
+  "accesible": true,
+  "nota": "Los campos name/sector/country/exchange son literales de Alpha Vantage, no asignados por este sistema."
+ },
+ {
+  "source_id": "src:dimasset-crypto",
+  "tipo": "DATA_PROVIDER",
+  "publisher": "org:coingecko",
+  "titulo": "Metadatos de CoinGecko, materializados en DimAsset",
+  "localizador": "data/assets/{ADA,BTC,DOT,ETH,SOL,XRP}.json",
+  "fecha_publicacion": "2026-09-03",
+  "fecha_consulta": "2026-09-06",
+  "accesible": true,
+  "nota": "sector='Cripto' y currency='EUR' son etiquetas ASIGNADAS por este sistema, no propiedades del activo."
+ },
+ {
+  "source_id": "src:kraken-pairs",
+  "tipo": "INTERNAL_RULE",
+  "publisher": null,
+  "titulo": "Tabla KRAKEN_PAIR del fetcher tecnico",
+  "localizador": "engine/technical/fetch_data.py:14-16",
+  "fecha_publicacion": null,
+  "fecha_consulta": "2026-09-06",
+  "accesible": true,
+  "nota": "El hecho subyacente es de Kraken; esto es donde este proyecto lo escribio. No verificado contra la documentacion de Kraken."
+ },
+ {
+  "source_id": "src:coinbase-products",
+  "tipo": "INTERNAL_RULE",
+  "publisher": null,
+  "titulo": "Tabla COINBASE_PAIR del fetcher de backfill tecnico",
+  "localizador": "engine/technical/fetch_backfill.py:60-62",
+  "fecha_publicacion": null,
+  "fecha_consulta": "2026-09-06",
+  "accesible": true,
+  "nota": "Mismo caracter que src:kraken-pairs."
+ },
+ {
+  "source_id": "src:coingecko-ids",
+  "tipo": "INTERNAL_RULE",
+  "publisher": null,
+  "titulo": "Tabla ASSETS del fetcher de fundamentales cripto",
+  "localizador": "engine/crypto/fetch_data.py:20-25",
+  "fecha_publicacion": null,
+  "fecha_consulta": "2026-09-06",
+  "accesible": true,
+  "nota": "Contiene tvl_chain=None para BTC y XRP, que es la unica huella de que su TVL no aplica."
+ },
+ {
+  "source_id": "src:thesis-macro-uniforme",
+  "tipo": "INTERNAL_RULE",
+  "publisher": null,
+  "titulo": "build_thesis() aplica score_us() y score_ea() a todos los activos por igual",
+  "localizador": "engine/reasoning/thesis.py:81-82 y :190-191",
+  "fecha_publicacion": null,
+  "fecha_consulta": "2026-09-06",
+  "accesible": true,
+  "nota": "NO es evidencia de exposicion economica. Es evidencia de que el software actual usa macro de EE.UU. y de la Eurozona para todos los activos sin distinguirlos."
+ },
+ {
+  "source_id": "src:xrp-coinbase-delisting",
+  "tipo": "OWN_ANALYSIS",
+  "publisher": null,
+  "titulo": "Hueco de 905 dias en la serie de precio de XRP en Coinbase",
+  "localizador": "engine/technical/score.py:106-107 (comentario) y data/history/crypto/XRP/ (medicion)",
+  "fecha_publicacion": "2026-09-04",
+  "fecha_consulta": "2026-09-06",
+  "accesible": true,
+  "nota": "Fechas medidas sobre el contrato, no estimadas: ultimo dato 2021-01-19, reanudacion 2023-07-13."
+ },
+ {
+  "source_id": "src:cadencias-no-aplica",
+  "tipo": "OWN_ANALYSIS",
+  "publisher": null,
+  "titulo": "Tabla NO_APLICA de cadencias.py (P1b)",
+  "localizador": "engine/contract/cadencias.py",
+  "fecha_publicacion": "2026-09-06",
+  "fecha_consulta": "2026-09-06",
+  "accesible": true,
+  "nota": "Declara que la ausencia de TVL en BTC y XRP es estructural, no un hueco de datos."
+ }
+]
