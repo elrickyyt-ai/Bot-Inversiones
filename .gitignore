@@ -9,3 +9,11 @@ __pycache__/
 # versiona. Medido: versionarlo costaria 65,1 KB/dia de historial de git por
 # activo (255 MB/anio con 11 activos), frente a 0,84 KB/dia sin el.
 data/current/
+
+# coverage.json es un artefacto DERIVADO igual que current/: se recalcula
+# entero desde incoming/ + history/ con engine/contract/cobertura.py. No se
+# versiona porque cambia cada dia aunque no haya ningun dato nuevo -- la
+# frescura envejece sola -- y versionarlo produciria un commit diario que no
+# corresponde a ningun cambio real (mismo motivo por el que _write_asset_row
+# dejo de reescribir DimAsset por solo retrieved_at).
+data/coverage.json

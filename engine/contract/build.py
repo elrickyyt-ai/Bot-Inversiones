@@ -227,7 +227,32 @@ def build_all(include_equity=True):
             print(f"  - {e}")
         raise SystemExit(1)
 
+    _escribir_cobertura()
     return summary
+
+
+def _escribir_cobertura():
+    """data/coverage.json -- derivado, gitignored, recalculado entero en
+    cada build. Solo lee incoming/ (biblioteca estandar): no mete PyArrow
+    en el camino critico del cron diario. Nunca falla el build: la
+    frescura es una declaracion del estado, no una puerta -- que el IPC
+    envejezca hasta su cadencia normal es correcto y no debe impedir
+    commitear datos nuevos."""
+    import cobertura
+    try:
+        res = cobertura.evaluar()
+    except Exception as e:  # noqa: BLE001 -- ver docstring
+        print(f"\ncoverage.json NO generado ({type(e).__name__}: {e}) -- el build sigue.")
+        return
+    tmp = cobertura.COVERAGE_PATH + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(res, f, ensure_ascii=False, indent=1)
+    os.replace(tmp, cobertura.COVERAGE_PATH)
+    resumen = {}
+    for fila in res["por_dominio"]:
+        resumen[fila["estado_frescura"]] = resumen.get(fila["estado_frescura"], 0) + 1
+    print(f"\ncoverage.json: {len(res['por_dominio'])} dominios — "
+          + ", ".join(f"{v} {k}" for k, v in sorted(resumen.items())))
 
 
 if __name__ == "__main__":

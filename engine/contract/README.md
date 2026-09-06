@@ -103,3 +103,26 @@ La razón de separarlos (a petición explícita del usuario, y es correcta): un 
 ## Fuentes de datos vs. fuentes de noticias
 
 `SOURCE_PRIORITY` en `schema.py` es una jerarquía **distinta** de la que ya existe en `engine/news/sources.py` — esa es para credibilidad periodística (Reuters vs. un blog), esta es para fiabilidad de fuentes de datos de mercado (FRED como fuente primaria vs. agregadores como Alpha Vantage/CoinGecko). Ambas conviven, no se fusionan. `NEWS_FIELDS.source_priority` usa la jerarquía periodística de `sources.py` (`tier_for_domain()`, 1-5) precisamente porque una fila de noticia es del segundo tipo, no del primero.
+
+## Cobertura y frescura (P1b, desde 2026-09-06) — `cadencias.py` + `cobertura.py`
+
+```bash
+python3 engine/contract/cobertura.py                # tabla + data/coverage.json
+python3 engine/contract/cobertura.py --con-history  # incluye history/ (PyArrow)
+```
+
+**Dos ejes ortogonales, no un enum de cinco estados.** `cobertura` (`AVAILABLE`/`PARTIAL`/`MISSING`/`NOT_APPLICABLE`/`UNKNOWN`) responde «¿existe el dato?»; `frescura` (`FRESH`/`LAGGING`/`STALE`/`UNKNOWN`) responde «¿sigue valiendo?». Son independientes y un dominio puede estar en los dos a la vez: IBM/fundamental tiene sus 14 métricas y cinco de ellas con 47 sesiones de retraso. Colapsarlos en un solo campo obligaría a elegir cuál de las dos verdades se oculta.
+
+**`cadencias.py` declara, no mide.** Inferir la cadencia de la propia serie haría que una serie parada se autodeclarase sana: si el IPC lleva tres meses sin publicarse, su hueco mediano observado es de tres meses. Lo que no está declarado queda en `UNKNOWN`, y `UNKNOWN` **no es permisivo** — «no se pudo determinar la frescura» no es «la frescura es correcta».
+
+**La cadencia es `(unidad, n)`, no un número de días.** La unidad es `sesion` o `dia`, y `sesion` se resuelve con `engine/technical/trading_calendar.py`, el mismo calendario NYSE que ya usaba la detección de huecos del backfill. Sin esa distinción, IBM aparecería retrasado cada domingo por tener su último cierre el viernes. Dos casos reales que un umbral fijo de 30 días clasificaría **al revés**: el IPC con 67 días está al día (cadencia declarada 75), y una métrica diaria con 3 sesiones está caducada.
+
+**El estado de un dominio es el de su peor componente**, nunca el del más reciente: con la regla del máximo, IBM/fundamental saldría al día porque sus nueve métricas trimestrales lo están.
+
+**La ausencia tiene causas.** `NO_APLICA` distingue las tres ausencias idénticas de `tvl_percentile_365d`: BTC y XRP no tienen TVL de DeFi por naturaleza (cobertura completa, 3/4 no es un hueco), mientras DOT sí es un hueco porque DefiLlama reporta 0 en toda la serie de Polkadot — una incidencia real de la fuente. DOT **no** está en la tabla a propósito.
+
+**Dependencias por capas, igual que `qa.py`.** Por defecto solo lee `incoming/` con la biblioteca estándar, para poder correr en el cron diario sin PyArrow; una métrica cuya última fila viva en `history/` no aparece, y por eso `--con-history` existe.
+
+**`data/coverage.json` es derivado y gitignored**, como `data/current/`: se recalcula entero en cada `build.py`. No se versiona porque la frescura envejece sola y produciría un commit diario sin ningún cambio real de datos. `qa.py` lo resume en un bloque **informativo que nunca falla**: que el IPC envejezca hasta su cadencia normal es correcto y no debe impedir commitear datos nuevos. Quien decida bloquear con la frescura será el motor de razonamiento, no la ingesta.
+
+**Registrado y no corregido** (`DEFECTO_DE_FECHADO` en `cadencias.py`): `adapt_equity()` escribe `pe_ratio`, `peg_ratio` y las tres `analyst_*` con `fundamental_as_of` (el trimestre) aunque dependen del precio del día. Su cadencia declarada es la correcta —diaria— y por eso salen `STALE`: el dato es de hoy y la fecha es de hace un trimestre.

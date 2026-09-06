@@ -412,6 +412,36 @@ def run_qa(require_parquet=False):
     p(f"RESULTADO: {_fmt_pass_fail(not hash_errors)}")
     p("")
 
+    # --- COBERTURA Y FRESCURA: informativo, nunca falla ---
+    # No es una puerta y no debe serlo: que el IPC envejezca hasta su
+    # cadencia normal de publicacion es correcto, y convertirlo en FAIL
+    # pararia el cron un dia de cada dos por un comportamiento esperado.
+    # Aqui se declara el estado; quien decida bloquear con el es el motor
+    # de razonamiento, no la ingesta.
+    p("## COBERTURA Y FRESCURA (informativo — no condiciona el resultado)")
+    try:
+        import cobertura
+        cob = cobertura.evaluar()
+        por_cobertura, por_frescura = {}, {}
+        for f in cob["por_dominio"]:
+            por_cobertura[f["cobertura"]] = por_cobertura.get(f["cobertura"], 0) + 1
+            por_frescura[f["estado_frescura"]] = por_frescura.get(f["estado_frescura"], 0) + 1
+        p(f"Dominios evaluados: {len(cob['por_dominio'])} (solo incoming/, sin PyArrow)")
+        p("Cobertura:  " + " · ".join(f"{v} {k}" for k, v in sorted(por_cobertura.items())))
+        p("Frescura:   " + " · ".join(f"{v} {k}" for k, v in sorted(por_frescura.items())))
+        peores = [f for f in cob["por_dominio"] if f["estado_frescura"] in ("STALE", "UNKNOWN")]
+        for f in sorted(peores, key=lambda x: -(x["retraso"] or 0))[:8]:
+            p(f"  {f['asset_id']}.{f['domain']}: {f['estado_frescura']} "
+              f"{f['retraso']} {f['unidad'] or ''} — manda {f['metrica_que_manda']} "
+              f"(último dato {f['data_as_of_peor']})")
+        incompletos = [f for f in cob["por_dominio"] if f["faltan"]]
+        for f in incompletos:
+            p(f"  {f['asset_id']}.{f['domain']}: {f['cobertura']} — faltan {', '.join(f['faltan'])}")
+        p("Detalle completo: python3 engine/contract/cobertura.py")
+    except Exception as e:  # noqa: BLE001 -- bloque informativo
+        p(f"NO EVALUADO ({type(e).__name__}: {e})")
+    p("")
+
     core_ok = (
         not schema_errors and not duplicates and not incompatible and not privacy_issues and not no_source
         and not asset_schema_errors and not asset_privacy_issues and not no_currency
