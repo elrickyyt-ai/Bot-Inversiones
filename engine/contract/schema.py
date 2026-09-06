@@ -26,11 +26,17 @@ METRIC_FIELDS = {
     "confidence_pct", "data_quality_pct", "calculation_method", "source_url",
 }
 
+# evidence_validity / evidence (P1, 2026-09-06): una tesis ya no publica
+# solo su conclusion, tambien de que evidencia depende y en que estado
+# estaba esa evidencia cuando se razono. Sin esto, confidence_pct = None
+# no se podria distinguir de "el motor no supo calcularla".
 THESIS_FIELDS = {
     "thesis_id", "asset_id", "thesis_type", "bull_case", "base_case", "bear_case",
     "contradictions", "convergences", "divergences", "invalidation_factors",
-    "confidence_pct", "data_as_of", "retrieved_at",
+    "confidence_pct", "evidence_validity", "evidence", "data_as_of", "retrieved_at",
 }
+
+VALIDEZ_EVIDENCIA = ("VALID", "INVALID", "UNKNOWN")
 
 # DimAsset -- atributos ESTATICOS del activo (no cambian dia a dia, por
 # eso no se historizan como las metricas). Algunos campos son un dato
@@ -175,6 +181,17 @@ def validate_thesis_row(row):
     if extra:
         raise ContractError(f"campos no reconocidos por el Data Contract: {extra}")
     _validate_pct_range(row, "confidence_pct")
+    validez = row.get("evidence_validity")
+    if validez is not None and validez not in VALIDEZ_EVIDENCIA:
+        raise ContractError(f"evidence_validity fuera del vocabulario: {validez}")
+    # Una tesis cuya evidencia requerida esta caducada o sin declarar NO
+    # puede publicar un numero de confianza. "No hay base para calcularla"
+    # no es "hay poca confianza": un numero reducido invitaria a seguir
+    # usandolo igualmente.
+    if validez in ("INVALID", "UNKNOWN") and row.get("confidence_pct") is not None:
+        raise ContractError(
+            f"confidence_pct={row['confidence_pct']} con evidence_validity={validez}: "
+            f"una tesis sin evidencia válida no puede declarar confianza")
     da, ra = _parse_date(row["data_as_of"]), _parse_date(row["retrieved_at"])
     if da > ra:
         raise ContractError(f"data_as_of ({da}) no puede ser posterior a retrieved_at ({ra})")

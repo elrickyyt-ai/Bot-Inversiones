@@ -36,6 +36,152 @@ NEWS_FINDINGS = {
 }
 
 
+# --- Evidencia que cada tesis usa, y con que papel (P1, 2026-09-06) ---
+#
+# Hasta ahora la cobertura de una tesis era sum([True, True, True, ...]):
+# tres literales. El sistema ya sabe su cobertura y su frescura reales
+# (engine/contract/cobertura.py) y la tesis seguia publicando una ficticia.
+#
+# El papel importa tanto como el estado. Una metrica caducada NO invalida
+# una tesis que no depende de ella: pe_ratio aparece en el texto del
+# bear_case y ninguna regla se bifurca por su valor, asi que su retraso
+# produce una advertencia, no la anulacion de la conclusion. Solo lo
+# REQUERIDO puede invalidar.
+#
+#   REQUERIDA  una regla de clasificacion se bifurca por su valor, o
+#              entra en el calculo de confidence_pct.
+#   PUBLICADA  su valor aparece como cifra o afirmacion en la salida,
+#              pero ninguna regla depende de el.
+#   CONTEXTO   contextualiza sin ser del activo (regimen macro).
+#
+# Las entradas con entidad "US"/"EA" son, literalmente, la relacion
+# implicita que P2 debe modelar: build_thesis() aplica el contexto macro
+# de EE.UU. y de la Eurozona a los once activos por igual. Aqui queda
+# escrita por primera vez de forma explicita; cuando exista el Knowledge
+# Model, esta lista se sustituye por una consulta de EXPOSED_TO en vez
+# de por una tabla a mano.
+REQUERIDA, PUBLICADA, CONTEXTO = "REQUERIDA", "PUBLICADA", "CONTEXTO"
+
+# (entidad, dominio, metrica, papel, reloj, campo_del_reloj, motivo)
+# entidad None = el propio activo. campo_del_reloj None = fecha_dato del motor.
+_MACRO_CONTEXTO = [
+    ("US", "macro", "cpi_yoy_pct", CONTEXTO, "macro_us", "cpi_yoy_pct",
+     "entra en el régimen macro de EE.UU. que se publica como hecho"),
+    ("US", "macro", "fed_funds_pct", CONTEXTO, "macro_us", "fed_funds_pct",
+     "entra en el régimen macro de EE.UU. que se publica como hecho"),
+    ("US", "macro", "desempleo_pct", CONTEXTO, "macro_us", "desempleo_pct",
+     "entra en el régimen macro; NO está en el Data Contract (hallazgo P1)"),
+    ("US", "macro", "spread_10y2y_pct", CONTEXTO, "macro_us", "spread_10y2y_pct",
+     "entra en el régimen macro; NO está en el Data Contract (hallazgo P1)"),
+    ("EA", "macro", "hicp_yoy_pct", CONTEXTO, "macro_ea", "hicp_yoy_pct",
+     "entra en el régimen macro de la Eurozona que se publica como hecho"),
+    ("EA", "macro", "ecb_deposit_rate_pct", CONTEXTO, "macro_ea", "ecb_deposit_rate_pct",
+     "entra en el régimen macro de la Eurozona que se publica como hecho"),
+]
+
+EVIDENCIA_CRYPTO = [
+    (None, "fundamental", "market_cap_percentile_365d", REQUERIDA, "crypto", None,
+     "percentil de capitalización: regla de convergencia/divergencia y bull_case"),
+    (None, "tecnico", "confluencia_sesgo", REQUERIDA, "technical", None,
+     "dirección técnica: regla de convergencia/divergencia, bear_case y base de confidence_pct"),
+    (None, "fundamental", "tvl_percentile_365d", PUBLICADA, "crypto", None,
+     "se publica como hecho; ninguna regla se bifurca por su valor"),
+    (None, "fundamental", "fdv_mcap_ratio", PUBLICADA, "crypto", None,
+     "se publica como hecho y puede generar una advertencia de dilución"),
+] + _MACRO_CONTEXTO
+
+EVIDENCIA_EQUITY = [
+    (None, "tecnico", "posicion_rango_52s_pct", REQUERIDA, "equity", "precio",
+     "posición en el rango de 52 semanas: regla de convergencia/divergencia"),
+    (None, "tecnico", "confluencia_sesgo", REQUERIDA, "equity", "precio",
+     "dirección técnica (proxy) y base de confidence_pct"),
+    (None, "fundamental", "earnings_surprise_last_pct", REQUERIDA, "equity", "fundamental",
+     "regla de contradicción: crecimiento anual fuerte vs. último trimestre fallado"),
+    (None, "fundamental", "earnings_growth_yoy_pct", REQUERIDA, "equity", "fundamental",
+     "misma regla de contradicción; NO está en el Data Contract (hallazgo P1)"),
+    (None, "fundamental", "revenue_growth_yoy_pct", PUBLICADA, "equity", "fundamental",
+     "se publica como hecho"),
+    (None, "fundamental", "pe_ratio", PUBLICADA, "equity", "fundamental",
+     "se cita en el bear_case; ninguna regla se bifurca por su valor"),
+    (None, "fundamental", "peg_ratio", PUBLICADA, "equity", "fundamental",
+     "solo puede generar una advertencia de valoración exigente"),
+    (None, "fundamental", "analyst_target_price", PUBLICADA, "equity", "fundamental",
+     "cifra citada en el bull_case"),
+    (None, "fundamental", "analyst_upside_pct", PUBLICADA, "equity", "fundamental",
+     "cifra citada en el bull_case"),
+] + _MACRO_CONTEXTO
+
+
+def _evaluar_evidencia(entradas, relojes, symbol, asset_type, hoy=None):
+    """Evalua cada evidencia contra su cadencia declarada y decide la
+    validez analitica de la tesis.
+
+    VALID    todo lo REQUERIDO está dentro de su cadencia (FRESH o LAGGING).
+    INVALID  algo REQUERIDO está STALE o no tiene fecha.
+    UNKNOWN  algo REQUERIDO no tiene cadencia declarada — que NO es lo
+             mismo que estar al día.
+    """
+    cadencias = _load_module("contract", "cadencias")
+    hoy = hoy or datetime.datetime.now(datetime.timezone.utc).date()
+    tc = cadencias._trading_calendar()
+
+    evaluadas = []
+    for entidad, dominio, metrica, papel, reloj, campo, motivo in entradas:
+        fechas = relojes.get(reloj) or {}
+        cruda = fechas.get(campo) if campo else fechas.get("_default")
+        fecha = None
+        if cruda:
+            try:
+                fecha = datetime.date.fromisoformat(cruda)
+            except (TypeError, ValueError):
+                fecha = None
+        tipo = "macro" if entidad in ("US", "EA") else asset_type
+        if fecha is None:
+            estado, r, unidad = "UNKNOWN", None, None
+        else:
+            estado, r, unidad = cadencias.estado_frescura(tipo, dominio, metrica, fecha, hoy, tc)
+        evaluadas.append({
+            "entidad": entidad or symbol, "dominio": dominio, "metrica": metrica,
+            "papel": papel, "data_as_of": fecha.isoformat() if fecha else None,
+            "frescura": estado, "retraso": r, "unidad": unidad, "motivo": motivo,
+        })
+
+    requeridas = [e for e in evaluadas if e["papel"] == REQUERIDA]
+    if any(e["frescura"] == "STALE" or e["data_as_of"] is None for e in requeridas):
+        validez = "INVALID"
+    elif any(e["frescura"] == "UNKNOWN" for e in requeridas):
+        validez = "UNKNOWN"
+    else:
+        validez = "VALID"
+    return evaluadas, validez
+
+
+def _advertencias_de_frescura(evaluadas):
+    """Lo que NO invalida pero el lector debe saber: una cifra caducada
+    que la tesis publica igualmente."""
+    fuera = []
+    for e in evaluadas:
+        if e["frescura"] != "STALE":
+            continue
+        que = {REQUERIDA: "de la que depende una regla",
+               PUBLICADA: "que se publica como cifra",
+               CONTEXTO: "que contextualiza"}[e["papel"]]
+        fuera.append(
+            f"{e['entidad']}.{e['metrica']} ({que}) tiene fecha {e['data_as_of']} — "
+            f"{e['retraso']} {e['unidad']}(s) de retraso sobre su cadencia declarada.")
+    return fuera
+
+
+def _cobertura_real(evaluadas, news_disponible):
+    """Sustituye a sum([True, True, True, ...]). Un dominio cuenta como
+    cubierto solo si al menos una de sus evidencias tiene fecha."""
+    dominios = {"fundamental", "tecnico", "macro", "noticias"}
+    cubiertos = {e["dominio"] for e in evaluadas if e["data_as_of"]}
+    if news_disponible:
+        cubiertos.add("noticias")
+    return len(cubiertos & dominios), len(dominios)
+
+
 def _load_module(subdir, modname):
     path = os.path.join(ROOT, subdir)
     sys.path.insert(0, path)
@@ -136,9 +282,23 @@ def build_thesis(symbol, tvl_chain):
             f"(Data Quality {fund['data_quality_pct']}%) — la tesis para este activo tiene menor fiabilidad que las demás."
         )
 
-    cobertura = sum([True, True, True, news.get("disponible", False)])
+    # --- Evidencia, frescura y validez analitica (P1) ---
+    evidencia, validez = _evaluar_evidencia(
+        EVIDENCIA_CRYPTO,
+        {"crypto": {"_default": fund.get("fecha_dato")},
+         "technical": {"_default": tech.get("fecha_dato")},
+         "macro_us": macro_us.get("fechas_dato", {}),
+         "macro_ea": macro_ea.get("fechas_dato", {})},
+        symbol, "crypto")
+    advertencias += _advertencias_de_frescura(evidencia)
+    cubiertos, total_dominios = _cobertura_real(evidencia, news.get("disponible", False))
+
     confidence_base = tech["confluencia"]["confidence_pct"]
     confidence_pct = round(confidence_base * (fund["data_quality_pct"] / 100)) if confidence_base else None
+    if validez != "VALID":
+        # "No hay base para calcular la confianza" no es "hay poca
+        # confianza". Un numero reducido invitaria a seguir usandolo.
+        confidence_pct = None
 
     bull_case = (
         f"Si el precio confirma el sesgo técnico actual ({tech['confluencia']['sesgo']}) y el contexto macro "
@@ -168,7 +328,9 @@ def build_thesis(symbol, tvl_chain):
             "Una corrección posterior de los datos marcados con posible incidencia (ver advertencias) cambiaría la lectura fundamental.",
         ],
         "confidence_pct": confidence_pct,
-        "cobertura_dominios": f"{cobertura}/4",
+        "validez_evidencia": validez,
+        "evidencia": evidencia,
+        "cobertura_dominios": f"{cubiertos}/{total_dominios}",
         "nota_metodologica": "Reglas de clasificación fijas y documentadas en engine/reasoning/thesis.py — no es una conclusión generada libremente.",
     }
 
@@ -227,10 +389,21 @@ def build_thesis_equity(symbol):
             f"dominada por una base de comparación baja, no por el momento actual."
         )
 
+    # --- Evidencia, frescura y validez analitica (P1) ---
+    evidencia, validez = _evaluar_evidencia(
+        EVIDENCIA_EQUITY,
+        {"equity": fund.get("fechas_dato", {}),
+         "macro_us": macro_us.get("fechas_dato", {}),
+         "macro_ea": macro_ea.get("fechas_dato", {})},
+        symbol, "equity")
+    advertencias += _advertencias_de_frescura(evidencia)
+    cubiertos, total_dominios = _cobertura_real(evidencia, False)
+
     validos_conf = [v for v in fund["confluencia"]["detalle"].values() if v is not None]
     confidence_base = round(len(validos_conf) / 3 * 100) if validos_conf else None
     confidence_pct = round(confidence_base * (fund["data_quality_pct"] / 100)) if confidence_base else None
-    cobertura = sum([True, False, True, False])  # fundamental+tecnico(proxy) si, noticias no, y macro si
+    if validez != "VALID":
+        confidence_pct = None
 
     upside = fund["analistas"]["upside_pct"]
     bull_case = (
@@ -261,7 +434,9 @@ def build_thesis_equity(symbol):
             "Sin cobertura de noticias para acciones en esta v1 — un evento no capturado aquí podría invalidar la tesis sin que el sistema lo detecte.",
         ],
         "confidence_pct": confidence_pct,
-        "cobertura_dominios": f"{cobertura}/4",
+        "validez_evidencia": validez,
+        "evidencia": evidencia,
+        "cobertura_dominios": f"{cubiertos}/{total_dominios}",
         "nota_metodologica": "Reglas de clasificación fijas y documentadas en engine/reasoning/thesis.py — no es una conclusión generada libremente. Dominio técnico es un proxy simplificado, no el motor técnico completo de engine/technical/.",
     }
 

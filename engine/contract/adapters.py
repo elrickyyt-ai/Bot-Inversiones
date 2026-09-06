@@ -479,6 +479,12 @@ def adapt_thesis(thesis, asset_type):
         "divergences": thesis["divergencias"],
         "invalidation_factors": thesis["factores_que_invalidarian_la_tesis"],
         "confidence_pct": thesis["confidence_pct"],
+        "evidence_validity": thesis.get("validez_evidencia"),
+        "evidence": thesis.get("evidencia"),
+        # data_as_of de una tesis es la fecha del RAZONAMIENTO, no la de
+        # los datos sobre los que razona -- una tesis si se produce hoy.
+        # La distancia entre las dos ya no queda oculta: esta en cada
+        # entrada de "evidence".
         "data_as_of": thesis["fecha"],
         "retrieved_at": retrieved_at,
     }

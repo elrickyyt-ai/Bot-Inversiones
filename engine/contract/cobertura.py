@@ -39,83 +39,10 @@ import sys
 
 import cadencias
 import storage
+from cadencias import estado_frescura, retraso, ORDEN_FRESCURA  # noqa: F401
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 COVERAGE_PATH = os.path.join(storage.DATA_DIR, "coverage.json")
-
-ORDEN_FRESCURA = {"FRESH": 0, "LAGGING": 1, "STALE": 2, "UNKNOWN": 3}
-
-
-def _trading_calendar():
-    """trading_calendar.py vive en engine/technical/ y es stdlib puro.
-    Se importa igual que adapters.py importa los motores."""
-    path = os.path.join(ROOT, "engine", "technical")
-    sys.path.insert(0, path)
-    try:
-        if "trading_calendar" in sys.modules:
-            del sys.modules["trading_calendar"]
-        return __import__("trading_calendar")
-    finally:
-        sys.path.remove(path)
-
-
-def _sesiones_transcurridas(desde, hasta, tipo, tc):
-    """Sesiones de mercado en el intervalo (desde, hasta] -- es decir,
-    cuantas oportunidades de publicar un dato nuevo ha habido desde la
-    ultima que se aprovecho. El dia del propio dato no cuenta.
-
-    No es sessions_skipped_between() a secas: esa funcion es
-    exclusive-exclusive y por tanto no cuenta el dia de hoy, asi que un
-    dato de anteayer y uno de ayer darian el mismo numero.
-
-        equity  vie 04 -> dom 06   0   (el domingo no es sesion)
-        equity  vie 04 -> lun 07   1
-        crypto  vie 04 -> dom 06   2   (el mercado no cierra)
-        cualquiera, mismo dia      0
-    """
-    if hasta <= desde:
-        return 0
-    n = tc.sessions_skipped_between(desde, hasta, tipo)
-    return n + (1 if tc.is_trading_day(hasta, tipo) else 0)
-
-
-def retraso(asset_type, domain, metric, data_as_of, hoy, tc=None):
-    """(retraso, unidad) en la unidad declarada, o (None, None) si no hay
-    declaracion. El retraso es "cuanto ha pasado desde el dato", medido
-    en la unidad en que la fuente publica: sesiones de mercado para lo
-    que se publica por sesion, dias naturales para lo que se publica por
-    calendario. Un sabado no es una sesion perdida para una accion y si
-    es un dia perdido para una criptomoneda."""
-    cad = cadencias.cadencia(domain, metric)
-    if cad is None:
-        return None, None
-    unidad, _ = cad
-    if unidad == cadencias.SESION:
-        tc = tc or _trading_calendar()
-        tipo = "equity" if asset_type == "equity" else "crypto"
-        return _sesiones_transcurridas(data_as_of, hoy, tipo, tc), unidad
-    return (hoy - data_as_of).days, unidad
-
-
-def estado_frescura(asset_type, domain, metric, data_as_of, hoy, tc=None):
-    """FRESH mientras no se haya pasado un periodo de cadencia entero,
-    LAGGING hasta dos, STALE a partir de ahi.
-
-    n es cada cuanto la fuente publica, no una tolerancia arbitraria: un
-    IPC de 67 dias esta FRESH porque su cadencia declarada son 75, y una
-    serie diaria con 3 sesiones de retraso esta STALE aunque lleve menos
-    dias. Un umbral fijo en dias los clasificaria a los dos al reves."""
-    cad = cadencias.cadencia(domain, metric)
-    if cad is None:
-        return "UNKNOWN", None, None
-    _, n = cad
-    r, unidad = retraso(asset_type, domain, metric, data_as_of, hoy, tc)
-    if r <= n:
-        return "FRESH", r, unidad
-    if r <= 2 * n:
-        return "LAGGING", r, unidad
-    return "STALE", r, unidad
-
 
 def _peor(a, b):
     if a is None:
@@ -145,7 +72,7 @@ def _estado_cobertura(esperadas, presentes, sin_aplicar):
 
 def evaluar(hoy=None, con_history=False):
     hoy = hoy or datetime.date.today()
-    tc = _trading_calendar()
+    tc = cadencias._trading_calendar()
 
     activos = sorted(set(storage.assets_en_incoming()) | set(storage.assets_en_history()))
     ultimo = {}   # (asset, domain, metric) -> {data_as_of, retrieved_at, asset_type}
