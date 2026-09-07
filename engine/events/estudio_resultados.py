@@ -206,6 +206,43 @@ def _sesiones_del_horizonte(fechas, s0, s1, horizonte):
     return desde, fechas[i1 + adelante], None
 
 
+def ventana_estimacion(fechas, s1, largo=None):
+    """Las `largo` sesiones que terminan en la anterior a `s1`.
+
+    Devuelve [] si la serie no llega: no se acorta la ventana para que
+    quepa, igual que no se acorta un horizonte."""
+    largo = LARGO_VENTANA_ESTIMACION if largo is None else largo
+    i1 = fechas.index(s1)
+    if i1 - largo < 0:
+        return []
+    return fechas[i1 - largo:i1]
+
+
+def sesiones_reaccion(fechas, s1, horizonte):
+    """Sesiones sobre las que se mide una metrica de NIVEL.
+
+    No coincide con la ventana de un retorno: un retorno se mide entre dos
+    extremos, un nivel se resume sobre las sesiones del intervalo. En
+    0_1d es la propia sesion del evento; en los de deriva, las posteriores
+    (s1 queda fuera: ya esta contada en 0_1d y meterla otra vez mezclaria
+    el pico con la deriva)."""
+    _origen, adelante = HORIZONTES[horizonte]
+    i1 = fechas.index(s1)
+    if adelante == 0:
+        return [s1]
+    if i1 + adelante >= len(fechas):
+        return []
+    return fechas[i1 + 1:i1 + adelante + 1]
+
+
+def _mediana(xs):
+    o = sorted(xs)
+    n = len(o)
+    if not n:
+        return None
+    return o[n // 2] if n % 2 else (o[n // 2 - 1] + o[n // 2]) / 2
+
+
 def _variacion(serie, desde, hasta):
     """(hasta/desde - 1) en %, o (None, motivo) si falta alguna de las dos
     observaciones. No se sustituye por la sesion mas cercana."""
@@ -268,11 +305,16 @@ def observar(evento, fechas, px, benchmark=None, series=None):
         if not bench_ok:
             bench_motivo = bench_motivo or SIN_BENCHMARK
 
+    ventana_est = ventana_estimacion(fechas, t1)
+    obs["ventana_estimacion"] = (ventana_est[0], ventana_est[-1]) if ventana_est else None
+    contaminada = False   # lo rellena marcar_contaminacion(), que ve toda la cohorte
+    obs["ventana_estimacion_contaminada"] = None
+
     for h in HORIZONTES:
         desde, hasta, motivo = _sesiones_del_horizonte(fechas, s0, t1, h)
         obs["ventanas"][h] = (desde, hasta)
         if motivo:
-            for m in ("RAW_RETURN", "ABNORMAL_RETURN", "VOLUME_CHANGE", "VOLATILITY_CHANGE"):
+            for m in ("RAW_RETURN", "ABNORMAL_RETURN", "VOLUME_RELATIVE_TO_PRE_EVENT"):
                 obs["motivos"][(m, h)] = motivo
             obs["motivos"][("PEER_RELATIVE_RETURN", h)] = SIN_REFERENCIA
             continue
@@ -302,16 +344,24 @@ def observar(evento, fechas, px, benchmark=None, series=None):
                     obs["metodo_ajuste"] = DIFERENCIA_SIMPLE
                     obs["razon_sin_ajuste"] = None
 
-        for medida, metrica in (("VOLUME_CHANGE", "volumen"),
-                                ("VOLATILITY_CHANGE", "volatilidad_hist_30d_anualizada_pct")):
-            if metrica not in series:
-                obs["motivos"][(medida, h)] = SIN_SERIE_DE_LA_MEDIDA
-                continue
-            valor, mot_m = _variacion(series[metrica], desde, hasta)
-            if mot_m:
-                obs["motivos"][(medida, h)] = mot_m
-            else:
-                obs["medidas"][(medida, h)] = valor
+        # VOLUMEN relativo al estado PREVIO, no a la sesion del evento
+        # (D-27). La base es la MEDIANA de la ventana de estimacion:
+        # medido sobre la cohorte, el 90% de las ventanas tiene media >
+        # mediana -- cola derecha -- asi que una base con media queda
+        # inflada por picos anteriores y hunde el ratio (47 de 52 eventos
+        # dan un ratio menor con media que con mediana).
+        base_v = _mediana([series["volumen"][d] for d in ventana_est
+                           if d in series.get("volumen", {})]) if ventana_est else None
+        reaccion = sesiones_reaccion(fechas, t1, h)
+        vols = [series["volumen"][d] for d in reaccion if d in series.get("volumen", {})]
+        if not ventana_est:
+            obs["motivos"][("VOLUME_RELATIVE_TO_PRE_EVENT", h)] = SIN_VENTANA_ESTIMACION
+        elif contaminada:
+            obs["motivos"][("VOLUME_RELATIVE_TO_PRE_EVENT", h)] = VENTANA_ESTIMACION_CONTAMINADA
+        elif not base_v or not vols or len(vols) < len(reaccion):
+            obs["motivos"][("VOLUME_RELATIVE_TO_PRE_EVENT", h)] = SIN_SERIE_DE_LA_MEDIDA
+        else:
+            obs["medidas"][("VOLUME_RELATIVE_TO_PRE_EVENT", h)] = round(_mediana(vols) / base_v, 3)
 
         # PEER_RELATIVE: no hay ninguna comparison reference declarada.
         obs["motivos"][("PEER_RELATIVE_RETURN", h)] = SIN_REFERENCIA
@@ -395,8 +445,7 @@ FAMILIAS_DE_MEDIDA = {
     "RAW_RETURN":           "variacion del propio activo; no necesita ninguna referencia",
     "PEER_RELATIVE_RETURN": "variacion respecto a un comparable declarado; NUNCA es retorno anormal",
     "ABNORMAL_RETURN":      "variacion descontado un benchmark formal; exige las cuatro condiciones de abajo",
-    "VOLUME_CHANGE":        "variacion del volumen negociado; no necesita referencia",
-    "VOLATILITY_CHANGE":    "variacion de la volatilidad; no necesita referencia",
+    "VOLUME_RELATIVE_TO_PRE_EVENT": "nivel de volumen sobre la mediana de la ventana de estimacion",
 }
 
 # Que necesita cada familia. Solo ABNORMAL_RETURN exige benchmark.
@@ -417,8 +466,7 @@ MINIMOS_DECLARADOS = {
     ("ABNORMAL_RETURN", "reaccion_mediana_por_clase"): 40,
     ("ABNORMAL_RETURN", "reaccion_mediana_condicionada"): 60,
     ("PEER_RELATIVE_RETURN", "reaccion_mediana_por_clase"): 40,
-    ("VOLUME_CHANGE", "reaccion_mediana_por_clase"): 30,
-    ("VOLATILITY_CHANGE", "reaccion_mediana_por_clase"): 30,
+    ("VOLUME_RELATIVE_TO_PRE_EVENT", "reaccion_mediana_por_clase"): 30,
 }
 
 # Motivos de no elegibilidad. Ninguno se rellena con un valor por defecto.
@@ -466,6 +514,21 @@ VENTANA_SESIONES = {"0_1d": 1, "2_5d": 5, "2_20d": 20, "2_60d": 60}
 SIN_SESIONES_SUFICIENTES = "SERIE_SIN_SESIONES_SUFICIENTES_PARA_EL_HORIZONTE"
 SIN_SERIE_DE_LA_MEDIDA = "SIN_SERIE_PARA_ESA_MEDIDA_EN_ESAS_SESIONES"
 SIN_REFERENCIA = "SIN_COMPARABLE_DECLARADO"
+SIN_VENTANA_ESTIMACION = "SIN_VENTANA_DE_ESTIMACION_COMPLETA"
+VENTANA_ESTIMACION_CONTAMINADA = "VENTANA_DE_ESTIMACION_CON_OTRO_EVENTO_DENTRO"
+
+# --- Ventana de estimacion (D-27) ------------------------------------------
+# `reaction_window` la definen los horizontes. `estimation_window` es el
+# estado PREVIO contra el que se compara una metrica de nivel. Son cosas
+# distintas y por eso llevan nombres distintos.
+#
+# [-20,-1]: las 20 sesiones que terminan en s0 (la anterior a la primera
+# negociable). Medido sobre la cohorte real: 52/52 eventos la tienen
+# completa, 0 estan contaminadas por otro evento del mismo activo -- con
+# intervalos de 58+ sesiones entre resultados, una ventana de 20 no llega
+# a alcanzar el trimestre anterior. NO se adopta como constante universal:
+# es la ventana declarada para ESTA cohorte y hay que revalidarla en otra.
+LARGO_VENTANA_ESTIMACION = 20
 
 
 def _entre(fecha, desde, hasta):

@@ -225,7 +225,7 @@ La justificación de `^GSPC` es **ex ante y por lo que cada índice representa**
 
 ## D-27 · Una medida de nivel no puede usar la sesión del evento como base
 
-**Vigente** (HistoricalReactionProfile v1, 2026-09-07).
+**Revisada el 2026-09-07** — ver la revisión al final de esta entrada. **Decisión original** (HistoricalReactionProfile v1, 2026-09-07).
 - **Evidencia medida**: acumular `VOLUME_CHANGE` desde `s1` da mediana **−43,5%** a 2_5d con `prob_positive` **0,08**. No mide volumen anormal: mide la vuelta a la normalidad **después del pico**, porque `s1` *es* la sesión del evento. Publicado tal cual, se leería al revés.
 - **Decisión vigente**: `VOLUME_CHANGE` y `VOLATILITY_CHANGE` solo se publican en `0_1d` (sesión del evento frente a la anterior, base limpia). En los horizontes de deriva devuelven `INSUFFICIENT_COMPARABILITY` con su motivo.
 - **Se descartó**: publicarlas con una advertencia. Un número correcto con una lectura natural equivocada es peor que una ausencia explicada.
@@ -237,3 +237,53 @@ La justificación de `^GSPC` es **ex ante y por lo que cada índice representa**
 - **Evidencia**: el episodio es una construcción de la capa de noticias — varios documentos sobre el mismo hecho (D-19). Una publicación de resultados no procede de documentos agrupables.
 - **Decisión vigente**: `n_episodes` y `n_independent_episodes` valen **`NOT_APPLICABLE`**, no `0` ni `UNKNOWN`. Ningún dato adicional le daría un `episode_id`, y el proyecto ya distingue las dos cosas desde P6: *"`NOT_APPLICABLE` no mejora con más datos; `UNKNOWN` sí"*.
 - **Se descartó**: contar cada evento como su propio episodio, que inflaría artificialmente la independencia a nivel de episodio y haría indistinguible una cohorte de resultados de una cohorte de noticias.
+
+### Revisión de D-27 (2026-09-07, mismo día) — la base es una ventana previa, no la sesión anterior
+
+- **Lo que decía la decisión original**: publicar las medidas de nivel **solo en `0_1d`** (sesión del evento frente a la anterior) y devolver `INSUFFICIENT_COMPARABILITY` en los horizontes de deriva. Era correcta como diagnóstico y demasiado restrictiva como solución: una sola sesión de base es tan frágil como la sesión del evento, solo que en la otra dirección.
+- **Evidencia nueva medida** sobre los 52 eventos: la ventana `[-20,-1]` existe **completa en 52 de 52**, con **0** contaminadas por otro evento y **0** huecos de volumen. La base previa no era una aspiración: estaba disponible.
+- **Comparación de bases, medida en vez de elegida** (mediana / media / z-score sobre la ventana de 20 sesiones):
+  - la **media** está contaminada al alza en el **90%** de las ventanas (47/52 a `0_1d`), y **44-47 eventos por horizonte** dan un ratio *menor* usando media que usando mediana — la media esconde sistemáticamente el pico;
+  - el **z-score** alcanza **16,92** en `0_1d`: la desviación típica de 20 sesiones de volumen no es una escala estable, la distribución es asimétrica por construcción;
+  - la elección **cambia el signo de la conclusión** en `2_60d`: mediana → 1,02 (por encima de lo normal), media → 0,94 (por debajo).
+- **Decisión vigente**: `VOLUME_CHANGE` se sustituye por **`VOLUME_RELATIVE_TO_PRE_EVENT`** = `mediana(ventana de reacción) / mediana(estimation_window [-20,-1])`, publicable en **los cuatro horizontes**. Resultado interpretable y monótono: **2,04 → 1,26 → 1,06 → 1,01**, con `prob > 1` de **0,98 → 0,82 → 0,63 → 0,53**.
+- **`VOLATILITY_CHANGE` no se rehabilita**: el mismo razonamiento da un resultado distinto. La única volatilidad del contrato es una **media móvil de 30 sesiones**, cuyo valor en el evento ya contiene las 20 sesiones de la ventana de estimación — el cociente compararía dos ventanas solapadas y quedaría comprimido hacia 1 por construcción. Pasa a `INSUFFICIENT_METHODOLOGY`, no a `INSUFFICIENT_COMPARABILITY`: el problema no es la comparación, es que la métrica no existe. La desbloquearía volatilidad **realizada** sobre la ventana de reacción, que es una métrica nueva del contrato.
+- **Corolario que la revisión obligó a arreglar**: el neutro de una medida es una propiedad de su **familia semántica**, no una convención global. `prob_positive` valía **1,00** para los cocientes porque los comparaba contra 0; un cociente de 0,4 es una caída y se contaba como positiva. `NEUTRO_POR_FAMILIA` fija `1.0` para `RELATIVE_TO_PRE_EVENT` y `0.0` para las familias de retorno.
+- **`[-20,-1]` NO se ha convertido en constante global.** `engine/crypto/score.py::_pct_in_window()` conserva su ventana de 365 días y su mínimo de 10, con el test de regresión de D-22 intacto.
+- **Informe**: `informes/2026-09-07_d27_dependencia_y_solapamiento.md`.
+
+## D-29 · Describir no es predecir: dos estados, no uno
+
+**Vigente** (2026-09-07). **Cristaliza el principio `COMPUTABLE ≠ INTERPRETABLE ≠ PREDICTIVO`.**
+
+- **Evidencia**: `HistoricalReactionProfile v1` produjo perfiles `VALID` con muestra suficiente, PIT válido y benchmark formal. Un solo campo `status = VALID` invita a leerlos como una señal, cuando **no se ha hecho ninguna comprobación fuera de muestra**: ni walk-forward, ni partición temporal, ni prueba en activos distintos de los tres que produjeron el perfil. La cohorte, además, tiene **3 activos** (`independence_status = LOW`): son perfiles descriptivos *de IBM, NVDA y XOM*.
+- **Decisión vigente**: dos campos independientes en todo perfil.
+  - `descriptive_status` — ¿hay muestra, PIT, benchmark y metodología para **describir** lo ocurrido? Toma los 7 valores ya existentes.
+  - `predictive_status` — `NOT_EVALUATED` | `VALID` | `INVALID`. **Toda la rejilla de v1.1 vale `NOT_EVALUATED`**, incluidos los 12 perfiles descriptivamente válidos.
+- **`NOT_EVALUATED` no significa "probablemente sirve"**: significa que la comprobación no se ha hecho. Es la misma distinción que el proyecto usa entre `UNKNOWN` y `NOT_APPLICABLE` desde P6 — aquí *sí* mejoraría con trabajo, y ese trabajo (P8, Backtesting) no se ha hecho.
+- **El perfil no entra en scoring.** Un test recorre `engine/scoring/` y `engine/reasoning/` y exige que ningún fichero mencione `perfil_reaccion`; un segundo test exige `NOT_EVALUATED` en las 20 celdas de la rejilla. La barrera es estructural, no una convención documentada.
+- **`status` se mantiene como alias de `descriptive_status`** para no romper a los consumidores de v1.
+- **Se descartó**: un único estado con más valores (`VALID_DESCRIPTIVE`, `VALID_PREDICTIVE`…). Son dos preguntas ortogonales — un perfil puede ser descriptivamente inválido y no haber sido evaluado nunca — y meterlas en un enum las obliga a un orden que no tienen.
+
+## D-30 · El solapamiento se marca; no se eliminan eventos
+
+**Vigente** (2026-09-07).
+
+- **Evidencia medida** sobre los 52 eventos: `overlap_event_count` **0 · 0 · 0 · 3** para `0_1d` / `2_5d` / `2_20d` / `2_60d`; `overlap_rate` máximo **0,061**.
+- **Decisión vigente**: la política por defecto pasa de `EXCLUDE` a **`FLAG`**. Un perfil publica **las dos** distribuciones —`statistics` (muestra completa) y `statistics_non_overlapping`— junto con `overlap_event_count` y `overlap_rate`. `EXCLUDE` sigue disponible como política explícita, con test propio.
+- **Por qué no se elimina**: quitar 3 de 49 observaciones cambia la mediana de `ABNORMAL_RETURN 2_60d` de **−1,02 a −0,88** (delta +0,140) y la de `RAW_RETURN` de **+2,27 a +2,25**. Esas diferencias **no demuestran que el solapamiento sea inocuo**: con 3 observaciones fuera de 49, una mediana estable es el resultado esperado tanto si contamina como si no. **La comparación todavía no discrimina**, que no es lo mismo que no encontrar efecto — es el mismo error que se corrigió al no concluir nada de las dos observaciones de NVDA.
+- **Cuando no hay nada que quitar**, `comparar_muestras()` devuelve `comparable: False` con motivo, en vez de duplicar una estadística idéntica y aparentar una validación que no ocurrió.
+- **Hallazgo que no se buscaba — contaminación estructural ≠ solapamiento técnico**: el intervalo mediano entre resultados consecutivos es de **63,5 sesiones** (18 intervalos por debajo de 150; 15 de ellos entre 58 y 66). La ventana de `2_60d` cubre por tanto el **94,5%** del trimestre. Con solo el 6% de solapamiento formal, `2_60d` parecería limpio; la cobertura dice que a 60 sesiones "deriva posterior al evento" y "lo que pasó hasta los resultados siguientes" han dejado de ser distinguibles. **Se publican las dos medidas** porque una sola habría llevado a la conclusión contraria.
+- **Consecuencia registrada** (de lectura, no de código): `2_20d` (cobertura 0,315) es el horizonte largo interpretable de la rejilla. `2_60d` se conserva y se publica como **contexto de deriva, nunca como medida de reacción** — su IQR casi se duplica frente a `2_20d` mientras la mediana apenas se mueve, que es ruido añadido y no señal añadida.
+
+## D-31 · `n_effective` se mide antes de formularse
+
+**Vigente** (2026-09-07). **Decisión de no construir.**
+
+- **Evidencia**: `n_observations` **52**, `n_events` **52**, `n_assets` **3**, `n_independent_assets` **3**, `events_per_asset` `{IBM: 16, NVDA: 18, XOM: 18}`, `n_episodes` **`NOT_APPLICABLE`** (D-28). El cuello de botella **no es `n_events`**: los mínimos de D-22 se cumplen con holgura sobre 52, y la cohorte tiene tres unidades transversales. Los 16 trimestres de IBM comparten empresa, sector, mercado y régimen.
+- **Decisión vigente**: **no se define ninguna fórmula de `n_effective`.** Se publican los conteos, `independence_status` de tres valores con umbrales declarados sobre el número de **activos** (`HIGH` ≥ 30, `MEDIUM` ≥ 10, `LOW` por debajo — esta cohorte: **`LOW`**), y `cluster_recomendado = "asset"` con su razón escrita en el código.
+- **Por qué `asset` y no `episode`**: los eventos de un mismo activo comparten empresa, sector, mercado y régimen *y además se suceden en el tiempo*; el episodio **no aplica** a un evento programado (D-28), así que clusterizar por episodio daría exactamente los mismos grupos que no clusterizar.
+- **Qué falta para poder formularla**: (a) la unidad de cluster está decidida pero no probada —con 3 grupos, cualquier correlación intra-cluster es inestable—; (b) la dependencia temporal dentro de un activo no está medida —16 observaciones no estiman esa autocorrelación—; (c) la dependencia transversal en fecha común **no existe** en esta cohorte porque las fechas de IBM, NVDA y XOM no coinciden, y sí existirá al ampliar a ~356 eventos.
+- **Se descartó**: `n_effective = n_assets` (tira toda la información temporal); `n / (1 + (m−1)ρ)` con un ρ supuesto (el supuesto sería el resultado); bootstrap por activo (correcto como método, pero 3 clusters no lo hacen fiable).
+- **Barrera**: un test comprueba que el módulo no publica ningún símbolo que contenga `effective`. Introducir la fórmula exige quitar el test, que es donde queda constancia.
+

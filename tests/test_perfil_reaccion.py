@@ -46,6 +46,27 @@ class TestRejillaCompleta(unittest.TestCase):
                       "n_episodes", "n_independent_episodes"):
                 self.assertIn(k, p)
 
+    def test_descriptivo_y_predictivo_son_estados_distintos(self):
+        """COMPUTABLE != INTERPRETABLE != PREDICTIVO. Colapsarlos en un
+        unico VALID invita a leer una cifra calculable como una certeza."""
+        for p in self.rejilla:
+            self.assertEqual(p["descriptive_status"], p["status"])
+            self.assertEqual(p["predictive_status"], "NOT_EVALUATED")
+            self.assertIn(p["predictive_status"], pr.PREDICTIVE_STATUS)
+
+    def test_toda_medida_declara_su_semantica(self):
+        for p in self.rejilla:
+            self.assertIn(p["semantica"], pr.FAMILIAS_SEMANTICAS)
+            self.assertNotIn(p["semantica"], pr.FAMILIAS_NO_IMPLEMENTADAS)
+
+    def test_solo_las_medidas_relativas_al_pre_evento_declaran_ventana(self):
+        for p in self.rejilla:
+            if p["semantica"] == "RELATIVE_TO_PRE_EVENT" and p["status"] != "INSUFFICIENT_METHODOLOGY":
+                self.assertEqual(p["estimation_window"], "[-20,-1]")
+            elif p["semantica"] != "RELATIVE_TO_PRE_EVENT":
+                self.assertIsNone(p["estimation_window"])
+            self.assertEqual(p["reaction_window"], p["horizon"])
+
     def test_ningun_perfil_produce_señal(self):
         prohibidos = ("score", "signal", "señal", "buy", "sell", "peso", "weight",
                       "reaction_gap", "confidence", "prediccion")
@@ -83,11 +104,24 @@ class TestPoblacionYExclusiones(unittest.TestCase):
         self.assertIsNotNone(p["tasa_exclusion"])
         self.assertTrue(p["exclusiones_por_motivo"])
 
-    def test_el_solape_excluye_en_horizontes_largos_y_no_en_cortos(self):
+    def test_el_solape_se_marca_y_no_se_elimina(self):
+        """REESCRITO (D-30). Antes el solape EXCLUIA. Ahora se marca y se
+        publican las dos muestras: eliminarlo de entrada impedia medir
+        cuanto cambia la distribucion al quitar la contaminacion."""
         corto = pr.perfil(self.obs, "earnings_release", "RAW_RETURN", "0_1d", HOY)
         largo = pr.perfil(self.obs, "earnings_release", "RAW_RETURN", "2_60d", HOY)
-        self.assertNotIn(pr.EXCL_SOLAPE, corto["exclusiones_por_motivo"])
-        self.assertIn(pr.EXCL_SOLAPE, largo["exclusiones_por_motivo"])
+        self.assertEqual(corto["overlap_event_count"], 0)
+        self.assertGreater(largo["overlap_event_count"], 0)
+        # con FLAG, los solapados SIGUEN en la muestra completa...
+        self.assertNotIn(pr.EXCL_SOLAPE, largo["exclusiones_por_motivo"])
+        # ...y ademas se publica la version sin ellos
+        self.assertIsNotNone(largo["statistics_non_overlapping"])
+        self.assertLess(largo["n_non_overlapping"], largo["n_observations"])
+
+    def test_la_politica_EXCLUDE_sigue_disponible(self):
+        p = pr.perfil(self.obs, "earnings_release", "RAW_RETURN", "2_60d", HOY,
+                      politica_solape="EXCLUDE")
+        self.assertIn(pr.EXCL_SOLAPE, p["exclusiones_por_motivo"])
 
 
 class TestPointInTime(unittest.TestCase):
@@ -155,15 +189,35 @@ class TestEstados(unittest.TestCase):
         p = pr.perfil(self.obs, "earnings_release", "PEER_RELATIVE_RETURN", "0_1d", HOY)
         self.assertEqual(p["status"], "INSUFFICIENT_COMPARABILITY")
 
-    def test_una_medida_de_nivel_no_usa_la_sesion_del_evento_como_base(self):
-        """VOLUME_CHANGE a 0_1d es limpio; en los horizontes de deriva
-        tomaria como base el propio pico y no se publica."""
-        limpio = pr.perfil(self.obs, "earnings_release", "VOLUME_CHANGE", "0_1d", HOY)
-        self.assertEqual(limpio["status"], "VALID")
-        for h in ("2_5d", "2_20d", "2_60d"):
-            p = pr.perfil(self.obs, "earnings_release", "VOLUME_CHANGE", h, HOY)
-            self.assertEqual(p["status"], "INSUFFICIENT_COMPARABILITY")
-            self.assertIn("ventana base", p["status_reason"])
+    def test_el_volumen_se_mide_contra_la_ventana_de_estimacion(self):
+        """REESCRITO (D-27). Antes `VOLUME_CHANGE` normalizaba contra la
+        sesion del propio evento y solo 0_1d era publicable. Ahora la base
+        es la mediana de [-20,-1] y los cuatro horizontes son
+        interpretables: 2,04x el dia del evento, decayendo a 1,01x."""
+        for h, esperado in (("0_1d", 2.0), ("2_5d", 1.2), ("2_20d", 1.0), ("2_60d", 1.0)):
+            p = pr.perfil(self.obs, "earnings_release", "VOLUME_RELATIVE_TO_PRE_EVENT", h, HOY)
+            self.assertEqual(p["status"], "VALID", h)
+            self.assertEqual(p["semantica"], "RELATIVE_TO_PRE_EVENT")
+            self.assertEqual(p["estimation_window"], "[-20,-1]")
+            self.assertAlmostEqual(p["statistics"]["median"], esperado, delta=0.35)
+
+    def test_el_neutro_de_un_cociente_es_uno_no_cero(self):
+        """Con neutro=0, prob_positive de un cociente seria 1,00 siempre:
+        un numero cierto y completamente vacio."""
+        p = pr.perfil(self.obs, "earnings_release", "VOLUME_RELATIVE_TO_PRE_EVENT", "0_1d", HOY)
+        self.assertEqual(p["statistics"]["neutro"], 1.0)
+        self.assertLess(p["statistics"]["prob_positive"], 1.0)
+        r = pr.perfil(self.obs, "earnings_release", "RAW_RETURN", "0_1d", HOY)
+        self.assertEqual(r["statistics"]["neutro"], 0.0)
+
+    def test_la_volatilidad_disponible_no_tiene_metodologia(self):
+        """Es una media movil de 30 sesiones: el valor del evento ya
+        contiene la ventana de estimacion entera."""
+        for h in pr.HORIZONTES:
+            p = pr.perfil(self.obs, "earnings_release",
+                          "VOLATILITY_RELATIVE_TO_PRE_EVENT", h, HOY)
+            self.assertEqual(p["status"], "INSUFFICIENT_METHODOLOGY")
+            self.assertIn("media movil", p["status_reason"])
 
     def test_muestra_insuficiente_sigue_reportando_la_distribucion(self):
         """INSUFFICIENT_SAMPLE no es 'no hay nada': es 'no me fio todavia'."""
@@ -307,6 +361,32 @@ class TestIndependencia(unittest.TestCase):
         p = pr.perfil(self.obs, "earnings_release", "RAW_RETURN", "0_1d", HOY)
         claves = {(o["asset_id"], o["period_end"]) for o in self.obs}
         self.assertEqual(p["n_events"], len(claves))
+
+
+class TestElPerfilNoSeUsaParaDecidir(unittest.TestCase):
+    """PREDICTIVE_STATUS = NOT_EVALUATED tiene que ser una barrera real.
+
+    Un perfil `VALID` describe lo que ocurrio; no esta validado fuera de
+    muestra. La distincion entre los dos estados existe justamente para
+    que no se cuele en una decision por parecerse a una senal."""
+
+    def test_ningun_motor_de_decision_importa_el_perfil(self):
+        for carpeta in ("scoring", "reasoning"):
+            base = os.path.join(RAIZ, "engine", carpeta)
+            if not os.path.isdir(base):
+                continue
+            for raiz, _, ficheros in os.walk(base):
+                for f in ficheros:
+                    if not f.endswith(".py"):
+                        continue
+                    with open(os.path.join(raiz, f), encoding="utf-8") as fh:
+                        self.assertNotIn("perfil_reaccion", fh.read(),
+                                         f"{carpeta}/{f} importa el perfil")
+
+    def test_toda_la_rejilla_declara_no_evaluado_prediccionalmente(self):
+        for p in pr.rejilla(pr.observaciones_v1(), HOY):
+            self.assertEqual(p["predictive_status"], "NOT_EVALUATED",
+                             f"{p['measure_type']}/{p['horizon']}")
 
 
 if __name__ == "__main__":

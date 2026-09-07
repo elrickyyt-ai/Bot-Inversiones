@@ -11,7 +11,7 @@ No sustituye a los README de cada módulo (que explican *por qué* está hecho a
 ## Verificación completa en tres comandos
 
 ```bash
-python3 -m unittest discover -s tests           # 581 tests, debe dar OK
+python3 -m unittest discover -s tests           # 601 tests, debe dar OK
 python3 engine/contract/qa.py --require-parquet # debe dar STATUS: VERIFIED
 git status --short data/ knowledge/             # debe salir vacío
 ```
@@ -44,6 +44,7 @@ Si los tres pasan, las veintidós fases están sanas. Si falla alguno, la tabla 
 | **D-21** | `2ee412a` | Ontología de benchmark y elegibilidad por familia | `python3 -m unittest tests.test_benchmark_ontologia` |
 | **D-21 (datos)** | `22ef8aa` | `bm:sp500` declarado y consumido por el event study | `python3 -m unittest tests.test_benchmark_sp500` |
 | **HRP v1** | `f4156fe` | Perfiles históricos descriptivos, 20 celdas con estado | `python3 engine/events/perfil_reaccion.py` |
+| **HRP v1.1** | `PENDIENTE` | Ventana de estimación, dependencia y solapamiento: `descriptive` ≠ `predictive` | `python3 engine/events/diagnostico_cohorte.py` |
 
 ---
 
@@ -151,6 +152,30 @@ Si los tres pasan, las veintidós fases están sanas. Si falla alguno, la tabla 
 **Esos tres tests son deliberadamente frágiles**: están puestos para romperse cuando el conocimiento crezca. Si fallan, no hay que arreglarlos: hay que actualizarlos y comprobar que P5B empieza a producir algo distinto de `UNKNOWN`.
 
 ---
+
+---
+
+### HRP v1.1 · Diagnóstico de cohorte — D-27 revisada · D-29 · D-30 · D-31
+
+**Ficheros**: `engine/events/diagnostico_cohorte.py` (nuevo) · `engine/events/perfil_reaccion.py` · `engine/events/estudio_resultados.py` · `tests/test_diagnostico_cohorte.py` (nuevo, 12 tests) · `tests/test_perfil_reaccion.py` (+10)
+
+**Qué añade sobre HRP v1**: no calcula perfiles nuevos; mide si los que hay son **interpretables**.
+
+- `estimation_window` `[-20,-1]` separada de `reaction_window`, con la disponibilidad medida: **52/52** completas, 0 contaminadas, 0 huecos de volumen.
+- Base del volumen elegida **por medición**, no por costumbre: la media está contaminada al alza en el **90%** de las ventanas y el z-score llega a **16,92** → mediana. `VOLUME_RELATIVE_TO_PRE_EVENT` **2,04 → 1,26 → 1,06 → 1,01**.
+- Volatilidad: mismo razonamiento, resultado distinto → `INSUFFICIENT_METHODOLOGY` (media móvil de 30 sesiones que solapa su propia base).
+- `descriptive_status` ≠ `predictive_status`; toda la rejilla `NOT_EVALUATED`.
+- Solape **marcado** (`FLAG`), no eliminado: 0 · 0 · 0 · **3/49**, con `statistics_non_overlapping` publicada al lado.
+- **Hallazgo**: contaminación estructural ≠ solapamiento técnico. `2_60d` solapa el 6% y cubre el **94,5%** del trimestre (intervalo mediano **63,5 sesiones**).
+
+**Tests deliberadamente frágiles**, puestos para romperse cuando la arquitectura cambie:
+- `test_el_modulo_no_publica_ninguna_formula_de_n_effective` — se rompe el día que se introduzca `n_effective`, que es cuando hay que releer D-31.
+- `test_ningun_motor_de_decision_importa_el_perfil` — se rompe el día que un scorer consuma el perfil, que es cuando hay que releer D-29.
+- `test_el_umbral_10_de_pct_in_window_no_se_ha_vuelto_global` (de D-22) — se rompe si el `[-20,-1]` se propaga a `engine/crypto/score.py`.
+
+**Qué se rompe si cae**: nada aguas abajo — ningún consumidor lee el perfil, por diseño. Lo que se pierde es la capacidad de decir **por qué** un perfil no es interpretable, y con ella la barrera contra usarlo como señal.
+
+**Informe**: `informes/2026-09-07_d27_dependencia_y_solapamiento.md`.
 
 ## Dependencias entre fases
 

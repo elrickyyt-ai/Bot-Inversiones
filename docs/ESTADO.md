@@ -36,6 +36,9 @@ DATA CONTRACT      data/incoming/*.csv (año en curso)  +  data/history/** (parq
    │           ├──► P4   Claims → Events
    │           │      └──► P6.2d Episodios   declarados, nunca inferidos
    │           │      └──► P6.2c Event study  earnings → reacción, sin agregar
+   │           │             └──► HRP v1  perfil histórico  DESCRIPTIVO, no predictivo
+   │           │                    └──► Diagnóstico de cohorte
+   │           │                          ¿es INTERPRETABLE?  dependencia · solape
    │           │
    │           └──► P5D  Data Requirements  ¿existe el dato que el mecanismo pide?
    │
@@ -79,6 +82,9 @@ CONSUMO (desacoplado, no dicta el motor)   Power BI · Web App
 | P6.2c | `f30ffc5` | Event study mínimo: 52 eventos, `first_tradable_at`, sin agregar |
 | P6.2d | `f30ffc5` | Episodios declarados sobre P4: 50 documentos → 43 eventos → 1 episodio |
 | D-21 | `2ee412a` | Ontología de benchmark: `benchmark` como entidad, referencia ≠ activo, elegibilidad por familia de medida |
+| `bm:sp500` | `da35869` | Primer benchmark real declarado: nivel publicado de `^GSPC`, 14.291 sesiones desde 1970-01-02 |
+| HRP v1 | `07f867e` | `HistoricalReactionProfile`: descriptivo, 20 perfiles, ninguno desaparece por falta de datos |
+| D-27/29/30/31 | `PENDIENTE` | Ventana de estimación, dependencia y solapamiento: `descriptive` ≠ `predictive`, solape marcado, `n_effective` medido antes de formularse |
 
 Detalle por fase, con qué se rompe si cae y cómo recuperarla: `informes/2026-09-07_trazabilidad_fases_P0_P61.md`.
 
@@ -112,7 +118,7 @@ Estos invariantes no son preferencias de estilo: cada uno nació de un fallo rea
 
 ## 5. Estado actual, medido
 
-**Suite**: 581 tests · OK — **QA**: `STATUS: VERIFIED` — **Knowledge**: PASS (25 entidades · 48 relaciones · 10 fuentes)
+**Suite**: 601 tests · OK — **QA**: `QA CORE: PASS` · `QA PARQUET: PASS` · `STATUS: VERIFIED` (287 particiones, 0 incidencias) — **Knowledge**: PASS (26 entidades · 51 relaciones · 11 fuentes)
 
 ```bash
 python3 -m unittest discover -s tests
@@ -158,7 +164,7 @@ magnitud      UNKNOWN                      (P6)
 | El contrato no admite observaciones sobre entidades que no son activos | `engine/impact/observaciones.py` | `asset_type_of('TSM') → None`. Las 3 filas del 20-F viven aisladas. Misma familia que `capacity_utilization(tech:cowos)` |
 | `capacity_utilization(tech:cowos)` | P5D | `MISSING`, sin candidatas ni fuente identificada |
 | `adapt_equity()` fecha 5 métricas con la fecha del trimestre | `cadencias.DEFECTO_DE_FECHADO` · `temporal.SEMANTICA_DATA_AS_OF` | Reescribiría filas ya en el contrato. **Clasificado `STALE` en P6.2a**: no falsea un backtest hacia el futuro, al revés que las 9 que sí se corrigieron (D-18) |
-| **Sin benchmark en el contrato** | D-21 · informe de P6.2 §12 | Bloquea el retorno anormal y con él cualquier agregación. Recomendación `DimBenchmark`; **sin resolver para cripto**, que es el 60% del contrato |
+| **Sin benchmark formal para cripto** | D-21 · D-24 · D-25 | Resuelto para acciones (`bm:sp500`, nivel publicado). **Sin resolver para cripto**, que es el 60% del contrato: no hay índice PIT gratuito defendible y un índice casero sobre los holdings sería sesgo de selección por construcción |
 | **Fecha de publicación de las series macro** | `temporal.RETRASO_PUBLICACION_DECLARADO` | Vive en ALFRED (vintages), no en FRED. 2.148 filas acotadas por cota conservadora, no corregidas |
 | **Dirección causal noticia↔precio** | informe de P6.2 §10 | Una noticia puede escribirse *porque* el precio ya se movió. No se representa; no se inventa un campo que no se pueda rellenar |
 | **`reportTime` ausente en las fixtures antiguas de equity** | `tests/fixtures/equity/*_earnings.json` | 8 trimestres sin ese campo, así que `momento_publicacion` sale `None`. La ingesta manual debe guardar el payload completo |
@@ -166,6 +172,12 @@ magnitud      UNKNOWN                      (P6)
 | HBM y sustrato ABF sin fuente | `knowledge/pendiente/nvidia_cadena.json` | Buscados en los dos filings: cero menciones |
 | Samsung / SK Hynix / Micron | `knowledge/pendiente/` | **Ya tienen fuente verificada**; fuera del alcance acordado, promovibles en un paso |
 | `tech:cowos` se evalúa como insumo de coste, no como restricción de capacidad | informe de P6 | P5B enruta por R5; decisión de no tocar P5B |
+| **La cohorte de eventos tiene 3 activos** | D-31 · `diagnostico_cohorte.py` | `independence_status = LOW`. 52 observaciones de 3 acciones del mismo mercado no son 52 unidades independientes. Los ~356 eventos existen (`EARNINGS` los devuelve en el plan gratuito); la ingesta es manual y no se ha hecho |
+| **`n_effective` sin fórmula** | D-31 · cabecera de `engine/events/diagnostico_cohorte.py` | Con 3 activos la correlación intra-cluster es inestable. Se publican los conteos y `independence_status`; un test impide introducir la fórmula sin quitarlo |
+| **No existe volatilidad realizada en el contrato** | D-27 revisada · `perfil_reaccion.MEDIDAS_SIN_METODOLOGIA` | La única disponible es una media móvil de 30 sesiones que solapa su propia ventana de estimación. Bloquea 4 perfiles con `INSUFFICIENT_METHODOLOGY` |
+| **Sin `ComparisonReference` de sector declarada** | D-21 · D-30 | Elegir peers ahora sería hacerlo *después* de ver los resultados. Bloquea `PEER_RELATIVE_RETURN` (4 perfiles) |
+| **`predictive_status` nunca evaluado** | D-29 · `perfil_reaccion.PREDICTIVE_STATUS` | Ninguna comprobación fuera de muestra: ni walk-forward, ni partición temporal, ni otros activos. Corresponde a P8 |
+| **`diagnostico_cohorte.py` fuera de `qa.py`** | D-24 (mismo patrón que la serie de benchmark) | Tiene 12 tests propios sobre datos reales, pero no condiciona el `STATUS: VERIFIED` global |
 | `consolidate.py` huérfano · `confluencia_sesgo` con dos vocabularios | P0 | Sin impacto funcional |
 
 ---
@@ -202,28 +214,50 @@ Eso **no resuelve** la decisión —`EARNINGS` da EPS y sorpresa, no `roe_pct` n
 
 **Tercera pieza: `HistoricalReactionProfile v1` — CONSTRUIDO** (`informes/2026-09-07_historical_reaction_profile_v1.md`). Descriptivo, no predictivo: ninguna señal, ningún score, ningún `reaction_gap`.
 
-De los **20 perfiles** de la rejilla `event_class × measure_type × horizon`: **10 `VALID` y 10 con su motivo**. Que la mitad no sea válida es el resultado correcto.
+De los **20 perfiles** de la rejilla `event_class × measure_type × horizon`, v1 dio **10 `VALID` y 10 con su motivo**. Que la mitad no fuera válida era el resultado correcto.
+
+**Cuarta pieza: iteración D-27 / independencia / solapamiento — HECHA** (`informes/2026-09-07_d27_dependencia_y_solapamiento.md`, decisiones **D-27 revisada · D-29 · D-30 · D-31**). Metodológica, sobre **los mismos 52 eventos**: no se amplió la cohorte, no se declaró ningún benchmark nuevo, no se tocó `data/` ni `knowledge/`.
+
+El principio que cristaliza: **`COMPUTABLE` ≠ `INTERPRETABLE` ≠ `PREDICTIVO`.** v1 demostró lo primero; esta iteración mide lo segundo; lo tercero no se ha tocado.
+
+**Rejilla vigente** (`as_of` 2026-09-07, política de solape `FLAG`) — **12 `VALID` de 20**:
 
 | Medida | 0_1d | 2_5d | 2_20d | 2_60d |
 |---|---|---|---|---|
-| `RAW_RETURN` | VALID n=52 | VALID n=52 | VALID n=51 | VALID n=46 |
-| `ABNORMAL_RETURN` | VALID n=52 | VALID n=52 | VALID n=51 | VALID n=46 |
-| `PEER_RELATIVE_RETURN` | — sin comparable declarado (×4) | | | |
-| `VOLUME` / `VOLATILITY` | VALID | — medida de nivel sin ventana base (D-27) | | |
+| `RAW_RETURN` | VALID −0,11 | VALID −0,05 | VALID +0,32 | VALID +2,27 |
+| `ABNORMAL_RETURN` | VALID −0,58 | VALID −0,49 | VALID −0,67 | VALID −1,02 |
+| `PEER_RELATIVE_RETURN` | `INSUFFICIENT_COMPARABILITY` (×4) | | | |
+| `VOLUME_RELATIVE_TO_PRE_EVENT` | VALID **2,04** | VALID **1,26** | VALID **1,06** | VALID **1,01** |
+| `VOLATILITY_RELATIVE_TO_PRE_EVENT` | `INSUFFICIENT_METHODOLOGY` (×4) | | | |
 
-**Lo más informativo**, y es descriptivo: a 60 sesiones la mediana **bruta** es +2,25% con `prob+` 0,65, y la **anormal** −0,88% con `prob+` 0,46. Descontar el mercado cambia por completo la lectura de la deriva larga. **No se afirma que la clase prediga nada**: la mediana anormal es ~0 en los cuatro horizontes y el IQR es entre 7 y 15 veces mayor que ella.
+**Lo más informativo**, y es descriptivo: a 60 sesiones la mediana **bruta** es +2,27% con `prob+` 0,65, y la **anormal** −1,02% con `prob+` 0,45. Descontar el mercado cambia por completo la lectura de la deriva larga. **No se afirma que la clase prediga nada**: la mediana anormal es ~0 en los cuatro horizontes y el IQR es entre 7 y 16 veces mayor que ella.
 
-**Look-ahead encontrado y corregido en la propia implementación** (D-26): un evento conocible en `as_of` cuya ventana termina después sigue siendo look-ahead. Reproducibilidad histórica verificada — `as_of` 2020-01-01 → n=18, 2010-01-01 → n=5, 1990-01-01 → `PIT_INVALID`.
+**Lo que la iteración midió** (`python3 engine/events/diagnostico_cohorte.py`):
 
-**Limitación que hay que leer con los números**: `n_activos = 3` y **no existe `n_effective`** — 52 observaciones de 3 acciones del mismo mercado no son 52 unidades independientes de información.
+| medición | resultado | consecuencia |
+|---|---|---|
+| ventana de estimación `[-20,-1]` | **52/52** completas · 0 contaminadas · 0 huecos de volumen | la base pre-evento existe de verdad |
+| base del volumen: mediana / media / z-score | media contaminada al alza en el **90%** de las ventanas; z-score hasta **16,92**; la elección **cambia el signo** en 2_60d | **mediana**, medida y no elegida por costumbre |
+| volatilidad disponible | media móvil de 30 sesiones que **solapa** su propia ventana de estimación | `INSUFFICIENT_METHODOLOGY`, no `INSUFFICIENT_COMPARABILITY` |
+| dependencia | `n_events` 52 · `n_assets` **3** · `independence_status` **LOW** · `cluster` `asset` | el cuello de botella no es `n_events` |
+| solapamiento | 0 · 0 · 0 · **3/49** (6,1%) | `FLAG`, no `EXCLUDE` |
+| intervalo entre resultados | **63,5 sesiones** (15 intervalos entre 58 y 66) | `2_60d` cubre el **94,5%** del trimestre |
+| full vs non-overlapping (2_60d) | ABN −1,02 → −0,88 con n 49→46 | **no discrimina todavía**; ≠ "no hay efecto" |
+
+**Hallazgo que no se buscaba — contaminación estructural ≠ solapamiento técnico**: con solo el 6% de solapamiento formal, `2_60d` parecería limpio; su cobertura del 94,5% del trimestre dice que a 60 sesiones "deriva posterior al evento" y "lo que pasó hasta los resultados siguientes" ya no son distinguibles. **`2_20d`** (cobertura 0,315) es el horizonte largo interpretable; **`2_60d` se publica como contexto de deriva, nunca como medida de reacción**.
+
+**Dos estados, no uno** (D-29): `descriptive_status` y `predictive_status` son campos independientes. **Toda la rejilla vale `predictive_status = NOT_EVALUATED`**, incluidos los 12 descriptivamente válidos — no se ha hecho ninguna comprobación fuera de muestra. Un test recorre `engine/scoring/` y `engine/reasoning/` y exige que **ningún fichero mencione `perfil_reaccion`**: la barrera contra usarlo para decidir es estructural, no documental.
+
+**`n_effective` sigue sin existir, deliberadamente** (D-31): con 3 activos no se puede estimar la correlación intra-cluster. Se publican los conteos y un `independence_status` de tres valores (`HIGH` ≥ 30 activos · `MEDIUM` ≥ 10 · `LOW`) mientras la fórmula no se pueda elegir con evidencia. Un test impide introducirla sin quitarlo.
 
 **Lo siguiente**, por orden de lo que desbloquea:
 
-1. **Ventana base para medidas de nivel** (D-27) — decisión metodológica, desbloquea 6 perfiles.
-2. **`n_effective`** — sin él, `n` sobreestima la evidencia.
-3. **Ampliar la cohorte** a los ~356 eventos reales (ingesta manual de `EARNINGS`), que también haría representativa la tasa de solape.
-4. Después: cripto (`RAW / PEER_RELATIVE / VOLUME / VOLATILITY`, sin benchmark formal) y macro (una sorpresa → varios activos), cada uno con estructura propia.
-5. Solo entonces: régimen y `reaction_gap`.
+1. **Ampliar la cohorte** a los ~356 eventos reales (ingesta manual de `EARNINGS`) — sube `n_assets`, hace representativa la tasa de solape y vuelve informativa la comparación full vs non-overlapping. **Es el siguiente paso, y no se ha dado.**
+2. **`n_effective`** (D-31), que la ampliación hace estimable por primera vez.
+3. **Volatilidad realizada** sobre la ventana de reacción — métrica nueva del contrato; desbloquea 4 perfiles.
+4. **`ComparisonReference` de sector** declarada *antes* de mirar resultados (D-21); desbloquea `PEER_RELATIVE_RETURN` (4 perfiles).
+5. Después: cripto (`RAW / VOLUME`, sin benchmark formal) y macro (una sorpresa → varios activos), cada uno con estructura propia.
+6. Solo entonces: `predictive_status` distinto de `NOT_EVALUATED` (P8, Backtesting), régimen y `reaction_gap`.
 
 Roadmap acordado: `P6.2 Quantification unlocks` → `P7 Market Impact` → `P8 Mispricing` → `P9 Thesis` → `P10 Portfolio` → `P11 Outcome/Calibration`. Power BI y Web App consumirán una proyección del motor; no lo dictan.
 

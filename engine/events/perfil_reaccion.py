@@ -48,27 +48,50 @@ CLASES_DE_EVENTO = {
     "earnings_release": "publicacion de resultados trimestrales",
 }
 
-MEDIDAS = ("RAW_RETURN", "ABNORMAL_RETURN", "PEER_RELATIVE_RETURN",
-           "VOLUME_CHANGE", "VOLATILITY_CHANGE")
+# --- Semantica de las medidas (D-27) ---------------------------------------
+# "change" era demasiado ambiguo: volume(evento)/volume(-1) y
+# volume(evento)/median(volume[-20,-1]) son cosas distintas, y ninguna de
+# las dos es necesariamente "volumen anormal". El nombre de la variable no
+# puede esconder la metodologia.
+#
+# Solo las tres primeras familias estan implementadas; las dos ultimas se
+# nombran para que quien las quiera usar tenga que declararlas antes --
+# mismo patron que D-10 con ESTIMATED.
+FAMILIAS_SEMANTICAS = {
+    "RETURN":                  "variacion de precio entre dos extremos; no necesita estado previo",
+    "RELATIVE_TO_BENCHMARK":   "retorno menos el del benchmark formal",
+    "RELATIVE_TO_PEER":        "retorno menos el de un comparable declarado; NUNCA es anormal",
+    "RELATIVE_TO_PRE_EVENT":   "nivel de la ventana de reaccion sobre el de la ventana de estimacion",
+    "STANDARDIZED_DEVIATION":  "desviacion tipificada respecto a la ventana de estimacion -- NO IMPLEMENTADA",
+    "LEVEL":                   "el nivel en bruto, sin referencia -- NO IMPLEMENTADA",
+}
+FAMILIAS_NO_IMPLEMENTADAS = {"STANDARDIZED_DEVIATION", "LEVEL"}
 
-# Medidas de NIVEL, no de precio. La diferencia importa y no es cosmetica.
+SEMANTICA_DE_MEDIDA = {
+    "RAW_RETURN":                       "RETURN",
+    "ABNORMAL_RETURN":                  "RELATIVE_TO_BENCHMARK",
+    "PEER_RELATIVE_RETURN":             "RELATIVE_TO_PEER",
+    "VOLUME_RELATIVE_TO_PRE_EVENT":     "RELATIVE_TO_PRE_EVENT",
+    "VOLATILITY_RELATIVE_TO_PRE_EVENT": "RELATIVE_TO_PRE_EVENT",
+}
+MEDIDAS = tuple(SEMANTICA_DE_MEDIDA)
+
+# Medidas cuya metodologia NO esta suficientemente justificada. Se declaran
+# y se rechazan con su razon: es preferible a publicar un numero ambiguo.
 #
-# Para un retorno, acumular desde s1 (la primera sesion negociable) mide la
-# DERIVA posterior al anuncio, que es justo lo que se quiere. Para el
-# volumen o la volatilidad, s1 es la sesion del propio evento -- es decir,
-# el pico -- asi que "variacion de s1 a s1+20" no mide volumen anormal:
-# mide la vuelta a la normalidad DESPUES del pico, y sale sistematicamente
-# negativa (medido: mediana -43,5% a 2_5d, prob_positive 0,08).
-#
-# Publicar ese numero como si fuese una reaccion seria invitar a leerlo al
-# reves. Una medida de nivel necesita una VENTANA BASE anterior al evento,
-# y esa es una decision metodologica que no se ha tomado. Hasta que se
-# tome, estos horizontes salen INSUFFICIENT_COMPARABILITY con su motivo.
-#
-# El horizonte 0_1d si es limpio para ellas: compara la sesion del evento
-# con la inmediatamente anterior, sin base contaminada.
-MEDIDAS_DE_NIVEL = ("VOLUME_CHANGE", "VOLATILITY_CHANGE")
-HORIZONTE_LIMPIO_PARA_NIVEL = "0_1d"
+# La volatilidad del contrato es `volatilidad_hist_30d_anualizada_pct`, una
+# MEDIA MOVIL de 30 sesiones. El valor del dia del evento ya contiene las
+# 30 anteriores, entre ellas la ventana de estimacion [-20,-1] entera:
+# comparar los dos compara ventanas SOLAPADAS, el cociente esta amortiguado
+# por construccion y los terminos no son independientes. Una reaccion de un
+# dia no se mide con una media movil de 30.
+MEDIDAS_SIN_METODOLOGIA = {
+    "VOLATILITY_RELATIVE_TO_PRE_EVENT": (
+        "la volatilidad disponible es una media movil de 30 sesiones: el valor del evento ya "
+        "contiene la ventana de estimacion completa, asi que el cociente compara dos ventanas "
+        "solapadas. Haria falta volatilidad realizada sobre la ventana de reaccion, que no esta "
+        "en el contrato."),
+}
 
 HORIZONTES = tuple(er.HORIZONTES)
 
@@ -80,6 +103,20 @@ ESTADOS = {
     "INSUFFICIENT_COMPARABILITY": "no hay referencia declarada contra la que comparar",
     "PIT_INVALID":               "ningun evento era conocible en la fecha as_of",
     "UNSTABLE":                  "hay muestra, pero las dos mitades temporales no coinciden en signo",
+    "INSUFFICIENT_METHODOLOGY":  "la medida no tiene una definicion suficientemente justificada",
+}
+
+# --- Dos estados, no uno (D-29) --------------------------------------------
+# Un perfil puede ser COMPUTABLE y descriptivamente correcto sin tener
+# ninguna capacidad predictiva demostrada. Colapsarlos en un unico VALID
+# invita justo al error que este proyecto evita: convertir una cifra
+# calculable en una certeza economica.
+#
+#     COMPUTABLE  !=  INTERPRETABLE  !=  PREDICTIVO
+PREDICTIVE_STATUS = {
+    "NOT_EVALUATED": "no se ha hecho ninguna validacion predictiva -- el estado de v1",
+    "VALID":         "hay validacion walk-forward fuera de muestra que la sostiene",
+    "INVALID":       "se evaluo y no se sostiene",
 }
 
 # --- Motivos de exclusion --------------------------------------------------
@@ -94,6 +131,13 @@ EXCL_PIT_VENTANA = "PIT: la ventana del horizonte termina despues de as_of"
 EXCL_TIMING = "TIMING: sin primera sesion negociable (franja de publicacion desconocida)"
 EXCL_CLASE = "CLASE: event_class fuera de la taxonomia"
 EXCL_SOLAPE = "SOLAPE: la ventana del horizonte alcanza al evento siguiente del mismo activo"
+
+# --- Politica de solapamiento (D-30) ---------------------------------------
+# v1 EXCLUIA los eventos solapados. Ahora no: se MARCAN y se publican las
+# dos muestras. Eliminarlos de entrada impedia medir cuanto cambia la
+# distribucion al quitar la contaminacion -- que es justo lo que hay que
+# saber antes de ampliar la cohorte.
+POLITICA_SOLAPE = ("FLAG", "EXCLUDE")
 EXCL_BENCHMARK = "BENCHMARK: sin benchmark formal elegible para esa sesion"
 EXCL_OBSERVACION = "OBSERVACION: la medida no tiene valor en esas dos sesiones"
 
@@ -110,7 +154,7 @@ class PerfilError(ValueError):
 
 # --- Poblacion -------------------------------------------------------------
 
-def poblacion(observaciones, measure_type, horizonte, as_of):
+def poblacion(observaciones, measure_type, horizonte, as_of, politica_solape="FLAG"):
     """(incluidas, exclusiones) aplicando los filtros EN ORDEN.
 
     El orden importa y es el mismo que ordena el resto del proyecto:
@@ -136,7 +180,7 @@ def poblacion(observaciones, measure_type, horizonte, as_of):
         ventana = o.get("ventanas", {}).get(horizonte)
         if ventana and ventana[1] is not None and ventana[1] > as_of:
             fuera(EXCL_PIT_VENTANA); continue
-        if o.get("solapa_por_horizonte", {}).get(horizonte):
+        if politica_solape == "EXCLUDE" and o.get("solapa_por_horizonte", {}).get(horizonte):
             fuera(EXCL_SOLAPE); continue
 
         valor = o["medidas"].get((measure_type, horizonte))
@@ -192,7 +236,15 @@ def _percentil(ordenados, p):
     return round(ordenados[bajo] + (ordenados[alto] - ordenados[bajo]) * (k - bajo), 2)
 
 
-def estadisticos(valores):
+# Valor NEUTRO de cada familia: el punto respecto al cual "positivo"
+# significa algo. Para un retorno es 0; para un cociente contra la ventana
+# de estimacion es 1. Usar 0 en un cociente daria prob_positive = 1,00
+# siempre -- un numero cierto y completamente vacio.
+NEUTRO_POR_FAMILIA = {"RETURN": 0.0, "RELATIVE_TO_BENCHMARK": 0.0,
+                      "RELATIVE_TO_PEER": 0.0, "RELATIVE_TO_PRE_EVENT": 1.0}
+
+
+def estadisticos(valores, neutro=0.0):
     """La distribucion, no un numero. La mediana va primero a proposito:
     con muestras pequeñas y colas gruesas la media sola engaña."""
     if not valores:
@@ -207,7 +259,8 @@ def estadisticos(valores):
         "p25": p25,
         "p75": p75,
         "p90": _percentil(o, 0.90),
-        "prob_positive": round(sum(1 for v in o if v > 0) / n, 3),
+        "neutro": neutro,
+        "prob_positive": round(sum(1 for v in o if v > neutro) / n, 3),
         "dispersion_iqr": round(p75 - p25, 2),
         "min": o[0],
         "max": o[-1],
@@ -243,7 +296,8 @@ def _estabilidad(incluidas, minimo):
     return estable, {"evaluable": True, "median_primera_mitad": m1, "median_segunda_mitad": m2}
 
 
-def perfil(observaciones, event_class, measure_type, horizonte, as_of):
+def perfil(observaciones, event_class, measure_type, horizonte, as_of,
+           politica_solape="FLAG"):
     """Un HistoricalReactionProfile. Siempre devuelve algo: si no puede
     construirse, devuelve por que."""
     if measure_type not in MEDIDAS:
@@ -251,7 +305,7 @@ def perfil(observaciones, event_class, measure_type, horizonte, as_of):
     if horizonte not in HORIZONTES:
         raise PerfilError(f"horizonte fuera del vocabulario: {horizonte}")
 
-    if measure_type in MEDIDAS_DE_NIVEL and horizonte != HORIZONTE_LIMPIO_PARA_NIVEL:
+    if measure_type in MEDIDAS_SIN_METODOLOGIA:
         return {
             "event_class": event_class, "measure_type": measure_type, "horizon": horizonte,
             "as_of_date": str(as_of)[:10], "methodology_version": METHODOLOGY_VERSION,
@@ -260,15 +314,23 @@ def perfil(observaciones, event_class, measure_type, horizonte, as_of):
             "n_episodes": NO_APLICA, "n_independent_episodes": NO_APLICA, "n_activos": 0,
             "n_excluidas": 0, "tasa_exclusion": None, "exclusiones_por_motivo": {},
             "statistics": None, "estabilidad": None,
-            "status": "INSUFFICIENT_COMPARABILITY",
-            "status_reason": (f"{measure_type} es una medida de nivel y en {horizonte} tomaria como "
-                              f"base la sesion del propio evento (el pico). Necesita una ventana base "
-                              f"anterior al evento, decision metodologica no tomada."),
+            "status": "INSUFFICIENT_METHODOLOGY",
+            "status_reason": MEDIDAS_SIN_METODOLOGIA[measure_type],
+            "descriptive_status": "INSUFFICIENT_METHODOLOGY",
+            "predictive_status": "NOT_EVALUATED",
+            "semantica": SEMANTICA_DE_MEDIDA[measure_type],
+            "estimation_window": None, "reaction_window": horizonte,
+            "politica_solape": politica_solape,
+            "overlap_event_count": 0, "overlap_rate": None,
+            "statistics_non_overlapping": None,
         }
 
     del_clase = [o for o in observaciones if o.get("event_class") == event_class]
-    incluidas, exclusiones = poblacion(del_clase, measure_type, horizonte, as_of)
+    incluidas, exclusiones = poblacion(del_clase, measure_type, horizonte, as_of, politica_solape)
     c = conteos(incluidas)
+    solapadas = [x for x in incluidas
+                 if x[0].get("solapa_por_horizonte", {}).get(horizonte)]
+    limpias = [x for x in incluidas if x not in solapadas]
 
     p = {
         "event_class": event_class,
@@ -276,6 +338,16 @@ def perfil(observaciones, event_class, measure_type, horizonte, as_of):
         "horizon": horizonte,
         "as_of_date": str(as_of)[:10],
         "methodology_version": METHODOLOGY_VERSION,
+        "semantica": SEMANTICA_DE_MEDIDA[measure_type],
+        "estimation_window": f"[-{er.LARGO_VENTANA_ESTIMACION},-1]" if
+                             SEMANTICA_DE_MEDIDA[measure_type] == "RELATIVE_TO_PRE_EVENT" else None,
+        "reaction_window": horizonte,
+        "politica_solape": politica_solape,
+        "overlap_event_count": len(solapadas),
+        "overlap_rate": round(len(solapadas) / len(incluidas), 3) if incluidas else None,
+        "statistics_non_overlapping": None,
+        "descriptive_status": None,
+        "predictive_status": "NOT_EVALUATED",
         "benchmark_id": None,
         "benchmark_methodology_version": None,
         "metodo_ajuste": None,
@@ -302,6 +374,7 @@ def perfil(observaciones, event_class, measure_type, horizonte, as_of):
             p["status"] = "INSUFFICIENT_COMPARABILITY"
             p["status_reason"] = (f"el perfil mezclaria {len(bids)} benchmarks / {len(vers)} versiones "
                                   f"de metodologia: seria irreproducible")
+            p["descriptive_status"] = p["status"]
             return p
         p["benchmark_id"], = bids
         p["benchmark_methodology_version"], = vers
@@ -319,6 +392,7 @@ def perfil(observaciones, event_class, measure_type, horizonte, as_of):
             p["status_reason"] = "no hay ninguna comparison reference declarada para estos activos"
         else:
             p["status"], p["status_reason"] = "INSUFFICIENT_SAMPLE", "ninguna observacion supera los filtros"
+        p["descriptive_status"] = p["status"]
         return p
 
     minimo = _minimo_declarado(measure_type)
@@ -326,9 +400,16 @@ def perfil(observaciones, event_class, measure_type, horizonte, as_of):
     if minimo is None:
         p["status"] = "INSUFFICIENT_COMPARABILITY"
         p["status_reason"] = f"no hay minimo declarado para {measure_type} (D-22)"
+        p["descriptive_status"] = p["status"]
         return p
 
-    p["statistics"] = estadisticos([v for _o, v in incluidas])
+    neutro = NEUTRO_POR_FAMILIA[SEMANTICA_DE_MEDIDA[measure_type]]
+    p["statistics"] = estadisticos([v for _o, v in incluidas], neutro)
+    # La muestra sin contaminacion, siempre que quede algo distinto que
+    # comparar. No sustituye a la completa: se publican las dos.
+    if solapadas and limpias:
+        p["statistics_non_overlapping"] = estadisticos([v for _o, v in limpias], neutro)
+        p["n_non_overlapping"] = len(limpias)
     estable, detalle = _estabilidad(incluidas, minimo)
     p["estabilidad"] = detalle
 
@@ -342,6 +423,7 @@ def perfil(observaciones, event_class, measure_type, horizonte, as_of):
     else:
         p["status"] = "VALID"
         p["status_reason"] = None
+    p["descriptive_status"] = p["status"]
     return p
 
 
