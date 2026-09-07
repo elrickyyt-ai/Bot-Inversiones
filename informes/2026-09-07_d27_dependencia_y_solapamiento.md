@@ -1,6 +1,6 @@
 # D-27, independencia y solapamiento — iteración metodológica previa a ampliar la cohorte
 
-**Fecha**: 2026-09-07 · **Rama**: `claude/bot-inversiones-audit-peh0x2` · **Base**: `07f867e`
+**Fecha**: 2026-09-07 · **Rama**: `claude/bot-inversiones-audit-peh0x2` · **Base**: `07f867e` · **Commit**: `c44120a`
 **Alcance**: metodología sobre los **mismos 52 eventos** de IBM/NVDA/XOM. No se ha ampliado la cohorte, no se ha declarado ningún benchmark nuevo, no se ha añadido ningún activo.
 
 **Verificación**:
