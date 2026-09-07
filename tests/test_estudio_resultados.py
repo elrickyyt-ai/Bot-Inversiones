@@ -151,33 +151,76 @@ class TestSolapamiento(unittest.TestCase):
         self.assertTrue(solapados, "a 90 sesiones tiene que haber solapamiento")
 
 
-class TestSuficiencia(unittest.TestCase):
+class TestElegibilidadPorFamilia(unittest.TestCase):
+    """REESCRITO EN D-21 (2026-09-07). Antes habia una sola puerta:
+    `suficiencia_de_muestra()` bloqueaba TODA agregacion por
+    `SIN_RETORNO_ANORMAL`. Era demasiado gruesa -- bloquear la agregacion
+    de retornos anormales sin benchmark es correcto, bloquear tambien la
+    de raw_return no lo es. La propiedad que sigue siendo cierta, y la
+    que ahora importa, es que cada familia responde por su cuenta."""
 
     @classmethod
     def setUpClass(cls):
         cls.todas = [o for s in SIMBOLOS for o in er.estudiar(s, _path(s))]
 
-    def test_no_se_agrega_sin_retorno_anormal(self):
-        """Aunque hubiese muestra de sobra, agregar retornos BRUTOS y
-        llamarlos 'reaccion al evento' atribuiria al evento lo que hizo el
-        mercado. La regla bloquea antes de mirar el tamaño de muestra."""
-        ok, informe = er.suficiencia_de_muestra(self.todas)
+    def test_raw_return_es_elegible_sin_benchmark(self):
+        """La regla critica de D-21: la ausencia de benchmark limita QUE
+        MEDIDAS pueden llamarse retorno anormal, no si hay analisis."""
+        ok, informe = er.elegibilidad(self.todas, "RAW_RETURN")
+        self.assertTrue(ok)
+        self.assertEqual(informe["motivo"], "SUFICIENTE")
+        self.assertEqual(informe["sin_solapamiento"], 52)
+
+    def test_abnormal_return_no_es_elegible_sin_benchmark(self):
+        ok, informe = er.elegibilidad(self.todas, "ABNORMAL_RETURN")
         self.assertFalse(ok)
         self.assertIn(er.SIN_BENCHMARK, informe["motivo"])
 
-    def test_no_devuelve_ningun_estadistico(self):
-        _ok, informe = er.suficiencia_de_muestra(self.todas)
-        for prohibido in ("mediana", "media", "p10", "p90", "median", "mean"):
-            self.assertNotIn(prohibido, informe)
+    def test_la_elegibilidad_de_raw_no_depende_de_la_de_abnormal(self):
+        """Test 10 del encargo. Las dos familias se evaluan sobre las
+        MISMAS observaciones y dan resultados distintos."""
+        raw_ok, _ = er.elegibilidad(self.todas, "RAW_RETURN")
+        abn_ok, _ = er.elegibilidad(self.todas, "ABNORMAL_RETURN")
+        self.assertTrue(raw_ok)
+        self.assertFalse(abn_ok)
 
-    def test_una_pregunta_no_declarada_no_pasa(self):
-        ok, informe = er.suficiencia_de_muestra(self.todas, pregunta="lo_que_sea")
+    def test_el_minimo_es_por_familia_y_pregunta(self):
+        """No hay un umbral global. Y ABNORMAL_RETURN exige mas que
+        RAW_RETURN porque lleva encima el error del propio benchmark."""
+        m = er.MINIMOS_DECLARADOS
+        self.assertGreater(m[("ABNORMAL_RETURN", "reaccion_mediana_por_clase")],
+                           m[("RAW_RETURN", "reaccion_mediana_por_clase")])
+        self.assertGreater(m[("RAW_RETURN", "reaccion_mediana_condicionada")],
+                           m[("RAW_RETURN", "reaccion_mediana_por_clase")])
+
+    def test_el_umbral_10_de_pct_in_window_no_se_ha_vuelto_global(self):
+        """Regla explicita del usuario: ese `10` era el minimo razonable
+        para un percentil en ventana movil, y no se generaliza."""
+        self.assertNotIn(10, set(er.MINIMOS_DECLARADOS.values()))
+        sys.path.insert(0, os.path.join(RAIZ, "engine", "crypto"))
+        try:
+            if "score" in sys.modules:
+                del sys.modules["score"]
+            crypto = __import__("score")
+        finally:
+            sys.path.remove(os.path.join(RAIZ, "engine", "crypto"))
+        # el modulo de cripto sigue intacto: se niega con menos de 10
+        self.assertIsNone(crypto._pct_in_window(list(range(9))))
+        self.assertIsNotNone(crypto._pct_in_window(list(range(10))))
+
+    def test_no_devuelve_ningun_estadistico(self):
+        for fam in er.FAMILIAS_DE_MEDIDA:
+            _ok, informe = er.elegibilidad(self.todas, fam)
+            for prohibido in ("mediana", "media", "p10", "p90", "median", "mean"):
+                self.assertNotIn(prohibido, informe)
+
+    def test_familia_o_pregunta_no_declarada_no_pasa(self):
+        ok, informe = er.elegibilidad(self.todas, "LO_QUE_SEA")
+        self.assertFalse(ok)
+        self.assertEqual(informe["motivo"], "FAMILIA_NO_DECLARADA")
+        ok, informe = er.elegibilidad(self.todas, "RAW_RETURN", pregunta="lo_que_sea")
         self.assertFalse(ok)
         self.assertEqual(informe["motivo"], "PREGUNTA_NO_DECLARADA")
-
-    def test_el_minimo_no_es_global_sino_por_pregunta(self):
-        self.assertNotEqual(er.MINIMOS_DECLARADOS["reaccion_mediana_por_clase"],
-                            er.MINIMOS_DECLARADOS["reaccion_mediana_condicionada"])
 
 
 if __name__ == "__main__":

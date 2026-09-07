@@ -11,12 +11,12 @@ No sustituye a los README de cada módulo (que explican *por qué* está hecho a
 ## Verificación completa en tres comandos
 
 ```bash
-python3 -m unittest discover -s tests           # 491 tests, debe dar OK
+python3 -m unittest discover -s tests           # 521 tests, debe dar OK
 python3 engine/contract/qa.py --require-parquet # debe dar STATUS: VERIFIED
 git status --short data/ knowledge/             # debe salir vacío
 ```
 
-Si los tres pasan, las diecinueve fases están sanas. Si falla alguno, la tabla de abajo dice qué fase mirar.
+Si los tres pasan, las veinte fases están sanas. Si falla alguno, la tabla de abajo dice qué fase mirar.
 
 ---
 
@@ -41,6 +41,7 @@ Si los tres pasan, las diecinueve fases están sanas. Si falla alguno, la tabla 
 | **P6.2b** | `f30ffc5` | Look-ahead corregido en la familia `earnings_*` | `python3 engine/contract/qa.py` → bloque `INTEGRIDAD TEMPORAL` |
 | **P6.2c** | `f30ffc5` | Event study mínimo sobre resultados | `python3 engine/events/estudio_resultados.py` |
 | **P6.2d** | `f30ffc5` | Episodios declarados sobre P4 | `python3 -m unittest tests.test_episodios` |
+| **D-21** | *(este commit)* | Ontología de benchmark y elegibilidad por familia | `python3 -m unittest tests.test_benchmark_ontologia` |
 
 ---
 
@@ -308,6 +309,8 @@ CONSUMPTION   Power BI + Web App
 | No hay benchmark en el contrato | D-21 | Sin él no hay retorno anormal, y sin retorno anormal la suficiencia de muestra bloquea toda agregación de reacciones. **Sin resolver para cripto** |
 | La dirección causal noticia↔precio no se representa | informe de P6.2 §10 | Una noticia puede escribirse *porque* el precio ya se movió. No se inventa un campo que no se pueda rellenar |
 | Un solo episodio declarado | `engine/events/episodios.json` | El mecanismo existe y está probado con 5 documentos reales; poblarlo es trabajo de curación con fuente, no de código |
+| Ningún benchmark declarado | `knowledge/` · D-21 | La ontología existe y valida; declarar `^GSPC` es curación con fuente. Dos tests vigilan que sigue vacío y **fallarán a propósito** cuando se declare el primero |
+| `ASSET_CLASS` declarado y rechazado | `modelo.ROLES_NO_ACTIVOS` | Su definición no está cerrada: para una acción `MARKET` y `ASSET_CLASS` difieren, para un cripto coinciden. Reactivarlo cuesta una línea |
 
 ---
 

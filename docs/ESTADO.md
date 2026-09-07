@@ -1,6 +1,6 @@
 # Estado del sistema — punto de entrada
 
-**Actualizado**: 2026-09-07 · **Rama**: `claude/bot-inversiones-audit-peh0x2` · **Último commit**: `f30ffc5`
+**Actualizado**: 2026-09-07 · **Rama**: `claude/bot-inversiones-audit-peh0x2` · **Último commit**: `D-21`
 
 > **Si eres un agente o una persona que entra por primera vez, lee este documento entero antes que ningún otro.** Está escrito para que no haga falta reconstruir la arquitectura leyendo cientos de commits.
 
@@ -40,6 +40,7 @@ DATA CONTRACT      data/incoming/*.csv (año en curso)  +  data/history/** (parq
    │           └──► P5D  Data Requirements  ¿existe el dato que el mecanismo pide?
    │
    └──► P2   KNOWLEDGE (a mano, versionado)  entidades · relaciones · conceptos · fuentes
+               │      └──► D-21 Benchmark / ComparisonReference  ontología, sin datos
                │
                ├──► P5A  Causal Path        recorrido, sin economía
                │      └──► P5B  Mechanism + Direction
@@ -76,6 +77,7 @@ CONSUMO (desacoplado, no dicta el motor)   Power BI · Web App
 | P6.2b | `f30ffc5` | Look-ahead de 22-31 días corregido en 27 filas |
 | P6.2c | `f30ffc5` | Event study mínimo: 52 eventos, `first_tradable_at`, sin agregar |
 | P6.2d | `f30ffc5` | Episodios declarados sobre P4: 50 documentos → 43 eventos → 1 episodio |
+| D-21 | *(este commit)* | Ontología de benchmark: `benchmark` como entidad, referencia ≠ activo, elegibilidad por familia de medida |
 
 Detalle por fase, con qué se rompe si cae y cómo recuperarla: `informes/2026-09-07_trazabilidad_fases_P0_P61.md`.
 
@@ -98,13 +100,16 @@ Estos invariantes no son preferencias de estilo: cada uno nació de un fallo rea
 | **Lo derivado no se versiona** | `data/current/`, `coverage.json`, `requirements.json`, Evidence, **`available_at`** (D-17) |
 | **`STALE` no es un `LOOK_AHEAD` suave** | dos defectos de fechado a la vez y de signo contrario en los mismos fundamentales (D-18) |
 | **Un agregado no es conocible hasta su último componente** | lo contrario que la fecha del bloque, y por eso no se contradicen: son dos preguntas |
+| **Una referencia de mercado no es un instrumento analizado** | meter índices en `DimAsset` rompe `calendario()` y `esperadas()` de forma medible (D-21) |
+| **La ausencia de benchmark limita qué medidas, no si hay análisis** | `RAW_RETURN` es elegible con n=52 mientras `ABNORMAL_RETURN` no lo es, sobre las mismas observaciones (D-22) |
+| **Una relación de medida no es un mecanismo económico** | el S&P 500 como referencia de NVIDIA no la conecta con las demás del índice (D-23) |
 | **Un test que se apoya en que algo NO existe caduca** cuando ese algo se documenta | cinco tests reescritos en P5C |
 
 ---
 
 ## 5. Estado actual, medido
 
-**Suite**: 491 tests · OK — **QA**: `STATUS: VERIFIED` — **Knowledge**: PASS (25 entidades · 48 relaciones · 10 fuentes)
+**Suite**: 521 tests · OK — **QA**: `STATUS: VERIFIED` — **Knowledge**: PASS (25 entidades · 48 relaciones · 10 fuentes)
 
 ```bash
 python3 -m unittest discover -s tests
@@ -177,26 +182,21 @@ La decisión pendiente es de dónde sale la historia de fundamentales de accione
 
 Eso **no resuelve** la decisión —`EARNINGS` da EPS y sorpresa, no `roe_pct` ni los márgenes, que vienen de `COMPANY_OVERVIEW` y siguen siendo un snapshot— pero sí cambia el planteamiento: hay al menos una serie fundamental con 30 años de profundidad, point-in-time y sin coste, que hoy se está tirando. Las opciones del informe de líneas base deben reevaluarse con ese dato encima de la mesa.
 
-**Segunda decisión: D-21, ontología de benchmark — CERRADA como ontología, pendiente de implementar.**
-
-Auditada en `informes/2026-09-07_auditoria_ontologia_benchmark.md` (dos revisiones, mismo día, **cero ficheros de código**). Lo que queda fijado:
+**Segunda decisión: D-21 — CERRADA E IMPLEMENTADA** (`informes/2026-09-07_implementacion_d21_benchmark.md`).
 
 > `DimAsset` representa instrumentos analizados; las referencias de mercado no se convierten en activos por conveniencia. Los benchmarks formales son referencias metodológicas versionadas y temporalmente válidas. Las *comparison references* contextualizan sin adquirir semántica de benchmark: son un **rol de la asignación**, no una clase. La asignación es una **relación de Knowledge**, no una tabla nueva. **La ausencia de benchmark no elimina el análisis de reacción: limita qué medidas pueden llamarse *abnormal return*.**
 
-| Hipótesis de v1 | Congelada |
+Construido: tipo de entidad `benchmark` con metodología, vigencia y origen de serie; `BENCHMARKED_BY` / `COMPARED_TO`; `role`; siete invariantes; elegibilidad por familia de medida. **Ningún benchmark concreto introducido** — `knowledge/` sigue con 25 entidades y 48 relaciones, y dos tests lo vigilan.
+
+| Familia | Sobre los 52 eventos reales |
 |---|---|
-| `MARKET` renta variable | `^GSPC` — justificado *ex ante*, no por cobertura |
-| `^IXIC` · `^NDX` | *comparison reference* |
-| `SECTOR` | *comparison reference*; sin ETF sectorial en v1 |
-| Cripto | sin benchmark formal; **análisis de reacción sí** |
+| `RAW_RETURN` | **utilizable** (n=52 ≥ 30) |
+| `ABNORMAL_RETURN` | no — `SIN_BENCHMARK_EN_EL_CONTRATO` |
+| `PEER_RELATIVE_RETURN` | no — `SIN_ASIGNACION_DECLARADA` |
 
-**Por qué índices dentro de `DimAsset` está descartado**, medido: `calendario(...,"index")` → `'crypto'` (24/7 para un índice que no cotiza fines de semana) y `esperadas(...,"index",...)` → `None`, con lo que `PARTIAL` deja de ser calculable.
+**Hipótesis de v1 congeladas, pendientes de declararse como datos**: `MARKET` renta variable = `^GSPC`; `^IXIC`/`^NDX` como *comparison reference*; sin ETF sectorial; cripto sin benchmark formal, con CoinDesk 20 registrado y no introducido (base 2022-10-04 → 54,7% de cobertura; 15 meses retrocalculados).
 
-**Por qué cripto no tiene benchmark formal**, medido: CoinGecko `/global` da solo el valor actual y `/global/market_cap_chart` responde 401; un índice con los 6 cripto del contrato sería sesgo de selección por construcción (son los holdings de `CARTERA_A`); y el **28,5%** de las sesiones de BTC/ETH caen en fin de semana, donde ningún índice bursátil observa nada. CoinDesk 20 queda **registrado y no introducido**: base 2022-10-04 (54,7% de cobertura), lanzamiento 2024-01-12 (38,2%), con 15 meses de historia retrocalculada entre ambas.
-
-**Pero cripto NO queda fuera del análisis de eventos**: `raw_return`, `peer_relative_return`, `volume_change`, `volatility_change` y `cross_asset_reaction` son computables hoy — las métricas ya están en el contrato para los 9 activos con serie, y `other_entities` ya existe en `CAMPOS_EVENTO`.
-
-**Lo que falta para implementar** es vocabulario, no estructura: un tipo de entidad `benchmark` y sus entradas en `PREDICADOS`. **No empieza en esta iteración.**
+**La siguiente decisión ya no es de ontología.** Es qué benchmarks concretos se declaran y con qué fuente — y después, el `HistoricalReactionProfile`, que nacerá con **dos ramas**: `market-adjusted` para acciones y `raw / peer-relative / volume / volatility` para cripto. Cada perfil llevará su `measure_type`: comparar un `RAW_RETURN` de BTC con un `ABNORMAL_RETURN` de XRP sería tratar como la misma magnitud dos cosas distintas.
 
 Roadmap acordado: `P6.2 Quantification unlocks` → `P7 Market Impact` → `P8 Mispricing` → `P9 Thesis` → `P10 Portfolio` → `P11 Outcome/Calibration`. Power BI y Web App consumirán una proyección del motor; no lo dictan.
 

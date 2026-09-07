@@ -95,7 +95,16 @@ def indice(k, as_of):
     """
     mod = _knowledge_mod()
     salidas, negadas = {}, {}
+    no_causales = getattr(mod, "PREDICADOS_NO_CAUSALES", frozenset())
     for r in k["relationships"]:
+        # D-21 (2026-09-07): una asignacion de benchmark o de comparable es
+        # una relacion de MEDIDA, no un mecanismo economico. Recorrerla
+        # inventaria caminos: que el S&P 500 sea la referencia de NVIDIA no
+        # conecta a NVIDIA con las demas empresas del indice. P5A no cambia
+        # su logica -- solo deja de ver un tipo de arista que antes no
+        # existia.
+        if r.get("predicate") in no_causales:
+            continue
         if not mod.vigente(r, as_of):
             continue
         clave = (r["subject"], r["predicate"], r["object"])

@@ -200,54 +200,133 @@ def estudiar(asset_id, path_eventos, ventana_sesiones=20):
 
 
 # --------------------------------------------------------------------------
-# Suficiencia de muestra
+# D-21: familias de medida y elegibilidad
 # --------------------------------------------------------------------------
-# Generalizacion del principio que engine/crypto/score.py ya aplicaba con
-# _pct_in_window(): con menos de N observaciones no se devuelve un numero
-# peor, se devuelve None. Aqui se declara POR PREGUNTA, no como un umbral
-# global: "10" era el minimo razonable para un percentil en una ventana
-# movil, y no tiene por que servir para estimar la reaccion mediana de una
-# clase de evento.
+# Antes de D-21 habia UNA puerta: sin retorno anormal, no se agregaba nada.
+# Era demasiado gruesa. Bloquear la agregacion de retornos anormales sin
+# benchmark es correcto; bloquear tambien la de raw_return o volume_change
+# no lo es -- esas no necesitan benchmark, y con ellas cripto SI puede
+# analizarse aunque su benchmark de mercado no exista.
 #
-# Los minimos de abajo son DECLARADOS y conservadores, no estimados: no
-# hay todavia ninguna medicion propia que justifique un numero concreto, y
-# ponerlo mas bajo "para que salga" seria justo lo que esta regla evita.
-MINIMOS_DECLARADOS = {
-    "reaccion_mediana_por_clase": 30,
-    "reaccion_mediana_condicionada": 50,
+# La elegibilidad es ahora una propiedad de la MEDIDA DERIVADA, no de la
+# observacion.
+FAMILIAS_DE_MEDIDA = {
+    "RAW_RETURN":           "variacion del propio activo; no necesita ninguna referencia",
+    "PEER_RELATIVE_RETURN": "variacion respecto a un comparable declarado; NUNCA es retorno anormal",
+    "ABNORMAL_RETURN":      "variacion descontado un benchmark formal; exige las cuatro condiciones de abajo",
+    "VOLUME_CHANGE":        "variacion del volumen negociado; no necesita referencia",
+    "VOLATILITY_CHANGE":    "variacion de la volatilidad; no necesita referencia",
 }
 
+# Que necesita cada familia. Solo ABNORMAL_RETURN exige benchmark.
+REQUIERE_BENCHMARK = {"ABNORMAL_RETURN"}
+REQUIERE_REFERENCIA = {"PEER_RELATIVE_RETURN"}
 
-def suficiencia_de_muestra(observaciones, pregunta="reaccion_mediana_por_clase"):
+# Minimos por (familia, pregunta). NO hay un umbral global: el `10` de
+# engine/crypto/score.py::_pct_in_window() era el minimo razonable para un
+# percentil en ventana movil y no tiene por que servir para estimar la
+# reaccion mediana de una clase de evento. Ese modulo NO se toca.
+#
+# Los numeros son DECLARADOS y conservadores, no estimados. Que
+# ABNORMAL_RETURN exija mas que RAW_RETURN no es arbitrario: lleva encima
+# el error de estimacion del propio benchmark.
+MINIMOS_DECLARADOS = {
+    ("RAW_RETURN", "reaccion_mediana_por_clase"): 30,
+    ("RAW_RETURN", "reaccion_mediana_condicionada"): 50,
+    ("ABNORMAL_RETURN", "reaccion_mediana_por_clase"): 40,
+    ("ABNORMAL_RETURN", "reaccion_mediana_condicionada"): 60,
+    ("PEER_RELATIVE_RETURN", "reaccion_mediana_por_clase"): 40,
+    ("VOLUME_CHANGE", "reaccion_mediana_por_clase"): 30,
+    ("VOLATILITY_CHANGE", "reaccion_mediana_por_clase"): 30,
+}
+
+# Motivos de no elegibilidad. Ninguno se rellena con un valor por defecto.
+SIN_ASIGNACION = "SIN_ASIGNACION_DECLARADA"
+FUERA_DE_VIGENCIA = "ASIGNACION_FUERA_DE_VIGENCIA"
+FUERA_DE_SERIE = "BENCHMARK_SIN_SERIE_EN_ESA_FECHA"
+CALENDARIO_INCOMPATIBLE = "CALENDARIO_INCOMPATIBLE"
+SIN_METODOLOGIA = "METODOLOGIA_NO_DECLARADA"
+NO_ES_BENCHMARK_FORMAL = "LA_REFERENCIA_NO_ES_BENCHMARK_FORMAL"
+
+
+def _entre(fecha, desde, hasta):
+    if desde and fecha < desde:
+        return False
+    if hasta and fecha > hasta:
+        return False
+    return True
+
+
+def benchmark_elegible(fecha_reaccion, calendario_activo, asignacion, entidad_benchmark):
+    """(bool, motivo) -- las CUATRO condiciones de D-21 para que exista
+    retorno anormal. Recibe la asignacion ya resuelta: esta funcion NO
+    elige benchmark, lo comprueba. Elegir es un acto de curacion en
+    Knowledge (D-04), y ademas el validador solo admite una asignacion por
+    (activo, rol, periodo).
+    """
+    if asignacion is None or entidad_benchmark is None:
+        return False, SIN_ASIGNACION
+    # 1. semanticamente compatible: una comparison reference no asciende
+    if asignacion.get("predicate") != "BENCHMARKED_BY" or asignacion.get("role") == "PEER":
+        return False, NO_ES_BENCHMARK_FORMAL
+    # 2. temporalmente valida: la asignacion y la serie del benchmark
+    if not _entre(fecha_reaccion, asignacion.get("valid_from"), asignacion.get("valid_to")):
+        return False, FUERA_DE_VIGENCIA
+    bm = entidad_benchmark.get("benchmark") or {}
+    if not _entre(fecha_reaccion, bm.get("serie_desde"), bm.get("serie_hasta")):
+        return False, FUERA_DE_SERIE
+    # 3. observacion disponible: mismo calendario, o no hay nada que restar
+    #    en mas de una de cada cuatro sesiones (28,5% en cripto)
+    if bm.get("calendar") != calendario_activo:
+        return False, CALENDARIO_INCOMPATIBLE
+    # 4. metodologia declarada
+    if not bm.get("methodology_version") or bm.get("point_in_time_capable") is not True:
+        return False, SIN_METODOLOGIA
+    return True, None
+
+
+def elegibilidad(observaciones, familia, pregunta="reaccion_mediana_por_clase",
+                 medidas_disponibles=None):
     """(utilizable, informe). NUNCA devuelve un estadistico.
 
-    Comprueba en este orden -- el mismo que ordena todo el proyecto:
+    `medidas_disponibles` es el conjunto de familias que de verdad se han
+    podido calcular para estas observaciones. Si no se pasa, se asume la
+    unica que el event study calcula hoy.
+
+    El orden de comprobacion es el mismo que ordena todo el proyecto:
     ¿existe la evidencia? ¿es temporalmente valida? ¿es comparable?
     ¿hay muestra suficiente?
     """
-    minimo = MINIMOS_DECLARADOS.get(pregunta)
+    if familia not in FAMILIAS_DE_MEDIDA:
+        return False, {"motivo": "FAMILIA_NO_DECLARADA", "familia": familia}
+    minimo = MINIMOS_DECLARADOS.get((familia, pregunta))
     if minimo is None:
-        return False, {"motivo": "PREGUNTA_NO_DECLARADA", "pregunta": pregunta}
+        return False, {"motivo": "PREGUNTA_NO_DECLARADA", "familia": familia, "pregunta": pregunta}
 
+    disponibles = {"RAW_RETURN"} if medidas_disponibles is None else set(medidas_disponibles)
     con_reaccion = [o for o in observaciones if o["raw_return_1s_pct"] is not None]
     sin_solape = [o for o in con_reaccion if not o.get("solapa_con")]
-    activos = {o["asset_id"] for o in sin_solape}
 
     informe = {
+        "familia": familia,
         "pregunta": pregunta,
         "minimo_declarado": minimo,
         "eventos_totales": len(observaciones),
-        "con_reaccion_medible": len(con_reaccion),
+        "con_medida_calculable": len(con_reaccion),
         "sin_solapamiento": len(sin_solape),
-        "n_efectivo_activos": len(activos),
-        "ajustado_por_mercado": 0,  # ninguno: no hay benchmark
+        "n_efectivo_activos": len({o["asset_id"] for o in sin_solape}),
     }
-    # Aunque hubiese muestra, el retorno es BRUTO: incluye lo que hiciera
-    # el mercado ese dia. Agregar retornos brutos y llamarlos "reaccion al
-    # evento" seria atribuir al evento un movimiento que no es suyo.
-    if informe["ajustado_por_mercado"] == 0:
-        informe["motivo"] = "SIN_RETORNO_ANORMAL: " + SIN_BENCHMARK
+
+    # La puerta que antes era global ahora es de la familia, y solo se
+    # cierra para quien de verdad necesita lo que falta.
+    if familia not in disponibles:
+        informe["motivo"] = f"MEDIDA_NO_CALCULADA: {familia}"
+        if familia in REQUIERE_BENCHMARK:
+            informe["motivo"] += f" ({SIN_BENCHMARK})"
+        elif familia in REQUIERE_REFERENCIA:
+            informe["motivo"] += f" ({SIN_ASIGNACION})"
         return False, informe
+
     if len(sin_solape) < minimo:
         informe["motivo"] = "MUESTRA_INSUFICIENTE"
         return False, informe
@@ -270,7 +349,8 @@ if __name__ == "__main__":
                   f"{o['surprise_pct'] if o['surprise_pct'] is not None else float('nan'):10.2f} "
                   f"{o['raw_return_1s_pct'] if o['raw_return_1s_pct'] is not None else float('nan'):11.2f} "
                   f"{'—':>8}")
-    ok, informe = suficiencia_de_muestra(todas)
-    print(f"\n=== SUFICIENCIA DE MUESTRA ===\nutilizable: {ok}")
-    for k, v in informe.items():
-        print(f"  {k}: {v}")
+    print("\n=== ELEGIBILIDAD POR FAMILIA DE MEDIDA (D-21) ===")
+    for fam in ("RAW_RETURN", "ABNORMAL_RETURN", "PEER_RELATIVE_RETURN", "VOLUME_CHANGE"):
+        ok, informe = elegibilidad(todas, fam)
+        print(f"  {fam:22} utilizable={str(ok):5} n={informe.get('sin_solapamiento')} "
+              f"minimo={informe.get('minimo_declarado')} motivo={informe['motivo']}")

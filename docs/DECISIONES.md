@@ -135,7 +135,7 @@ Formato: cada entrada dice **qué se decidió**, **con qué evidencia** y **qué
 
 ## D-21 · Ontología de benchmark en una arquitectura multi-activo
 
-**Ontología VIGENTE, implementación PENDIENTE** (2026-09-07). **No se ha tocado `DimAsset` ni nada más: cero ficheros de código en las dos revisiones de la auditoría.**
+**VIGENTE e IMPLEMENTADA** (2026-09-07). Ontología y validación construidas; **ningún benchmark concreto introducido**. `DimAsset`, `METRIC_FIELDS` y Power BI intactos. Informe: `informes/2026-09-07_implementacion_d21_benchmark.md`.
 - **Evidencia**: el contrato no tiene ningún índice (11 activos: 6 cripto, 3 acciones, 2 regiones macro), así que el retorno anormal no es calculable. Medido sobre datos propios: en XOM 2020-05-01 el retorno bruto fue −7,17% mientras las otras dos acciones hacían −3,09% de media — **~40% del movimiento es común**, y atribuirlo entero al evento lo sobreestima en varios puntos.
 - **Opciones evaluadas**: (A) el índice como un activo más de `DimAsset`; (B) `DimBenchmark` + `AssetBenchmarkMap`.
 - **Recomendación**: **B**. `ASSET_FIELDS` describe instrumentos (`sector`, `industry`, `exchange`); un índice no tiene sector ni cotiza, y rellenar esos campos repetiría lo que ya pasó con `sector = "Cripto"`. Y `DimAsset` pasaría a mezclar **lo que se analiza** con **lo que se usa para medir**.
@@ -182,4 +182,20 @@ La justificación de `^GSPC` es **ex ante y por lo que cada índice representa**
 
 > `DimAsset` representa instrumentos analizados; las referencias de mercado no se convierten en activos por conveniencia. Los benchmarks formales son referencias metodológicas versionadas y temporalmente válidas, distinguiendo nivel publicado de NAV de un instrumento negociable, y rechazando las construidas por el propio sistema. Las *comparison references* contextualizan la reacción sin adquirir semántica de benchmark: son un **rol de la asignación**, no una clase de objeto, y ninguna asciende a benchmark porque falte el bueno. La asignación activo→referencia es una **relación de Knowledge** con rol y vigencia, no una tabla nueva. Un `(activo, rol, periodo)` admite exactamente una asignación. **La ausencia de benchmark no elimina el análisis de reacción: limita qué medidas pueden denominarse *abnormal return*.**
 
-**Qué falta**: solo vocabulario, no estructura — un tipo de entidad `benchmark` y sus entradas en `PREDICADOS`. **La implementación no empieza en esta iteración.**
+**Implementada el 2026-09-07** en 5 ficheros, sin tocar `data/` ni `knowledge/`: tipo de entidad `benchmark` con bloque de metodología propio, predicados `BENCHMARKED_BY` (habilita `ABNORMAL_RETURN`) y `COMPARED_TO` (no lo habilita nunca), campo `role`, y siete invariantes en el validador. `ASSET_CLASS` queda **declarado y rechazado** hasta que su definición esté cerrada (patrón de D-10 con `ESTIMATED`). Ningún benchmark concreto: `knowledge/` sigue con 25 entidades y 48 relaciones, y dos tests lo vigilan.
+
+## D-22 · La elegibilidad es una propiedad de la medida derivada, no de la observación
+
+**Vigente** (D-21 implementación, 2026-09-07).
+- **Decisión original** (P6.2c): `suficiencia_de_muestra()` bloqueaba **toda** agregación con un único motivo, `SIN_RETORNO_ANORMAL`.
+- **Evidencia nueva**: tras D-21, las medidas derivadas de un mismo evento no necesitan lo mismo. `RAW_RETURN`, `VOLUME_CHANGE` y `VOLATILITY_CHANGE` no necesitan benchmark — y sus métricas ya están en el contrato para los 9 activos con serie. Bloquearlas por una carencia que no les afecta excluía a cripto de un análisis que sí puede hacer.
+- **Decisión vigente**: cinco familias de medida, cada una con sus requisitos y su mínimo declarado por `(familia, pregunta)`. Sobre los mismos 52 eventos: `RAW_RETURN` **utilizable** (n=52 ≥ 30) y `ABNORMAL_RETURN` **no** (`SIN_BENCHMARK`).
+- **`ABNORMAL_RETURN` exige más muestra que `RAW_RETURN`** (40 frente a 30): lleva encima el error de estimación del propio benchmark.
+- **Se descartó**: un umbral global. El `10` de `_pct_in_window()` era el mínimo razonable para un percentil en ventana móvil y no sirve para estimar la reacción mediana de una clase de evento. `engine/crypto/score.py` **no se ha tocado**, y un test comprueba las dos cosas.
+
+## D-23 · Una asignación de benchmark no es una arista causal
+
+**Vigente** (D-21 implementación, 2026-09-07). **Toca P5A, que estaba cerrada.**
+- **Evidencia**: `caminos.indice()` recorre **toda** relación vigente sin mirar el predicado. El día que se declarase el primer benchmark, el motor causal seguiría esa arista y produciría caminos inexistentes — que el S&P 500 sea la referencia de NVIDIA **no conecta** a NVIDIA con las demás empresas del índice.
+- **Decisión vigente**: `modelo.PREDICADOS_NO_CAUSALES` y un filtro en `indice()`. Una asignación de referencia es una relación de **medida**, no un mecanismo económico.
+- **Por qué se tocó una fase cerrada**: no hacerlo dejaba un fallo plantado que solo se manifestaría cuando ya hubiera datos. La lógica de P5A no cambia: deja de ver un tipo de arista que hasta hoy no existía. Verificado con 3 tests de regresión — 22 nodos con salida antes y después, y la entidad benchmark nunca entra en el grafo.

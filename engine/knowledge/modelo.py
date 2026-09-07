@@ -59,6 +59,12 @@ TIPOS_ENTIDAD = {
     "technology":   "proceso o capacidad que se emplea, no se compra",
     "material":     "insumo fisico",
     "person":       "individuo",
+    # D-21 (2026-09-07). Una referencia de mercado NO es un "security":
+    # un indice no es negociable, no tiene sector ni mercado de cotizacion,
+    # y meterlo en DimAsset rompe cosas medibles (ver la auditoria de D-21).
+    # Un ETF que replica un indice SI es un security -- y por eso el
+    # benchmark declara con que clase de serie se construye.
+    "benchmark":    "referencia metodologica contra la que se mide una reaccion; no es un instrumento analizado",
 }
 
 # Una entidad no se borra cuando deja de cotizar: su identidad sigue
@@ -83,6 +89,13 @@ PREDICADOS = {
     "USES":          ({"organization"}, {"product", "technology"}),
     "DEPENDS_ON":    (set(TIPOS_ENTIDAD), set(TIPOS_ENTIDAD)),
     "SUBSTITUTES":   ({"product", "material", "technology"}, {"product", "material", "technology"}),
+    # D-21. Dos predicados, no uno con un flag: lo que cambia entre ellos
+    # no es un matiz sino si la relacion habilita o no un retorno anormal.
+    # NINGUNO de los dos es simetrico -- "ETH respecto a BTC" y "BTC
+    # respecto a ETH" son relaciones distintas, con signo opuesto, y el
+    # validador no las normaliza.
+    "BENCHMARKED_BY": ({"security"}, {"benchmark"}),
+    "COMPARED_TO":    ({"security"}, {"security", "benchmark"}),
 }
 
 POLARIDADES = {
@@ -123,13 +136,73 @@ TIPOS_FUENTE = {
     "OWN_ANALYSIS":      "analisis hecho dentro de este proyecto",
 }
 
+# --- D-21: referencias de mercado -----------------------------------------
+# Un benchmark FORMAL habilita el retorno anormal. Una comparison
+# REFERENCE contextualiza y no lo habilita nunca. La diferencia no es de
+# grado: si BTC fuese el benchmark de BTC su retorno anormal seria cero
+# por construccion.
+ROLES_REFERENCIA = {
+    "MARKET":      "referencia general del mercado del activo",
+    "SECTOR":      "referencia del sector economico del activo",
+    "ASSET_CLASS": "referencia de la clase de activo",
+    "PEER":        "otro instrumento comparable -- NUNCA un benchmark formal",
+}
+
+# Declarados y NO activos. Mismo patron que D-10 con ESTIMATED: el token
+# se nombra para que el dia que alguien lo use salte, en vez de aparecer
+# sin que nadie lo note.
+#
+# ASSET_CLASS: para una accion estadounidense "mercado" (estadounidense) y
+# "clase de activo" (renta variable) son cosas distintas; para un cripto
+# coincidirian. Activarlo sin fijar antes cual de las dos lecturas es
+# seria el error de token compartido que evito D-13.
+ROLES_NO_ACTIVOS = {"ASSET_CLASS"}
+
+# De donde sale la serie del benchmark. Determina que problemas tiene.
+ORIGENES_SERIE_BENCHMARK = {
+    "PUBLISHED_LEVEL": "nivel publicado por el proveedor del indice; no se restata, y la composicion es irrelevante",
+    "ETF_NAV":         "valor de un instrumento negociable que replica el indice; tiene comision, tracking error y splits",
+    "CONSTRUCTED":     "construida por este sistema -- PROHIBIDA, ver abajo",
+}
+
+# Un benchmark construido por el propio sistema a partir de los activos
+# que ya sigue esta seleccionado ex post por construccion. Se declara para
+# rechazarlo, no para usarlo.
+ORIGEN_SERIE_PROHIBIDO = "CONSTRUCTED"
+
+# El calendario es una propiedad del benchmark, no de la asignacion: el
+# 28,5% de las sesiones de BTC caen en fin de semana y las de IBM cero,
+# asi que un indice bursatil no puede medir un cripto ni queriendo.
+CALENDARIOS_BENCHMARK = {"equity", "crypto"}
+
+CAMPOS_BENCHMARK = {"methodology_version", "composition_source",
+                    "point_in_time_capable", "calendar", "serie_desde", "serie_hasta"}
+
+# Predicados que exigen `role`; el resto lo tienen prohibido.
+PREDICADOS_CON_ROL = {"BENCHMARKED_BY", "COMPARED_TO"}
+
+# Predicados que NO son aristas causales. Una asignacion de benchmark es
+# una relacion de MEDIDA, no un mecanismo economico: que el S&P 500 sea la
+# referencia de NVIDIA no crea ningun camino causal entre NVIDIA y las
+# demas empresas del indice. Sin esta lista, engine/causal/caminos.py
+# -- que recorre TODA relacion vigente, sin mirar el predicado -- las
+# seguiria en cuanto se declarase la primera, y produciria caminos que no
+# existen.
+PREDICADOS_NO_CAUSALES = frozenset(PREDICADOS_CON_ROL)
+
+
 CAMPOS_RELACION = {
     "relationship_id", "subject", "predicate", "object", "polarity", "nature",
     "status", "support_level", "source_id", "statement", "valid_from",
     "valid_to", "last_verified", "verification_method",
+    # D-21: obligatorio en PREDICADOS_CON_ROL, prohibido fuera de ellos.
+    "role",
 }
 CAMPOS_ENTIDAD = {"entity_id", "type", "nombre", "status", "asset_id", "aliases",
-                  "source_id", "nota"}
+                  "source_id", "nota",
+                  # solo para type="benchmark"; el validador lo exige alli y
+                  # lo prohibe en el resto (un sector no tiene metodologia)
+                  "benchmark"}
 CAMPOS_FUENTE = {"source_id", "tipo", "publisher", "titulo", "localizador",
                  "fecha_publicacion", "fecha_consulta", "accesible", "nota"}
 CAMPOS_CONCEPTO = {"concept_id", "nombre", "unidad_canonica", "parametros",
@@ -191,6 +264,21 @@ def _fecha(v, donde, campo, errores):
         return None
 
 
+def _solapan(a, b):
+    """¿Se solapan las vigencias de dos relaciones? `valid_to: null`
+    significa "vigente hasta nuevo aviso", no "para siempre" -- pero para
+    comprobar solapamiento se trata como abierto por la derecha."""
+    def _d(v, defecto):
+        try:
+            return datetime.date.fromisoformat(v) if v else defecto
+        except (TypeError, ValueError):
+            return defecto
+    MIN, MAX = datetime.date.min, datetime.date.max
+    a0, a1 = _d(a.get("valid_from"), MIN), _d(a.get("valid_to"), MAX)
+    b0, b1 = _d(b.get("valid_from"), MIN), _d(b.get("valid_to"), MAX)
+    return a0 <= b1 and b0 <= a1
+
+
 def validar(k):
     """Devuelve la lista de incidencias. Vacia = el conjunto es valido."""
     e = []
@@ -217,6 +305,42 @@ def validar(k):
             e.append(f"{donde}: status fuera del vocabulario: {ent.get('status')!r}")
         if not ent.get("nombre"):
             e.append(f"{donde}: sin nombre")
+
+        # --- D-21: bloque `benchmark`, exigido solo donde significa algo ---
+        bm = ent.get("benchmark")
+        if ent.get("type") == "benchmark":
+            if not isinstance(bm, dict):
+                e.append(f"{donde}: type=benchmark exige un bloque 'benchmark' con su metodologia")
+            else:
+                faltan = CAMPOS_BENCHMARK - set(bm)
+                if faltan:
+                    e.append(f"{donde}: bloque benchmark incompleto, faltan {sorted(faltan)}")
+                sobra_bm = set(bm) - CAMPOS_BENCHMARK
+                if sobra_bm:
+                    e.append(f"{donde}: bloque benchmark con campos no reconocidos {sorted(sobra_bm)}")
+                origen = bm.get("composition_source")
+                if origen == ORIGEN_SERIE_PROHIBIDO:
+                    e.append(f"{donde}: composition_source=CONSTRUCTED no se admite — "
+                             f"una referencia construida con los propios activos del sistema "
+                             f"esta seleccionada ex post por construccion")
+                elif origen not in ORIGENES_SERIE_BENCHMARK:
+                    e.append(f"{donde}: composition_source fuera del vocabulario: {origen!r}")
+                if bm.get("calendar") not in CALENDARIOS_BENCHMARK:
+                    e.append(f"{donde}: calendar fuera del vocabulario: {bm.get('calendar')!r}")
+                if not isinstance(bm.get("point_in_time_capable"), bool):
+                    e.append(f"{donde}: point_in_time_capable tiene que ser booleano, no {bm.get('point_in_time_capable')!r}")
+                if not bm.get("methodology_version"):
+                    e.append(f"{donde}: sin methodology_version — un cambio de metodologia del proveedor "
+                             f"no puede pasar inadvertido")
+                d0 = _fecha(bm.get("serie_desde"), donde, "benchmark.serie_desde", e)
+                d1 = _fecha(bm.get("serie_hasta"), donde, "benchmark.serie_hasta", e)
+                if bm.get("serie_desde") is None:
+                    e.append(f"{donde}: sin serie_desde — sin ventana de disponibilidad no hay "
+                             f"compatibilidad temporal que comprobar")
+                if d0 and d1 and d1 < d0:
+                    e.append(f"{donde}: serie_hasta anterior a serie_desde")
+        elif bm is not None:
+            e.append(f"{donde}: solo una entidad de tipo benchmark puede llevar bloque 'benchmark'")
         for al in ent.get("aliases") or []:
             if not al.get("scheme") or not al.get("value"):
                 e.append(f"{donde}: alias sin scheme o sin value")
@@ -275,6 +399,34 @@ def validar(k):
             if to not in tipos_o:
                 e.append(f"{donde}: {pred} no admite un objeto de tipo {to}")
 
+        # --- D-21: rol de la referencia ---
+        role = r.get("role")
+        if pred in PREDICADOS_CON_ROL:
+            if role is None:
+                e.append(f"{donde}: {pred} exige `role` — sin el no se sabe que representa la referencia")
+            elif role in ROLES_NO_ACTIVOS:
+                e.append(f"{donde}: role={role} esta declarado pero NO activo — su definicion no esta "
+                         f"cerrada (ver ROLES_NO_ACTIVOS)")
+            elif role not in ROLES_REFERENCIA:
+                e.append(f"{donde}: role fuera del vocabulario: {role!r}")
+            # Un PEER no asciende a benchmark porque falte el bueno.
+            if pred == "BENCHMARKED_BY" and role == "PEER":
+                e.append(f"{donde}: un PEER no puede ser benchmark formal — "
+                         f"produce PEER_RELATIVE_RETURN, nunca ABNORMAL_RETURN")
+            # Coherencia entre lo que el rol dice y lo que el objeto es.
+            if r.get("object") in entidades:
+                tipo_obj = entidades[r["object"]]["type"]
+                if role == "PEER" and tipo_obj != "security":
+                    e.append(f"{donde}: role=PEER exige un objeto de tipo security, no {tipo_obj}")
+                if role in ("MARKET", "SECTOR") and tipo_obj != "benchmark":
+                    e.append(f"{donde}: role={role} exige un objeto de tipo benchmark, no {tipo_obj}")
+            # Nadie es su propia referencia: el retorno anormal seria cero
+            # por construccion.
+            if r.get("subject") == r.get("object"):
+                e.append(f"{donde}: {r.get('subject')} no puede ser referencia de si mismo")
+        elif role is not None:
+            e.append(f"{donde}: `role` solo tiene sentido en {sorted(PREDICADOS_CON_ROL)}")
+
         if r.get("polarity") not in POLARIDADES:
             e.append(f"{donde}: polarity fuera del vocabulario: {r.get('polarity')!r}")
         nat = r.get("nature")
@@ -306,6 +458,26 @@ def validar(k):
         _fecha(r.get("last_verified"), donde, "last_verified", e)
         if not r.get("verification_method"):
             e.append(f"{donde}: sin verification_method")
+
+    # --- D-21: una asignacion por (activo, rol, periodo) ---------------
+    # Es la defensa ESTRUCTURAL contra el benchmark selection bias: si un
+    # activo pudiera tener dos benchmarks del mismo rol vigentes a la vez,
+    # el calculo podria quedarse con el que diera el resultado mas
+    # interesante. Con esta regla la eleccion es un acto de curacion con
+    # fecha de commit, no una decision del codigo.
+    asignaciones = {}
+    for r in k["relationships"]:
+        if r.get("predicate") != "BENCHMARKED_BY" or r.get("polarity") != "AFFIRMS":
+            continue
+        clave = (r.get("subject"), r.get("role"))
+        asignaciones.setdefault(clave, []).append(r)
+    for (suj, role), rels in sorted(asignaciones.items(), key=lambda x: (str(x[0][0]), str(x[0][1]))):
+        for i, a in enumerate(rels):
+            for b in rels[i + 1:]:
+                if _solapan(a, b):
+                    e.append(f"relacion {a.get('relationship_id')} y {b.get('relationship_id')}: "
+                             f"{suj} tiene dos benchmarks de rol {role} con vigencias solapadas — "
+                             f"un (activo, rol, periodo) admite exactamente uno")
 
     # --- conceptos ---
     for c in k["concepts"]:
