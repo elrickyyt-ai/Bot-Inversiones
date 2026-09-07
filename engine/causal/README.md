@@ -53,3 +53,54 @@ T4 sale incompleto **sin fabricar el caso**: la única entidad no financiera dec
 ## Invariancia
 
 P5A es una transformación derivada. `caminos.py` no tiene ninguna llamada de escritura a fichero, y la suite comprueba por hash que `knowledge/` y `data/` no cambian al recorrer.
+
+---
+
+# Economic Causal Mechanism & Direction (v1) — P5B
+
+```
+Event + CausalPath + Evidence → CausalAssessment
+```
+
+Representa el mecanismo económico, la dirección, la evidencia que la sostiene y lo que falta. **No calcula** impacto, probabilidad, exposición, transmisión, tiempo, mispricing ni oportunidad. Sin ningún campo numérico y sin LLM: los siete mecanismos son reglas declaradas con `rule_id` y `rule_version` que viajan en cada tramo.
+
+```bash
+python3 engine/causal/valoracion.py sec:NVDA.NASDAQ --profundidad 2
+python3 engine/causal/valoracion.py sec:BTC --accion demand_change --direccion UP
+```
+
+## Ausencia no es evidencia de ausencia
+
+La regla más importante de P5B, y la corrección que el diseño recibió antes de implementarse. Que Knowledge no contenga una fila `X SUBSTITUTES Y` significa **«no conozco un sustituto declarado»**, no «no existe sustituto». La comprobación tiene tres estados, no dos:
+
+| en Knowledge | estado | `pricing_power` |
+|---|---|---|
+| `SUBSTITUTES` AFFIRMS vigente | `KNOWN_SUBSTITUTE` | `UNKNOWN` — hay alternativa, no se puede inferir |
+| `SUBSTITUTES` **DENIES** vigente | `VERIFIED_ABSENCE` | `POSITIVE` · **`SUPPORTED`** |
+| ninguna fila | `UNKNOWN` | `POSITIVE` · **`PARTIAL`** + supuesto declarado |
+
+Sólo la ausencia **comprobada** permite soporte completo. Es la tercera aparición de la misma invariante: P1b la aplicó a la ausencia de TVL (`NO_APLICA` distingue «no aplica» de «falta») y P2 con `polarity=DENIES`.
+
+## `USES` ≠ `CONSUMES` · `SUPPLIES` ≠ `PRODUCES`
+
+Las fixtures usan **exclusivamente** predicados del vocabulario cerrado de P2. `CONSUMES` y `PRODUCES` no existen ahí y **no se mapean** a los que sí existen, porque no son equivalentes: `USES` puede ser tecnología o infraestructura mientras `CONSUMES` implica flujo económico o físico; `SUPPLIES` es organización→organización mientras `PRODUCES` es organización→producto y no dice a quién se vende. Quedan como candidatos futuros, para cuando un caso real los exija por el procedimiento de alta de P2. No se reabre P2.
+
+## `NO_MECHANISM` es la respuesta correcta a la mayoría de las aristas
+
+`ISSUED_BY`, `LISTED_ON`, `DOMICILED_IN`, `CLASSIFIED_AS` y `EXPOSED_TO` no transmiten nada económicamente. `NVDA →ISSUED_BY→ nvidia` son el mismo sujeto económico visto de dos formas: estampar un signo ahí sería fabricar una inferencia donde sólo hay un cambio de punto de vista.
+
+## El resumen se hace sobre una sola vara de medir
+
+Sumar signos de variables distintas da falsos positivos: *el coste sube* y *el margen baja* son la misma historia contada dos veces, no una divergencia. `overall_direction` sólo cuenta `revenue`, `margin`, `pricing_power` y `demand`; **`cost` queda fuera a propósito**, porque su efecto en la rentabilidad pasa por el margen. Con eso T2 sale `NEGATIVE` —lo que económicamente ocurre— y el cambio de signo real (ingreso arriba y margen abajo en el mismo nodo) sale `DIVERGENT`.
+
+`DIVERGENT` y no `MIXED`: `MIXED` ya es un valor de `traversal_direction` en P5A. Los tres vocabularios de dirección —`AFFIRMS/DENIES`, `FORWARD/REVERSE/MIXED`, `POSITIVE/NEGATIVE/NEUTRAL/UNKNOWN/DIVERGENT`— son disjuntos, y un test lo mantiene.
+
+## Un signo con supuesto nunca está completamente sostenido
+
+El margen no baja *mecánicamente* porque suba el coste: depende de si la empresa puede repercutirlo. Ese supuesto se escribe en `assumptions[]` y el validador **rechaza** cualquier tramo `SUPPORTED` que tenga supuestos declarados.
+
+## El resultado real, hoy
+
+Sobre el Knowledge real, **los 25 caminos desde NVDA dan `UNKNOWN`**. Tres motivos medidos: no existe ni una relación `SUPPLIES`, `USES` o `SUBSTITUTES` afirmativa; las cuatro relaciones verificadas son de identidad o clasificación; y Evidence no mide demanda, capacidad, coste de insumo ni plazo en ninguno de sus tres dominios.
+
+Eso no es un fallo. `UNKNOWN` no significa `economic_direction = 0`: significa *no resuelto*, y cada assessment dice en `requires_evidence[]` exactamente qué variable haría falta. Ese campo convierte un «no lo sé» en una lista accionable de requisitos de información — y es el mecanismo con el que decidir, más adelante, qué fuente nueva merece la pena incorporar.
