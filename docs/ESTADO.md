@@ -177,7 +177,16 @@ La decisión pendiente es de dónde sale la historia de fundamentales de accione
 
 Eso **no resuelve** la decisión —`EARNINGS` da EPS y sorpresa, no `roe_pct` ni los márgenes, que vienen de `COMPANY_OVERVIEW` y siguen siendo un snapshot— pero sí cambia el planteamiento: hay al menos una serie fundamental con 30 años de profundidad, point-in-time y sin coste, que hoy se está tirando. Las opciones del informe de líneas base deben reevaluarse con ese dato encima de la mesa.
 
-**Segunda decisión abierta, nueva**: dónde vive el benchmark (D-21). Bloquea el retorno anormal y, con él, cualquier agregación de reacciones. Recomendación razonada en `informes/2026-09-07_integridad_temporal_y_event_study_mvp.md` §12, **sin resolver para cripto**.
+**Segunda decisión abierta, y hoy la que bloquea la cadena**: dónde vive el benchmark (**D-21**). Sin retorno anormal no hay agregación de reacciones, y sin ella no hay Historical Reaction Profile.
+
+Ontología auditada en `informes/2026-09-07_auditoria_ontologia_benchmark.md` (2026-09-07). Lo medido:
+
+- **Índices dentro de `DimAsset` rompe cosas verificables**: `calendario(...,"index")` → `'crypto'` (24/7 para un índice que no cotiza fines de semana) y `esperadas(...,"index",...)` → `None`, con lo que `PARTIAL` deja de ser calculable.
+- **La asignación cabe en Knowledge** tal cual: `subject`/`object`/`valid_from`/`valid_to`/`source_id` ya son una `AssetBenchmarkAssignment`, y traen D-04 y D-09 sin escribir una línea. Eso hace estructural la defensa contra el *selection bias*.
+- **Cripto: `MARKET = UNAVAILABLE`.** CoinGecko `/global` da solo el valor actual y `/global/market_cap_chart` responde 401. Un índice con los 6 cripto del contrato sería sesgo de selección por construcción: son los holdings de `CARTERA_A`.
+- **Equity sí**: ^GSPC cubre 1970-01-02 → 2026-09-04, el mismo tramo y la misma fuente que IBM/XOM ya usan.
+
+**Tres preguntas pendientes del usuario** antes de implementar: (1) ¿se acepta que cripto quede sin retorno anormal, y por tanto que el primer Historical Reaction Profile cubra solo acciones? (2) ¿ETF sectorial o ningún benchmark sectorial en v1? (3) ¿`^GSPC`, `^IXIC` o `^NDX`, decidido antes de mirar resultados?
 
 Roadmap acordado: `P6.2 Quantification unlocks` → `P7 Market Impact` → `P8 Mispricing` → `P9 Thesis` → `P10 Portfolio` → `P11 Outcome/Calibration`. Power BI y Web App consumirán una proyección del motor; no lo dictan.
 
