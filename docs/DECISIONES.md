@@ -199,3 +199,20 @@ La justificación de `^GSPC` es **ex ante y por lo que cada índice representa**
 - **Evidencia**: `caminos.indice()` recorre **toda** relación vigente sin mirar el predicado. El día que se declarase el primer benchmark, el motor causal seguiría esa arista y produciría caminos inexistentes — que el S&P 500 sea la referencia de NVIDIA **no conecta** a NVIDIA con las demás empresas del índice.
 - **Decisión vigente**: `modelo.PREDICADOS_NO_CAUSALES` y un filtro en `indice()`. Una asignación de referencia es una relación de **medida**, no un mecanismo económico.
 - **Por qué se tocó una fase cerrada**: no hacerlo dejaba un fallo plantado que solo se manifestaría cuando ya hubiera datos. La lógica de P5A no cambia: deja de ver un tipo de arista que hasta hoy no existía. Verificado con 3 tests de regresión — 22 nodos con salida antes y después, y la entidad benchmark nunca entra en el grafo.
+
+## D-24 · La serie del benchmark vive fuera del árbol de activos
+
+**Vigente** (2026-09-07, primera declaración de D-21).
+- **Evidencia**: `data/history/` está particionado por `asset_type`. Poner ahí la serie del S&P 500 haría que `storage.asset_type_of("SP500")` la devolviese como un activo, que `cadencias.esperadas()` no supiera qué métricas esperar de ella —`PARTIAL` deja de ser calculable— y que `Asset Count` de Power BI subiera de 11 a 12 en silencio. Son los tres efectos que la auditoría de D-21 midió.
+- **Decisión vigente**: `data/benchmarks/{benchmark_id}.csv`, versionado, con escritura idempotente propia. Es la "tabla propia" que recomendaba el §13 de la auditoría.
+- **Se descartó**: `data/history/benchmark/SP500/`, que encajaría mecánicamente sin tocar `storage.py` y es exactamente por eso peligroso.
+- **Deuda**: no está conectada a `qa.py`. Tiene validación propia (`fetch_benchmark.validar_serie()`) y un test que la ejecuta sobre la serie real, pero no entra en el `STATUS: VERIFIED` global.
+
+## D-25 · El nivel publicado del índice, nunca un ETF ni una reconstrucción
+
+**Vigente** (2026-09-07).
+- **Evidencia medida** sobre `^GSPC`: la fuente declara `instrumentType: INDEX`; 14.291 sesiones desde 1970-01-02; **cero** eventos de split o dividendo; `close == adjclose` en las 2.299 sesiones comparadas. Un nivel de índice no tiene acciones corporativas que ajustar, así que elegir `close` no es una elección — a diferencia del caso de las acciones, donde el bloque 4 tuvo que decidirlo explícitamente.
+- **Decisión vigente**: `composition_source = PUBLISHED_LEVEL`. Con el nivel publicado, el cambio histórico de composición del índice es **irrelevante**: el nivel de una fecha pasada lo incorpora ya y no se restata.
+- **Se descartó**: (a) un ETF como SPY, que metería comisión, *tracking error*, distribuciones y acciones corporativas propias dentro del benchmark metodológico; (b) reconstruir el índice desde sus constituyentes, que es `CONSTRUCTED` y el validador lo rechaza.
+- **Límite registrado**: la metodología de S&P Dow Jones Indices **no es citable** desde este entorno (403, misma situación que D-07). `point_in_time_capable = true` se afirma sobre la comprobación propia y no sobre una declaración del proveedor; queda el hash de la serie registrado para detectar una reformulación futura. `methodology_version = "yahoo-^GSPC-close-1d/v1"` describe cómo consume la serie **este sistema**, no la versión de S&P.
+

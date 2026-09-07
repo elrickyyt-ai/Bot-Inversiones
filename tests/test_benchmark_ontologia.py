@@ -256,57 +256,45 @@ class TestElegibilidadDelBenchmark(unittest.TestCase):
         self.assertEqual(motivo, er.SIN_ASIGNACION)
 
 
-class TestNoSeHaIntroducidoNingunBenchmark(unittest.TestCase):
-    """El encargo prohibe introducir benchmarks concretos en esta
-    iteracion: solo la ontologia."""
-
-    def test_el_conocimiento_real_no_tiene_todavia_benchmarks(self):
-        k = modelo.cargar()
-        self.assertEqual([e for e in k["entities"] if e["type"] == "benchmark"], [])
-        self.assertEqual([r for r in k["relationships"]
-                          if r.get("predicate") in modelo.PREDICADOS_CON_ROL], [])
-
-    def test_el_conjunto_real_sigue_validando(self):
-        self.assertEqual(modelo.validar(modelo.cargar()), [])
-
-
-class TestCompatibilidadConP5A(unittest.TestCase):
-    """Incompatibilidad REAL encontrada al implementar D-21, y corregida.
-
-    `caminos.indice()` recorre TODA relacion vigente sin mirar el
-    predicado. Sin la exclusion, el dia que se declarase el primer
-    benchmark, el motor causal seguiria esa arista y produciria caminos
-    inexistentes: que el S&P 500 sea la referencia de NVIDIA no conecta a
-    NVIDIA con las demas empresas del indice. Una asignacion de benchmark
-    es una relacion de MEDIDA, no un mecanismo economico.
-    """
+class TestElPrimerBenchmarkDeclarado(unittest.TestCase):
+    """REESCRITO (2026-09-07). Estos dos tests comprobaban que NO habia
+    ningun benchmark declarado, y estaban puestos para fallar el dia que
+    se declarase el primero. Ese dia es hoy: `bm:sp500`. La propiedad que
+    sigue siendo cierta, y la que ahora importa, es que **solo** hay lo
+    que se autorizo declarar -- ni Nasdaq, ni ETF sectoriales, ni cripto."""
 
     @classmethod
     def setUpClass(cls):
-        sys.path.insert(0, os.path.join(RAIZ, "engine", "causal"))
-        import caminos
-        cls.caminos = caminos
-        cls.hoy = __import__("datetime").date(2026, 9, 7)
         cls.k = modelo.cargar()
 
-    def test_los_predicados_de_referencia_estan_declarados_no_causales(self):
-        self.assertEqual(modelo.PREDICADOS_NO_CAUSALES, frozenset(modelo.PREDICADOS_CON_ROL))
+    def test_solo_hay_el_benchmark_autorizado(self):
+        bms = [e["entity_id"] for e in self.k["entities"] if e["type"] == "benchmark"]
+        self.assertEqual(sorted(bms), ["bm:sp500"])
 
-    def test_declarar_un_benchmark_no_cambia_el_grafo_causal(self):
-        antes, _ = self.caminos.indice(self.k, self.hoy)
-        k2 = {kk: list(v) for kk, v in self.k.items()}
-        k2["entities"].append(_benchmark("bm:t", "T"))
-        k2["relationships"].append(
-            _rel("rel:bm", "sec:NVDA.NASDAQ", "BENCHMARKED_BY", "bm:t", role="MARKET"))
-        despues, _ = self.caminos.indice(k2, self.hoy)
-        self.assertEqual(sorted(antes), sorted(despues))
-        self.assertNotIn("bm:t", despues)
+    def test_solo_hay_las_tres_asignaciones_autorizadas(self):
+        refs = [r for r in self.k["relationships"]
+                if r.get("predicate") in modelo.PREDICADOS_CON_ROL]
+        self.assertEqual(len(refs), 3)
+        self.assertEqual({r["predicate"] for r in refs}, {"BENCHMARKED_BY"})
+        self.assertEqual({r["role"] for r in refs}, {"MARKET"})
+        self.assertEqual(sorted(r["subject"] for r in refs),
+                         ["sec:IBM.NYSE", "sec:NVDA.NASDAQ", "sec:XOM.NYSE"])
 
-    def test_p5a_conserva_su_comportamiento_sobre_el_conocimiento_real(self):
-        """La exclusion no quita ninguna arista de las que ya existian:
-        ninguna relacion del repositorio usa los predicados nuevos."""
-        salidas, _ = self.caminos.indice(self.k, self.hoy)
-        self.assertEqual(len(salidas), 22)
+    def test_no_hay_comparison_references_todavia(self):
+        """Nasdaq-100 y Nasdaq Composite quedan para la siguiente vertical."""
+        self.assertEqual(
+            [r for r in self.k["relationships"] if r.get("predicate") == "COMPARED_TO"], [])
+
+    def test_ningun_activo_cripto_tiene_benchmark(self):
+        cripto = {e["entity_id"] for e in self.k["entities"]
+                  if e["type"] == "security" and e.get("asset_id") in
+                  ("BTC", "ETH", "ADA", "SOL", "DOT", "XRP")}
+        asignados = {r["subject"] for r in self.k["relationships"]
+                     if r.get("predicate") == "BENCHMARKED_BY"}
+        self.assertEqual(cripto & asignados, set())
+
+    def test_el_conjunto_real_sigue_validando(self):
+        self.assertEqual(modelo.validar(self.k), [])
 
 
 if __name__ == "__main__":

@@ -11,12 +11,12 @@ No sustituye a los README de cada módulo (que explican *por qué* está hecho a
 ## Verificación completa en tres comandos
 
 ```bash
-python3 -m unittest discover -s tests           # 521 tests, debe dar OK
+python3 -m unittest discover -s tests           # 547 tests, debe dar OK
 python3 engine/contract/qa.py --require-parquet # debe dar STATUS: VERIFIED
 git status --short data/ knowledge/             # debe salir vacío
 ```
 
-Si los tres pasan, las veinte fases están sanas. Si falla alguno, la tabla de abajo dice qué fase mirar.
+Si los tres pasan, las veintiuna fases están sanas. Si falla alguno, la tabla de abajo dice qué fase mirar.
 
 ---
 
@@ -42,6 +42,7 @@ Si los tres pasan, las veinte fases están sanas. Si falla alguno, la tabla de a
 | **P6.2c** | `f30ffc5` | Event study mínimo sobre resultados | `python3 engine/events/estudio_resultados.py` |
 | **P6.2d** | `f30ffc5` | Episodios declarados sobre P4 | `python3 -m unittest tests.test_episodios` |
 | **D-21** | `2ee412a` | Ontología de benchmark y elegibilidad por familia | `python3 -m unittest tests.test_benchmark_ontologia` |
+| **D-21 (datos)** | *(este commit)* | `bm:sp500` declarado y consumido por el event study | `python3 -m unittest tests.test_benchmark_sp500` |
 
 ---
 
@@ -309,7 +310,10 @@ CONSUMPTION   Power BI + Web App
 | No hay benchmark en el contrato | D-21 | Sin él no hay retorno anormal, y sin retorno anormal la suficiencia de muestra bloquea toda agregación de reacciones. **Sin resolver para cripto** |
 | La dirección causal noticia↔precio no se representa | informe de P6.2 §10 | Una noticia puede escribirse *porque* el precio ya se movió. No se inventa un campo que no se pueda rellenar |
 | Un solo episodio declarado | `engine/events/episodios.json` | El mecanismo existe y está probado con 5 documentos reales; poblarlo es trabajo de curación con fuente, no de código |
-| Ningún benchmark declarado | `knowledge/` · D-21 | La ontología existe y valida; declarar `^GSPC` es curación con fuente. Dos tests vigilan que sigue vacío y **fallarán a propósito** cuando se declare el primero |
+| ~~Ningún benchmark declarado~~ | — | **Cerrada**: `bm:sp500` declarado el 2026-09-07 con las tres asignaciones. Los dos tests que vigilaban el vacío fallaron como estaba previsto y se reescribieron a "solo existe lo autorizado" |
+| La metodología de S&P DJI no es citable | `src:yahoo-gspc` (nota) | `spglobal.com` responde 403, misma situación que D-07. `point_in_time_capable` se afirma sobre comprobación propia; hash de la serie registrado para detectar una reformulación |
+| `data/benchmarks/` fuera de `qa.py` | D-24 | Tiene validación propia y un test sobre la serie real, pero no entra en el `STATUS: VERIFIED` global |
+| El cron no actualiza el benchmark | `fetch_benchmark.py` | Se ejecuta a mano. Si la serie se queda atrás, la observación sale `SIN_OBSERVACION_BENCHMARK` — visible, no silencioso |
 | `ASSET_CLASS` declarado y rechazado | `modelo.ROLES_NO_ACTIVOS` | Su definición no está cerrada: para una acción `MARKET` y `ASSET_CLASS` difieren, para un cripto coinciden. Reactivarlo cuesta una línea |
 
 ---

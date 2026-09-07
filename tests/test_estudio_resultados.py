@@ -108,9 +108,31 @@ class TestObservaciones(unittest.TestCase):
             self.assertEqual(o["available_at"], o["published_at"])
 
     def test_bruto_y_anormal_no_se_confunden(self):
-        """El retorno anormal no existe todavia, y su ausencia lleva razon
-        explicita en vez de rellenarse con el bruto."""
+        """REESCRITO (2026-09-07). Este test afirmaba que el retorno
+        anormal no existia todavia y que su ausencia llevaba razon. La
+        primera mitad caduco al declararse `bm:sp500`; la segunda sigue
+        siendo cierta y se refuerza: si hay ajuste, viaja con la identidad
+        del benchmark que lo produjo -- un `market_adjusted_return` sin
+        saber contra que es irreproducible; si no lo hay, con su razon."""
         for o in self.todas:
+            self.assertIn("raw_return_1s_pct", o)
+            self.assertIn("market_adjusted_return_pct", o)
+            if o["market_adjusted_return_pct"] is None:
+                self.assertIsNotNone(o["razon_sin_ajuste"])
+                self.assertIsNone(o["benchmark_id"])
+            else:
+                self.assertIsNone(o["razon_sin_ajuste"])
+                self.assertIsNotNone(o["benchmark_id"])
+                self.assertIsNotNone(o["benchmark_methodology_version"])
+                self.assertIsNotNone(o["metodo_ajuste"])
+                # y nunca son el mismo campo
+                self.assertIsNot(o["raw_return_1s_pct"], o["market_adjusted_return_pct"])
+
+    def test_sin_benchmark_la_ausencia_lleva_razon(self):
+        """La otra mitad, ahora comprobada donde de verdad aplica: un
+        activo sin asignacion declarada."""
+        obs = er.estudiar("IBM", _path("IBM"), con_benchmark=False)
+        for o in obs:
             self.assertIsNone(o["market_adjusted_return_pct"])
             self.assertEqual(o["razon_sin_ajuste"], er.SIN_BENCHMARK)
 

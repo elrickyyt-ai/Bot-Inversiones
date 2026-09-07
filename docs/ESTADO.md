@@ -40,7 +40,8 @@ DATA CONTRACT      data/incoming/*.csv (año en curso)  +  data/history/** (parq
    │           └──► P5D  Data Requirements  ¿existe el dato que el mecanismo pide?
    │
    └──► P2   KNOWLEDGE (a mano, versionado)  entidades · relaciones · conceptos · fuentes
-               │      └──► D-21 Benchmark / ComparisonReference  ontología, sin datos
+               │      └──► D-21 Benchmark / ComparisonReference
+               │             bm:sp500 → IBM · NVDA · XOM   (serie en data/benchmarks/)
                │
                ├──► P5A  Causal Path        recorrido, sin economía
                │      └──► P5B  Mechanism + Direction
@@ -109,7 +110,7 @@ Estos invariantes no son preferencias de estilo: cada uno nació de un fallo rea
 
 ## 5. Estado actual, medido
 
-**Suite**: 521 tests · OK — **QA**: `STATUS: VERIFIED` — **Knowledge**: PASS (25 entidades · 48 relaciones · 10 fuentes)
+**Suite**: 547 tests · OK — **QA**: `STATUS: VERIFIED` — **Knowledge**: PASS (25 entidades · 48 relaciones · 10 fuentes)
 
 ```bash
 python3 -m unittest discover -s tests
@@ -182,21 +183,24 @@ La decisión pendiente es de dónde sale la historia de fundamentales de accione
 
 Eso **no resuelve** la decisión —`EARNINGS` da EPS y sorpresa, no `roe_pct` ni los márgenes, que vienen de `COMPANY_OVERVIEW` y siguen siendo un snapshot— pero sí cambia el planteamiento: hay al menos una serie fundamental con 30 años de profundidad, point-in-time y sin coste, que hoy se está tirando. Las opciones del informe de líneas base deben reevaluarse con ese dato encima de la mesa.
 
-**Segunda decisión: D-21 — CERRADA E IMPLEMENTADA** (`informes/2026-09-07_implementacion_d21_benchmark.md`).
+**Segunda decisión: D-21 — CERRADA, IMPLEMENTADA Y CON SU PRIMER DATO** (`informes/2026-09-07_auditoria_ontologia_benchmark.md` · `…_implementacion_d21_benchmark.md` · `…_declaracion_benchmark_sp500.md`).
 
-> `DimAsset` representa instrumentos analizados; las referencias de mercado no se convierten en activos por conveniencia. Los benchmarks formales son referencias metodológicas versionadas y temporalmente válidas. Las *comparison references* contextualizan sin adquirir semántica de benchmark: son un **rol de la asignación**, no una clase. La asignación es una **relación de Knowledge**, no una tabla nueva. **La ausencia de benchmark no elimina el análisis de reacción: limita qué medidas pueden llamarse *abnormal return*.**
+> `DimAsset` representa instrumentos analizados; las referencias de mercado no se convierten en activos por conveniencia. La asignación es una **relación de Knowledge**, no una tabla nueva. **La ausencia de benchmark no elimina el análisis de reacción: limita qué medidas pueden llamarse *abnormal return*.**
 
-Construido: tipo de entidad `benchmark` con metodología, vigencia y origen de serie; `BENCHMARKED_BY` / `COMPARED_TO`; `role`; siete invariantes; elegibilidad por familia de medida. **Ningún benchmark concreto introducido** — `knowledge/` sigue con 25 entidades y 48 relaciones, y dos tests lo vigilan.
+`bm:sp500` declarado con el **nivel publicado** del índice (D-25), serie en `data/benchmarks/SP500.csv` — fuera del árbol de activos (D-24). Tres asignaciones `BENCHMARKED_BY` / `MARKET`, con la vigencia fijada por el activo (NVDA desde su OPV de 1999-01-22, no desde 1970).
 
-| Familia | Sobre los 52 eventos reales |
+**La cadena completa funciona sobre 52 eventos reales**: `available_at → first_tradable_at → surprise → raw → benchmark → abnormal`, sin look-ahead. Mediana de \|bruto − anormal\| **0,57 pp**, máximo **2,81 pp**, y **3 eventos donde el signo cambia** (IBM 1999-04-21: bruto +1,25%, anormal −1,04%). `ABNORMAL_RETURN` pasa a ser elegible (n=52 ≥ 40).
+
+| Familia | Estado |
 |---|---|
-| `RAW_RETURN` | **utilizable** (n=52 ≥ 30) |
-| `ABNORMAL_RETURN` | no — `SIN_BENCHMARK_EN_EL_CONTRATO` |
-| `PEER_RELATIVE_RETURN` | no — `SIN_ASIGNACION_DECLARADA` |
+| `RAW_RETURN` | utilizable (n=52 ≥ 30) |
+| `ABNORMAL_RETURN` | **utilizable** para IBM/NVDA/XOM (n=52 ≥ 40) |
+| `PEER_RELATIVE_RETURN` | sin asignación declarada |
+| Cripto | sin benchmark formal — y **sin excluir del análisis** |
 
-**Hipótesis de v1 congeladas, pendientes de declararse como datos**: `MARKET` renta variable = `^GSPC`; `^IXIC`/`^NDX` como *comparison reference*; sin ETF sectorial; cripto sin benchmark formal, con CoinDesk 20 registrado y no introducido (base 2022-10-04 → 54,7% de cobertura; 15 meses retrocalculados).
+**La siguiente decisión ya no es de ontología ni de datos: es el `HistoricalReactionProfile`**, que nacerá con dos ramas —`market-adjusted` para acciones, `raw / peer-relative / volume / volatility` para cripto— y cada perfil con su `measure_type`, `benchmark_id`, `benchmark_version` y `eligibility_status`. Un perfil que no puede calcularse debe decir por qué (`INELIGIBLE / NO_VALID_BENCHMARK`), no desaparecer.
 
-**La siguiente decisión ya no es de ontología.** Es qué benchmarks concretos se declaran y con qué fuente — y después, el `HistoricalReactionProfile`, que nacerá con **dos ramas**: `market-adjusted` para acciones y `raw / peer-relative / volume / volatility` para cripto. Cada perfil llevará su `measure_type`: comparar un `RAW_RETURN` de BTC con un `ABNORMAL_RETURN` de XRP sería tratar como la misma magnitud dos cosas distintas.
+**Antes de sacar conclusiones de los ~356 eventos disponibles** hay que medir `n`, `n_effective` y la distribución. Los 52 de hoy validan la cadena, no describen ningún patrón.
 
 Roadmap acordado: `P6.2 Quantification unlocks` → `P7 Market Impact` → `P8 Mispricing` → `P9 Thesis` → `P10 Portfolio` → `P11 Outcome/Calibration`. Power BI y Web App consumirán una proyección del motor; no lo dictan.
 

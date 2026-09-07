@@ -1,0 +1,27 @@
+[
+ {
+  "entity_id": "bm:sp500",
+  "type": "benchmark",
+  "nombre": "S&P 500",
+  "status": "ACTIVE",
+  "asset_id": null,
+  "aliases": [
+   {
+    "scheme": "yahoo",
+    "value": "^GSPC",
+    "valid_from": "1970-01-02",
+    "valid_to": null
+   }
+  ],
+  "source_id": "src:yahoo-gspc",
+  "nota": "Referencia metodologica de mercado para renta variable estadounidense (D-21, hipotesis de v1 congelada). NO es un activo: no se negocia, no tiene sector ni mercado de cotizacion, y su serie vive en data/benchmarks/, fuera del arbol de activos. Se usa el NIVEL PUBLICADO del indice y nunca un ETF que lo replique (SPY introduciria comision, tracking error, distribuciones y acciones corporativas propias en el benchmark). Justificacion ex ante frente a ^IXIC y ^NDX, escrita ANTES de calcular ningun retorno anormal: S&P 500 = referencia general del mercado estadounidense; Nasdaq Composite = exposicion Nasdaq; Nasdaq-100 = grandes no financieras, sesgado a growth. Los tres cubren el periodo, asi que la eleccion no se justifica por cobertura sino por lo que cada uno representa.",
+  "benchmark": {
+   "methodology_version": "yahoo-^GSPC-close-1d/v1",
+   "composition_source": "PUBLISHED_LEVEL",
+   "point_in_time_capable": true,
+   "calendar": "equity",
+   "serie_desde": "1970-01-02",
+   "serie_hasta": null
+  }
+ }
+]

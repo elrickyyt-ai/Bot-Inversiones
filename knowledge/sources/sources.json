@@ -108,5 +108,16 @@
   "fecha_consulta": "2026-09-07",
   "accesible": true,
   "nota": "Se eligio el 20-F y NO la pagina comercial tsmc.com/english/dedicatedFoundry/technology/cowos, que era el documento previsto en pendiente/: la pagina web es COMPANY_STATEMENT, no tiene fecha estable, esta detras de proteccion anti-bot (curl recibe 'Just a moment...') y su contenido puede cambiar sin dejar rastro. El 20-F dice lo mismo, es FILING, y su URL en EDGAR es inmutable."
+ },
+ {
+  "source_id": "src:yahoo-gspc",
+  "tipo": "DATA_PROVIDER",
+  "publisher": null,
+  "titulo": "Serie diaria del nivel de cierre del indice S&P 500 (^GSPC), Yahoo Finance chart API",
+  "localizador": "https://query1.finance.yahoo.com/v8/finance/chart/%5EGSPC?period1=0&period2=9999999999&interval=1d (meta: instrumentType=INDEX, currency=USD, exchangeTimezoneName=America/New_York, dataGranularity=1d)",
+  "fecha_publicacion": null,
+  "fecha_consulta": "2026-09-07",
+  "accesible": true,
+  "nota": "Se cita la SERIE, no la metodologia del indice. La documentacion metodologica de S&P Dow Jones Indices NO se ha podido citar: spglobal.com responde 403 desde este entorno, la misma situacion que D-07 resolvio prefiriendo un localizador reabrible. Verificado en vivo el 2026-09-07 sobre esta URL: 14.291 sesiones desde 1970-01-02, cero eventos de split o dividendo, y close == adjclose en las 2.299 sesiones comparadas -- un nivel de indice no tiene acciones corporativas que ajustar, asi que la eleccion de 'close' no es una eleccion. Deuda registrada: point_in_time_capable se afirma sobre esta comprobacion, no sobre una declaracion del proveedor."
  }
 ]

@@ -48,6 +48,11 @@ sys.path.insert(0, os.path.join(RAIZ, "engine", "contract"))
 
 import storage  # noqa: E402
 
+sys.path.insert(0, os.path.join(RAIZ, "engine", "knowledge"))
+sys.path.insert(0, os.path.join(RAIZ, "engine", "technical"))
+import modelo            # noqa: E402
+import fetch_benchmark   # noqa: E402
+
 
 # Semantica declarada del timestamp que da el proveedor. No es una
 # marca de tiempo: es el dia que el proveedor reporta como publicacion.
@@ -138,7 +143,41 @@ def first_tradable_at(fechas, published_at, report_time):
     return fechas[i], None
 
 
-def observar(evento, fechas, px):
+def asignacion_de(asset_id, role="MARKET", k=None):
+    """(asignacion, entidad_benchmark) declaradas para este activo y rol.
+
+    BUSCA, no elige: si hubiera dos vigentes a la vez seria un error del
+    conocimiento -- el validador de Knowledge ya lo rechaza -- y aqui se
+    levanta en vez de quedarse con una. Es la mitad de la defensa contra
+    el benchmark selection bias; la otra mitad es que `modelo` no tiene
+    funciones de escritura (D-04).
+    """
+    k = k or modelo.cargar()
+    entidades = {e["entity_id"]: e for e in k["entities"]}
+    sujeto = next((e["entity_id"] for e in k["entities"]
+                   if e.get("asset_id") == asset_id and e["type"] == "security"), None)
+    if sujeto is None:
+        return None, None
+    candidatas = [r for r in k["relationships"]
+                  if r.get("predicate") == "BENCHMARKED_BY" and r.get("subject") == sujeto
+                  and r.get("role") == role and r.get("polarity") == "AFFIRMS"]
+    if len(candidatas) > 1:
+        raise EstudioError(
+            f"{asset_id} tiene {len(candidatas)} benchmarks declarados de rol {role}: "
+            f"el calculo no elige entre ellos")
+    if not candidatas:
+        return None, None
+    asig = candidatas[0]
+    return asig, entidades.get(asig["object"])
+
+
+def _benchmark_id(entidad):
+    """El identificador con el que la serie esta guardada en
+    data/benchmarks/. Se toma del propio entity_id, sin prefijo."""
+    return entidad["entity_id"].split(":", 1)[1].upper()
+
+
+def observar(evento, fechas, px, benchmark=None):
     """Una ObservacionDeReaccion. Nunca inventa: cada ausencia lleva su razon."""
     obs = dict(evento)
     obs["available_at"] = evento["published_at"]  # dia, no instante
@@ -157,11 +196,36 @@ def observar(evento, fechas, px):
             obs["sesion_previa"] = t0
             obs["raw_return_1s_pct"] = round((px[t1] - px[t0]) / px[t0] * 100, 2)
 
-    # Retorno anormal: NO se calcula, y se dice por que. Un retorno bruto
-    # no es un retorno anormal, y llamarlos igual seria el mismo error de
-    # token compartido que el proyecto ya se prohibio.
+    # Retorno anormal. Un retorno bruto NO es un retorno anormal, y
+    # llamarlos igual seria el mismo error de token compartido que el
+    # proyecto ya se prohibio: por eso viajan en campos distintos y el
+    # ajustado lleva siempre la identidad del benchmark que lo produjo.
     obs["market_adjusted_return_pct"] = None
+    obs["benchmark_return_1s_pct"] = None
+    obs["benchmark_id"] = None
+    obs["benchmark_methodology_version"] = None
+    obs["metodo_ajuste"] = None
     obs["razon_sin_ajuste"] = SIN_BENCHMARK
+
+    if benchmark is not None and obs["raw_return_1s_pct"] is not None:
+        asig, entidad, bfechas, bpx, calendario = benchmark
+        ok, motivo = benchmark_elegible(t1, calendario, asig, entidad)
+        if not ok:
+            obs["razon_sin_ajuste"] = motivo
+        elif obs["sesion_previa"] not in bpx or t1 not in bpx:
+            # El benchmark tiene que observar EXACTAMENTE las dos mismas
+            # sesiones. Si le falta una, no hay nada que restar y no se
+            # sustituye por la sesion mas cercana.
+            obs["razon_sin_ajuste"] = SIN_OBSERVACION_BENCHMARK
+        else:
+            b0, b1 = bpx[obs["sesion_previa"]], bpx[t1]
+            bret = (b1 - b0) / b0 * 100
+            obs["benchmark_return_1s_pct"] = round(bret, 2)
+            obs["market_adjusted_return_pct"] = round(obs["raw_return_1s_pct"] - bret, 2)
+            obs["benchmark_id"] = entidad["entity_id"]
+            obs["benchmark_methodology_version"] = entidad["benchmark"]["methodology_version"]
+            obs["metodo_ajuste"] = DIFERENCIA_SIMPLE
+            obs["razon_sin_ajuste"] = None
     return obs
 
 
@@ -192,10 +256,24 @@ def marcar_solapamientos(observaciones, ventana_sesiones, fechas):
     return observaciones
 
 
-def estudiar(asset_id, path_eventos, ventana_sesiones=20):
+def _benchmark_para(asset_id, k=None):
+    """La tupla que `observar()` necesita, o None si no hay asignacion
+    declarada. Ninguna de las dos situaciones es un fallo."""
+    asig, entidad = asignacion_de(asset_id, "MARKET", k)
+    if asig is None or entidad is None:
+        return None
+    bfechas, bpx = fetch_benchmark.serie(_benchmark_id(entidad))
+    if not bfechas:
+        return None
+    calendario = CALENDARIO_POR_TIPO.get(storage.asset_type_of(asset_id))
+    return (asig, entidad, bfechas, bpx, calendario)
+
+
+def estudiar(asset_id, path_eventos, ventana_sesiones=20, con_benchmark=True):
     fechas, px = serie_de_precios(asset_id)
     eventos = leer_eventos(path_eventos)
-    obs = [observar(e, fechas, px) for e in eventos]
+    benchmark = _benchmark_para(asset_id) if con_benchmark else None
+    obs = [observar(e, fechas, px, benchmark) for e in eventos]
     return marcar_solapamientos(obs, ventana_sesiones, fechas)
 
 
@@ -247,6 +325,15 @@ FUERA_DE_SERIE = "BENCHMARK_SIN_SERIE_EN_ESA_FECHA"
 CALENDARIO_INCOMPATIBLE = "CALENDARIO_INCOMPATIBLE"
 SIN_METODOLOGIA = "METODOLOGIA_NO_DECLARADA"
 NO_ES_BENCHMARK_FORMAL = "LA_REFERENCIA_NO_ES_BENCHMARK_FORMAL"
+SIN_OBSERVACION_BENCHMARK = "BENCHMARK_SIN_OBSERVACION_EN_ESAS_SESIONES"
+
+# Unico metodo de ajuste admitido en v1: r_activo - r_benchmark. El modelo
+# de mercado (alfa + beta) exigiria ESTIMAR un coeficiente, y D-10 lo
+# prohibe hasta que exista una capa de Model/Calibration con ventana de
+# entrenamiento y validacion fuera de muestra.
+DIFERENCIA_SIMPLE = "DIFERENCIA_SIMPLE"
+
+CALENDARIO_POR_TIPO = {"equity": "equity", "crypto": "crypto"}
 
 
 def _entre(fecha, desde, hasta):
@@ -342,15 +429,20 @@ if __name__ == "__main__":
         todas += obs
         print(f"\n=== {sym} ===")
         print(f"{'period_end':11} {'published':11} {'franja':12} {'1a negociable':13} "
-              f"{'sorpresa%':>10} {'ret bruto%':>11} {'anormal':>8}")
+              f"{'sorpresa%':>10} {'bruto%':>8} {'bench%':>8} {'anormal%':>9}")
         for o in obs:
+            def _n(v):
+                return f"{v:8.2f}" if v is not None else f"{'—':>8}"
             print(f"{o['period_end']:11} {o['published_at']:11} "
                   f"{str(o['report_time']):12} {str(o['first_tradable_at']):13} "
                   f"{o['surprise_pct'] if o['surprise_pct'] is not None else float('nan'):10.2f} "
-                  f"{o['raw_return_1s_pct'] if o['raw_return_1s_pct'] is not None else float('nan'):11.2f} "
-                  f"{'—':>8}")
+                  f"{_n(o['raw_return_1s_pct'])} {_n(o['benchmark_return_1s_pct'])} "
+                  f"{_n(o['market_adjusted_return_pct'])}")
     print("\n=== ELEGIBILIDAD POR FAMILIA DE MEDIDA (D-21) ===")
+    calculadas = {"RAW_RETURN"}
+    if any(o["market_adjusted_return_pct"] is not None for o in todas):
+        calculadas.add("ABNORMAL_RETURN")
     for fam in ("RAW_RETURN", "ABNORMAL_RETURN", "PEER_RELATIVE_RETURN", "VOLUME_CHANGE"):
-        ok, informe = elegibilidad(todas, fam)
+        ok, informe = elegibilidad(todas, fam, medidas_disponibles=calculadas)
         print(f"  {fam:22} utilizable={str(ok):5} n={informe.get('sin_solapamiento')} "
               f"minimo={informe.get('minimo_declarado')} motivo={informe['motivo']}")
