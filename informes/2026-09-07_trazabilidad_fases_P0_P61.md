@@ -41,7 +41,7 @@ Si los tres pasan, las veinte fases están sanas. Si falla alguno, la tabla de a
 | **P6.2b** | `f30ffc5` | Look-ahead corregido en la familia `earnings_*` | `python3 engine/contract/qa.py` → bloque `INTEGRIDAD TEMPORAL` |
 | **P6.2c** | `f30ffc5` | Event study mínimo sobre resultados | `python3 engine/events/estudio_resultados.py` |
 | **P6.2d** | `f30ffc5` | Episodios declarados sobre P4 | `python3 -m unittest tests.test_episodios` |
-| **D-21** | *(este commit)* | Ontología de benchmark y elegibilidad por familia | `python3 -m unittest tests.test_benchmark_ontologia` |
+| **D-21** | `2ee412a` | Ontología de benchmark y elegibilidad por familia | `python3 -m unittest tests.test_benchmark_ontologia` |
 
 ---
 
