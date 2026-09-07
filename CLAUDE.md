@@ -2,6 +2,14 @@
 
 Sistema de inteligencia financiera para apoyo a decisiones de inversión (no un chatbot de bolsa). Ver `docs/00-arquitectura-conceptual.md` para la arquitectura conceptual del proyecto (Fase 0) y las fases de desarrollo acordadas.
 
+## Punto de entrada obligatorio
+
+**Antes de trabajar en nada, lee `docs/ESTADO.md`.** Es el índice de estado del proyecto: objetivo, arquitectura actual, capas cerradas, la evidencia de por qué se diseñaron así, el estado medido, las deudas abiertas y la próxima decisión. Está escrito para que no haga falta reconstruir la arquitectura leyendo cientos de commits.
+
+Complementos: `docs/DECISIONES.md` (decisiones y sus revisiones, con la historia intacta) y `docs/07-protocolo-de-informes.md` (qué debe dejar cada fase).
+
+Esta sección de `CLAUDE.md` describe las fases hasta el backfill histórico (2026-09-04). **Todo lo posterior — P0.5 a P6.1: Knowledge, Evidence, Events, Causal Path, Mechanism, Impact y Materiality — vive en `docs/ESTADO.md`**, que se mantiene actualizado.
+
 ## Protocolo obligatorio de privacidad
 
 **Antes de tratar cualquier dato del usuario (identidad, cartera, holdings, plataformas, credenciales), lee y aplica `docs/00-protocolo-privacidad.md` en su totalidad.** Es un requisito permanente para todo el trabajo en este proyecto, no solo una referencia opcional. En resumen:
