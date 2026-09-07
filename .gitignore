@@ -18,6 +18,12 @@ data/current/
 # dejo de reescribir DimAsset por solo retrieved_at).
 data/coverage.json
 
+# requirements.json (P5D) es derivado por partida doble: de coverage.json,
+# que ya no se versiona, y de los caminos de P5A, que se recalculan. Y
+# envejece solo igual que la frescura. Se regenera con
+# engine/requirements/resolver.py <entidad> --json.
+data/requirements.json
+
 # Evidence es una VISTA DERIVADA del Data Contract y de data/news/: se
 # regenera entera con engine/evidence/construir.py y por defecto ni
 # siquiera se escribe. Materializarla es opcional (--materializar) y su

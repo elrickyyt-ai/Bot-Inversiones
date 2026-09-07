@@ -39,6 +39,20 @@ DIA = "dia"
 # criterio -- y por eso no puede quedar por debajo de nada.
 ORDEN_FRESCURA = {"FRESH": 0, "LAGGING": 1, "STALE": 2, "UNKNOWN": 3}
 
+# El otro eje. Estaba escrito como literales dentro de cobertura.py; se
+# declara aqui porque P5D responde la MISMA pregunta ("existe el dato?")
+# sobre un sujeto distinto (un requisito de mecanismo en vez de un par
+# activo x dominio) y tiene que compartir el vocabulario, no copiarlo.
+# Copiarlo es como acabaron `source_priority` y `nature` significando dos
+# cosas segun quien las leyera.
+ESTADOS_COBERTURA = {
+    "AVAILABLE":      "estan todas las piezas esperadas",
+    "PARTIAL":        "hay algunas, faltan otras",
+    "MISSING":        "no hay ninguna, y se esperaban",
+    "NOT_APPLICABLE": "declarado que no aplica, con motivo -- NO es un hueco",
+    "UNKNOWN":        "no habia declaracion con la que comparar; no es permisivo",
+}
+
 # Clave: (dominio, metrica). La metrica None es el comodin del dominio.
 # El valor es (unidad, n): se considera FRESH hasta n, LAGGING hasta 2n,
 # STALE a partir de ahi.

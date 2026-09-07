@@ -1,6 +1,6 @@
-# Trazabilidad de las fases P0 → P5C
+# Trazabilidad de las fases P0 → P5D
 
-**Fecha**: 2026-09-07 · **Rama**: `claude/bot-inversiones-audit-peh0x2` · **Último commit**: `61dca44`
+**Fecha**: 2026-09-07 · **Rama**: `claude/bot-inversiones-audit-peh0x2` · **Último commit**: `61dca44` + P5D
 
 Este informe existe para una situación concreta: **que una fase falle en el futuro y haya que recuperar su estado**. Da, por cada fase, el commit exacto, los ficheros que la componen, los tests que la cubren, el comando que la verifica por separado y qué se rompe si cae.
 
@@ -11,12 +11,12 @@ No sustituye a los README de cada módulo (que explican *por qué* está hecho a
 ## Verificación completa en tres comandos
 
 ```bash
-python3 -m unittest discover -s tests           # 354 tests, debe dar OK
+python3 -m unittest discover -s tests           # 381 tests, debe dar OK
 python3 engine/contract/qa.py --require-parquet # debe dar STATUS: VERIFIED
 git status --short data/ knowledge/             # debe salir vacío
 ```
 
-Si los tres pasan, las doce fases están sanas. Si falla alguno, la tabla de abajo dice qué fase mirar.
+Si los tres pasan, las trece fases están sanas. Si falla alguno, la tabla de abajo dice qué fase mirar.
 
 ---
 
@@ -34,6 +34,7 @@ Si los tres pasan, las doce fases están sanas. Si falla alguno, la tabla de aba
 | **P5A** | `b214082` | Causal Path / traversal | `python3 engine/causal/caminos.py sec:NVDA.NASDAQ` |
 | **P5B** | `0c4003f` | Mecanismo y dirección económica | `python3 engine/causal/valoracion.py sec:NVDA.NASDAQ` |
 | **P5C** | `61dca44` | Primera cadena económica real, con fuentes externas | `python3 -m unittest tests.test_cadena_suministro` |
+| **P5D** | (este commit) | Evidence Gap → Data Requirement | `python3 engine/requirements/resolver.py org:nvidia` |
 
 ---
 
@@ -154,6 +155,7 @@ Data Contract (migración)
     │        └─→ P4  Event        (lee Evidence)
     └─→ P2  Knowledge  ───────────┴─→ P5A Path  ─→ P5B Assessment
         └─ P5C amplía SUS DATOS (no su código): fuentes externas
+                                              └─→ P5D Requirement (lee P1b + P5B)
 ```
 
 ### P5C · Economic Knowledge Seed v2 — cadena `NVIDIA → TSMC → CoWoS`
@@ -174,6 +176,24 @@ Data Contract (migración)
 
 ---
 
+### P5D · Evidence Gap → Data Requirement
+
+**Ficheros**: `engine/requirements/{esquema_requisito,catalogo,resolver}.py` + `README.md` (nuevos) · `engine/contract/cadencias.py` (declara `ESTADOS_COBERTURA`) · `tests/test_requisitos.py` (nuevo) · `.gitignore`
+
+**Qué hace**: convierte el `requires_evidence` de P5B en `DataRequirement` resueltos contra el contrato real, con los cinco estados de disponibilidad de P1b (importados, no copiados) y los cuatro de frescura.
+
+**Las tres reglas del validador**: (1) una métrica no es la variable hasta que se declara con justificación — todo `PROXY` exige además su confusor; (2) solo-proxy nunca llega a `AVAILABLE`, techo `PARTIAL`; (3) `NOT_APPLICABLE` exige declaración, la falta de dato es `MISSING`.
+
+**Resultado sobre la cadena de P5C**: `demand(org:nvidia)` = `PARTIAL`/`FRESH` (solo proxy declarado); `capacity_utilization(tech:cowos)` = `MISSING`, bloqueando 6 tramos. Ése es el cuello de botella real hacia P6.
+
+**Fallo real que atrapó su propio diseño**: la candidata de `price` se declaró sobre el dominio `"technical"` cuando el contrato lo llama `"tecnico"`. No fallaba: devolvía `MISSING`, presentando una errata del catálogo como un hueco de datos. Guardia permanente en `test_toda_candidata_apunta_a_una_metrica_que_el_contrato_emite`.
+
+**Si falla**: no rompe nada por debajo — solo lee. `engine/requirements/resolver.py --requisito "price(sec:BTC)"` es el diagnóstico más corto: si eso no da `AVAILABLE`, el problema está en `catalogo.py` o en `data/`, no en el resolutor.
+
+**Informe**: `informes/2026-09-07_p5d_requisitos_de_evidencia.md`.
+
+---
+
 **La dirección es única**: cada capa lee la anterior y **ninguna escribe hacia atrás**. Está comprobado por hash dentro de la propia suite en P3, P4, P5A y P5B.
 
 ---
@@ -182,8 +202,13 @@ Data Contract (migración)
 
 Reglas que han aparecido más de una vez y que conviene no volver a romper:
 
-1. **Ausencia ≠ evidencia de ausencia.** Tres apariciones: `NO_APLICA` en P1b (TVL de BTC), `polarity=DENIES` en P2, y la comprobación de sustitución de tres estados en P5B.
-2. **Nunca reutilizar un vocabulario para conceptos distintos.** Tres apariciones: `source_priority` (P0), `nature` en Knowledge vs Evidence (P3), y las tres direcciones (P5B) — resuelto usando `DIVERGENT` en vez de `MIXED`. Los conjuntos deben ser **disjuntos** y hay tests que lo mantienen.
+1. **Ausencia ≠ evidencia de ausencia.** Cuatro apariciones, y desde P5D con un bloque de tests único (`TestInvariantesEpistemicos`) que las rompe juntas si alguien afloja una:
+   - `NO RELATION` ≠ `RELATION DENIES` — P2 (`polarity=DENIES` exige fuente)
+   - `NO EVIDENCE` ≠ `EVIDENCE OF NO EFFECT` — P5B (`UNKNOWN` ≠ `NEUTRAL`)
+   - `NO SOURCE` ≠ `SOURCE SAYS IT DOES NOT EXIST` — P5D (`MISSING` ≠ `NOT_APPLICABLE`)
+   - `NO_APLICA` en P1b (TVL de BTC), el caso original
+   Y una cuarta que las une: **`UNKNOWN` nunca es permisivo** en ninguno de los tres ejes.
+2. **Reutilizar un vocabulario cuando el concepto ES el mismo, nunca cuando difiere.** Las dos caras: P5D **importa** los cinco estados de cobertura de P1b en vez de copiarlos (misma pregunta, otro sujeto), y comparte `UNKNOWN` entre disponibilidad y frescura porque significa lo mismo — pero **solo** `UNKNOWN`, fijado por test. La cara opuesta: Tres apariciones: `source_priority` (P0), `nature` en Knowledge vs Evidence (P3), y las tres direcciones (P5B) — resuelto usando `DIVERGENT` en vez de `MIXED`. Los conjuntos deben ser **disjuntos** y hay tests que lo mantienen.
 3. **Dos ejes, no un enum.** Cobertura y frescura (P1b), validez y completitud (P5A).
 4. **La fecha del bloque es la del componente más antiguo**, nunca la del más reciente.
 5. **Nombres de módulo únicos en `engine/`** salvo `score.py` y `fetch_data.py`, que se repiten a propósito. Guardia en `tests/test_events.py`.
@@ -204,6 +229,8 @@ Reglas que han aparecido más de una vez y que conviene no volver a romper:
 | Seed B de NVIDIA: HBM y sustrato ABF | `knowledge/pendiente/nvidia_cadena.json` | **Buscados en P5C** en los dos filings primarios: cero menciones. Siguen sin fuente |
 | Samsung, SK Hynix y Micron como proveedores de NVIDIA | `knowledge/pendiente/nvidia_cadena.json::_candidatas_documentadas_pendientes_de_alta` | **Ya tienen fuente verificada** (misma frase del 10-K que `rel:0046`). Fuera del alcance acordado de P5C, promovibles en un paso |
 | `rel:0046` no documenta la **materialidad** de la relación de suministro | informe de P5C | El 10-K no dice qué fracción de wafers fabrica TSMC. Toda medida de impacto que lo necesite tendrá que decir que no lo sabe |
+| `demand(org:nvidia)` sale `FRESH` con un dato de hace 5 semanas | informe de P5D | Correcto por cadencia (trimestral), pero la frescura dice que el dato está al día para su cadencia, no que sirva para el mecanismo. P6 debe mirarlo dos veces |
+| Las 5 variables de mecanismo no tienen `concept_id` | `catalogo.CONCEPTO_DE_VARIABLE` + test | Ausencia medida, no hueco: declarar un concepto vacío sería peor que no declararlo |
 
 ---
 
