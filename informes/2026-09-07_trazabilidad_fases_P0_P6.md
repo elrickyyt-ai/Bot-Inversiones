@@ -1,6 +1,6 @@
-# Trazabilidad de las fases P0 → P5D
+# Trazabilidad de las fases P0 → P6
 
-**Fecha**: 2026-09-07 · **Rama**: `claude/bot-inversiones-audit-peh0x2` · **Último commit**: `cfbf38b`
+**Fecha**: 2026-09-07 · **Rama**: `claude/bot-inversiones-audit-peh0x2` · **Último commit**: `cfbf38b` + P6
 
 Este informe existe para una situación concreta: **que una fase falle en el futuro y haya que recuperar su estado**. Da, por cada fase, el commit exacto, los ficheros que la componen, los tests que la cubren, el comando que la verifica por separado y qué se rompe si cae.
 
@@ -11,12 +11,12 @@ No sustituye a los README de cada módulo (que explican *por qué* está hecho a
 ## Verificación completa en tres comandos
 
 ```bash
-python3 -m unittest discover -s tests           # 381 tests, debe dar OK
+python3 -m unittest discover -s tests           # 422 tests, debe dar OK
 python3 engine/contract/qa.py --require-parquet # debe dar STATUS: VERIFIED
 git status --short data/ knowledge/             # debe salir vacío
 ```
 
-Si los tres pasan, las trece fases están sanas. Si falla alguno, la tabla de abajo dice qué fase mirar.
+Si los tres pasan, las catorce fases están sanas. Si falla alguno, la tabla de abajo dice qué fase mirar.
 
 ---
 
@@ -35,6 +35,7 @@ Si los tres pasan, las trece fases están sanas. Si falla alguno, la tabla de ab
 | **P5B** | `0c4003f` | Mecanismo y dirección económica | `python3 engine/causal/valoracion.py sec:NVDA.NASDAQ` |
 | **P5C** | `61dca44` | Primera cadena económica real, con fuentes externas | `python3 -m unittest tests.test_cadena_suministro` |
 | **P5D** | `cfbf38b` | Evidence Gap → Data Requirement | `python3 engine/requirements/resolver.py org:nvidia` |
+| **P6** | (este commit) | Economic Impact v1 | `python3 engine/impact/impacto.py org:nvidia` |
 
 ---
 
@@ -156,6 +157,7 @@ Data Contract (migración)
     └─→ P2  Knowledge  ───────────┴─→ P5A Path  ─→ P5B Assessment
         └─ P5C amplía SUS DATOS (no su código): fuentes externas
                                               └─→ P5D Requirement (lee P1b + P5B)
+                                                    └─→ P6 Impact (lee P5B + P5D)
 ```
 
 ### P5C · Economic Knowledge Seed v2 — cadena `NVIDIA → TSMC → CoWoS`
@@ -194,6 +196,26 @@ Data Contract (migración)
 
 ---
 
+### P6 · Economic Impact v1
+
+**Ficheros**: `engine/impact/{esquema_impacto,requisitos_magnitud,impacto}.py` + `README.md` (nuevos) · `tests/test_impacto.py` (nuevo). **Ningún fichero modificado**.
+
+**Qué hace**: `CausalAssessment` (P5B) + `DataRequirement` (P5D) → `EconomicImpact`. Las cuatro piezas —dirección, magnitud, materialidad, horizonte— tienen **su propio estado**, porque pueden estar en estados distintos a la vez: la magnitud **no es obligatoria**.
+
+**El núcleo**: `derecho_a_magnitud()`. v1 **no produce números y no contiene ninguna fórmula**; lo que entrega es la comprobación de si el sistema *tendría derecho* a producirlos, con cuatro precondiciones (variable medida · materialidad · coeficiente de origen declarado · línea base). Hoy `False` en el 100% de los casos reales; un test puebla las tablas y comprueba que **se enciende**, para que "siempre False" no pueda ser un bug disfrazado de decisión.
+
+**Reglas ejecutables**: `value == 0` exige `evidence_ids` · `magnitude KNOWN` exige `materiality KNOWN` (causalidad ≠ materialidad, general) · `coefficient_origin == ESTIMATED` **rechazado en v1** · `fitness` `PROXY` nunca se promueve a cuantitativo · `NOT_QUANTIFIABLE` ⇒ `NOT_APPLICABLE` y al revés · rechazo por nombre de `probability`/`score`/`price_target`/`confidence`/`recommendation`.
+
+**Combinar ≠ sumar**: `combinar()` **no tiene campo `total`**, por diseño. Devuelve `conocido[]` + `unresolved[]`, soporte del peor componente, `UNKNOWN` si algo no resuelve o si los horizontes difieren.
+
+**Resultado real**: 42 tramos sobre 22 caminos → 37 `NOT_APPLICABLE` + 5 `UNKNOWN`. Ninguna magnitud, y cada tramo dice si es porque el mecanismo no puede o porque falta el dato.
+
+**Si falla**: no rompe nada por debajo, solo lee. `python3 engine/impact/impacto.py org:nvidia` es el diagnóstico; si aparece cualquier magnitud con valor, el fallo está en `requisitos_magnitud.py` (alguna tabla de declaración dejó de estar vacía sin querer).
+
+**Informe**: `informes/2026-09-07_p6_impacto_economico_v1.md` · **Diseño previo**: `docs/05-diseno-p6-impacto-economico.md`.
+
+---
+
 **La dirección es única**: cada capa lee la anterior y **ninguna escribe hacia atrás**. Está comprobado por hash dentro de la propia suite en P3, P4, P5A y P5B.
 
 ---
@@ -208,6 +230,7 @@ Reglas que han aparecido más de una vez y que conviene no volver a romper:
    - `NO SOURCE` ≠ `SOURCE SAYS IT DOES NOT EXIST` — P5D (`MISSING` ≠ `NOT_APPLICABLE`)
    - `NO_APLICA` en P1b (TVL de BTC), el caso original
    Y una cuarta que las une: **`UNKNOWN` nunca es permisivo** en ninguno de los tres ejes.
+   P6 añade dos más: **`causalidad ≠ materialidad`** (Knowledge acredita que la relación existe, no en qué proporción) y **"no puedo" ≠ "no sé"** (`NOT_APPLICABLE` no mejora con más datos; `UNKNOWN` sí).
 2. **Reutilizar un vocabulario cuando el concepto ES el mismo, nunca cuando difiere.** Las dos caras: P5D **importa** los cinco estados de cobertura de P1b en vez de copiarlos (misma pregunta, otro sujeto), y comparte `UNKNOWN` entre disponibilidad y frescura porque significa lo mismo — pero **solo** `UNKNOWN`, fijado por test. La cara opuesta: Tres apariciones: `source_priority` (P0), `nature` en Knowledge vs Evidence (P3), y las tres direcciones (P5B) — resuelto usando `DIVERGENT` en vez de `MIXED`. Los conjuntos deben ser **disjuntos** y hay tests que lo mantienen.
 3. **Dos ejes, no un enum.** Cobertura y frescura (P1b), validez y completitud (P5A).
 4. **La fecha del bloque es la del componente más antiguo**, nunca la del más reciente.
@@ -231,6 +254,8 @@ Reglas que han aparecido más de una vez y que conviene no volver a romper:
 | `rel:0046` no documenta la **materialidad** de la relación de suministro | informe de P5C | El 10-K no dice qué fracción de wafers fabrica TSMC. Toda medida de impacto que lo necesite tendrá que decir que no lo sabe |
 | `demand(org:nvidia)` sale `FRESH` con un dato de hace 5 semanas | informe de P5D | Correcto por cadencia (trimestral), pero la frescura dice que el dato está al día para su cadencia, no que sirva para el mecanismo. P6 debe mirarlo dos veces |
 | Las 5 variables de mecanismo no tienen `concept_id` | `catalogo.CONCEPTO_DE_VARIABLE` + test | Ausencia medida, no hueco: declarar un concepto vacío sería peor que no declararlo |
+| `MATERIALIDAD`, `COEFICIENTES` y `LINEAS_BASE` vacías | `requisitos_magnitud.py` + test | Decisión de P6 v1, no olvido. Poblar `MATERIALIDAD` exigiría un campo de peso en Knowledge: cambio de esquema de P2 con su propia decisión |
+| `tech:cowos` se evalúa como insumo de coste, no como restricción de capacidad | informe de P6 | P5B enruta ese impulso por R5 y no por la vía de capacidad. Coherente con P5B, no tocado; el ángulo de capacidad es el económicamente interesante |
 
 ---
 
