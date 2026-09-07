@@ -1,6 +1,6 @@
 # Estado del sistema — punto de entrada
 
-**Actualizado**: 2026-09-07 · **Rama**: `claude/bot-inversiones-audit-peh0x2` · **Último commit**: `P6.2a-d`
+**Actualizado**: 2026-09-07 · **Rama**: `claude/bot-inversiones-audit-peh0x2` · **Último commit**: `f30ffc5`
 
 > **Si eres un agente o una persona que entra por primera vez, lee este documento entero antes que ningún otro.** Está escrito para que no haga falta reconstruir la arquitectura leyendo cientos de commits.
 
@@ -72,10 +72,10 @@ CONSUMO (desacoplado, no dicta el motor)   Power BI · Web App
 | P5D | `cfbf38b` | Evidence Gap → Data Requirement |
 | P6 | `4f22a88` | Economic Impact: derecho a cuantificar |
 | P6.1 | `02c31ad` | Materiality derivada y acotada |
-| P6.2a | *(este commit)* | Integridad temporal: los cinco relojes, `available_at` derivado |
-| P6.2b | *(este commit)* | Look-ahead de 22-31 días corregido en 27 filas |
-| P6.2c | *(este commit)* | Event study mínimo: 52 eventos, `first_tradable_at`, sin agregar |
-| P6.2d | *(este commit)* | Episodios declarados sobre P4: 50 documentos → 43 eventos → 1 episodio |
+| P6.2a | `f30ffc5` | Integridad temporal: los cinco relojes, `available_at` derivado |
+| P6.2b | `f30ffc5` | Look-ahead de 22-31 días corregido en 27 filas |
+| P6.2c | `f30ffc5` | Event study mínimo: 52 eventos, `first_tradable_at`, sin agregar |
+| P6.2d | `f30ffc5` | Episodios declarados sobre P4: 50 documentos → 43 eventos → 1 episodio |
 
 Detalle por fase, con qué se rompe si cae y cómo recuperarla: `informes/2026-09-07_trazabilidad_fases_P0_P61.md`.
 

@@ -37,10 +37,10 @@ Si los tres pasan, las diecinueve fases están sanas. Si falla alguno, la tabla 
 | **P5D** | `cfbf38b` | Evidence Gap → Data Requirement | `python3 engine/requirements/resolver.py org:nvidia` |
 | **P6** | `4f22a88` | Economic Impact v1 | `python3 engine/impact/impacto.py org:nvidia` |
 | **P6.1** | `02c31ad` | Materiality derivada | `python3 -m unittest tests.test_materialidad` |
-| **P6.2a** | *(este commit)* | Integridad temporal: los cinco relojes | `python3 -m unittest tests.test_temporal` |
-| **P6.2b** | *(este commit)* | Look-ahead corregido en la familia `earnings_*` | `python3 engine/contract/qa.py` → bloque `INTEGRIDAD TEMPORAL` |
-| **P6.2c** | *(este commit)* | Event study mínimo sobre resultados | `python3 engine/events/estudio_resultados.py` |
-| **P6.2d** | *(este commit)* | Episodios declarados sobre P4 | `python3 -m unittest tests.test_episodios` |
+| **P6.2a** | `f30ffc5` | Integridad temporal: los cinco relojes | `python3 -m unittest tests.test_temporal` |
+| **P6.2b** | `f30ffc5` | Look-ahead corregido en la familia `earnings_*` | `python3 engine/contract/qa.py` → bloque `INTEGRIDAD TEMPORAL` |
+| **P6.2c** | `f30ffc5` | Event study mínimo sobre resultados | `python3 engine/events/estudio_resultados.py` |
+| **P6.2d** | `f30ffc5` | Episodios declarados sobre P4 | `python3 -m unittest tests.test_episodios` |
 
 ---
 
