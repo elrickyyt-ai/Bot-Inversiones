@@ -1,0 +1,444 @@
+{
+ "_nota": "FIXTURES SINTETICAS, declaradas como tales. El corpus real de 50 noticias de XRP no contiene ninguno de estos cuatro casos: medido, 0 titulares identicos, 1 solo par con solapamiento lexico >=0.5 y del mismo medio, ninguna fuente de tier 1, y ningun par anuncio/entrada-en-vigor. Fabricar esos casos dentro de data/news/ seria contaminar datos reales; se construyen aqui y se declaran.",
+ "T3_duplicacion": {
+  "_esperado": "3 evidencias de 3 medios distintos sobre el MISMO hecho -> 1 evento CORROBORATED",
+  "evidence": [
+   {
+    "evidence_id": "ev:fx:t3:a",
+    "source": "Reuters",
+    "source_rank": 2,
+    "source_scale": "journalistic_tier",
+    "nature": "DERIVED",
+    "occurred_at": "2026-08-01T10:00:00Z",
+    "known_at": "2026-08-02T00:00:00Z",
+    "metric": "sintetico",
+    "entity_id": "sec:XRP",
+    "value_num": null,
+    "value_text": "x"
+   },
+   {
+    "evidence_id": "ev:fx:t3:b",
+    "source": "Bloomberg",
+    "source_rank": 2,
+    "source_scale": "journalistic_tier",
+    "nature": "DERIVED",
+    "occurred_at": "2026-08-01T10:00:00Z",
+    "known_at": "2026-08-02T00:00:00Z",
+    "metric": "sintetico",
+    "entity_id": "sec:XRP",
+    "value_num": null,
+    "value_text": "x"
+   },
+   {
+    "evidence_id": "ev:fx:t3:c",
+    "source": "Financial Times",
+    "source_rank": 2,
+    "source_scale": "journalistic_tier",
+    "nature": "DERIVED",
+    "occurred_at": "2026-08-01T10:00:00Z",
+    "known_at": "2026-08-02T00:00:00Z",
+    "metric": "sintetico",
+    "entity_id": "sec:XRP",
+    "value_num": null,
+    "value_text": "x"
+   }
+  ],
+  "claims": [
+   {
+    "claim_id": "cl:t3:a",
+    "evidence_ids": [
+     "ev:fx:t3:a"
+    ],
+    "subject_entity": "sec:XRP",
+    "predicate": "MOVED_PRICE",
+    "object_entity": null,
+    "object_value": 12.1,
+    "temporal_ref": {
+     "occurred_at": "2026-08-01",
+     "published_at": "2026-08-01",
+     "known_at": "2026-08-02"
+    },
+    "polarity": "AFFIRMS",
+    "status": "EXTRACTED",
+    "extraction_method": "fixture_sintetica/v1"
+   },
+   {
+    "claim_id": "cl:t3:b",
+    "evidence_ids": [
+     "ev:fx:t3:b"
+    ],
+    "subject_entity": "sec:XRP",
+    "predicate": "MOVED_PRICE",
+    "object_entity": null,
+    "object_value": 12.4,
+    "temporal_ref": {
+     "occurred_at": "2026-08-01",
+     "published_at": "2026-08-01",
+     "known_at": "2026-08-02"
+    },
+    "polarity": "AFFIRMS",
+    "status": "EXTRACTED",
+    "extraction_method": "fixture_sintetica/v1"
+   },
+   {
+    "claim_id": "cl:t3:c",
+    "evidence_ids": [
+     "ev:fx:t3:c"
+    ],
+    "subject_entity": "sec:XRP",
+    "predicate": "MOVED_PRICE",
+    "object_entity": null,
+    "object_value": 12.0,
+    "temporal_ref": {
+     "occurred_at": "2026-08-01",
+     "published_at": "2026-08-01",
+     "known_at": "2026-08-02"
+    },
+    "polarity": "AFFIRMS",
+    "status": "EXTRACTED",
+    "extraction_method": "fixture_sintetica/v1"
+   }
+  ]
+ },
+ "T3b_mismo_medio": {
+  "_esperado": "3 evidencias del MISMO medio -> 1 evento CANDIDATE: 3 evidencias, 1 fuente",
+  "evidence": [
+   {
+    "evidence_id": "ev:fx:t3b:a",
+    "source": "Motley Fool",
+    "source_rank": 3,
+    "source_scale": "journalistic_tier",
+    "nature": "DERIVED",
+    "occurred_at": "2026-08-01T10:00:00Z",
+    "known_at": "2026-08-02T00:00:00Z",
+    "metric": "sintetico",
+    "entity_id": "sec:XRP",
+    "value_num": null,
+    "value_text": "x"
+   },
+   {
+    "evidence_id": "ev:fx:t3b:b",
+    "source": "Motley Fool",
+    "source_rank": 3,
+    "source_scale": "journalistic_tier",
+    "nature": "DERIVED",
+    "occurred_at": "2026-08-01T10:00:00Z",
+    "known_at": "2026-08-02T00:00:00Z",
+    "metric": "sintetico",
+    "entity_id": "sec:XRP",
+    "value_num": null,
+    "value_text": "x"
+   },
+   {
+    "evidence_id": "ev:fx:t3b:c",
+    "source": "Motley Fool",
+    "source_rank": 3,
+    "source_scale": "journalistic_tier",
+    "nature": "DERIVED",
+    "occurred_at": "2026-08-01T10:00:00Z",
+    "known_at": "2026-08-02T00:00:00Z",
+    "metric": "sintetico",
+    "entity_id": "sec:XRP",
+    "value_num": null,
+    "value_text": "x"
+   }
+  ],
+  "claims": [
+   {
+    "claim_id": "cl:t3b:a",
+    "evidence_ids": [
+     "ev:fx:t3b:a"
+    ],
+    "subject_entity": "sec:XRP",
+    "predicate": "MOVED_PRICE",
+    "object_entity": null,
+    "object_value": 11.0,
+    "temporal_ref": {
+     "occurred_at": "2026-08-05",
+     "known_at": "2026-08-06"
+    },
+    "polarity": "AFFIRMS",
+    "status": "EXTRACTED",
+    "extraction_method": "fixture_sintetica/v1"
+   },
+   {
+    "claim_id": "cl:t3b:b",
+    "evidence_ids": [
+     "ev:fx:t3b:b"
+    ],
+    "subject_entity": "sec:XRP",
+    "predicate": "MOVED_PRICE",
+    "object_entity": null,
+    "object_value": 11.2,
+    "temporal_ref": {
+     "occurred_at": "2026-08-05",
+     "known_at": "2026-08-06"
+    },
+    "polarity": "AFFIRMS",
+    "status": "EXTRACTED",
+    "extraction_method": "fixture_sintetica/v1"
+   },
+   {
+    "claim_id": "cl:t3b:c",
+    "evidence_ids": [
+     "ev:fx:t3b:c"
+    ],
+    "subject_entity": "sec:XRP",
+    "predicate": "MOVED_PRICE",
+    "object_entity": null,
+    "object_value": 11.4,
+    "temporal_ref": {
+     "occurred_at": "2026-08-05",
+     "known_at": "2026-08-06"
+    },
+    "polarity": "AFFIRMS",
+    "status": "EXTRACTED",
+    "extraction_method": "fixture_sintetica/v1"
+   }
+  ]
+ },
+ "T4_contradiccion": {
+  "_esperado": "una evidencia afirma el hecho y otra lo niega -> CONTESTED, no resuelto por mayoria",
+  "evidence": [
+   {
+    "evidence_id": "ev:fx:t4:a",
+    "source": "Cointelegraph",
+    "source_rank": 3,
+    "source_scale": "journalistic_tier",
+    "nature": "DERIVED",
+    "occurred_at": "2026-08-01T10:00:00Z",
+    "known_at": "2026-08-02T00:00:00Z",
+    "metric": "sintetico",
+    "entity_id": "sec:XRP",
+    "value_num": null,
+    "value_text": "x"
+   },
+   {
+    "evidence_id": "ev:fx:t4:b",
+    "source": "Decrypt.co",
+    "source_rank": 3,
+    "source_scale": "journalistic_tier",
+    "nature": "DERIVED",
+    "occurred_at": "2026-08-01T10:00:00Z",
+    "known_at": "2026-08-02T00:00:00Z",
+    "metric": "sintetico",
+    "entity_id": "sec:XRP",
+    "value_num": null,
+    "value_text": "x"
+   },
+   {
+    "evidence_id": "ev:fx:t4:c",
+    "source": "Cointelegraph",
+    "source_rank": 3,
+    "source_scale": "journalistic_tier",
+    "nature": "DERIVED",
+    "occurred_at": "2026-08-01T10:00:00Z",
+    "known_at": "2026-08-02T00:00:00Z",
+    "metric": "sintetico",
+    "entity_id": "sec:XRP",
+    "value_num": null,
+    "value_text": "x"
+   }
+  ],
+  "claims": [
+   {
+    "claim_id": "cl:t4:a",
+    "evidence_ids": [
+     "ev:fx:t4:a"
+    ],
+    "subject_entity": "sec:XRP",
+    "predicate": "ANNOUNCES_ACTION",
+    "object_entity": null,
+    "object_value": "listing",
+    "temporal_ref": {
+     "occurred_at": "2026-08-10",
+     "published_at": "2026-08-10",
+     "known_at": "2026-08-11"
+    },
+    "polarity": "AFFIRMS",
+    "status": "EXTRACTED",
+    "extraction_method": "fixture_sintetica/v1"
+   },
+   {
+    "claim_id": "cl:t4:b",
+    "evidence_ids": [
+     "ev:fx:t4:b"
+    ],
+    "subject_entity": "sec:XRP",
+    "predicate": "ANNOUNCES_ACTION",
+    "object_entity": null,
+    "object_value": "listing",
+    "temporal_ref": {
+     "occurred_at": "2026-08-10",
+     "published_at": "2026-08-10",
+     "known_at": "2026-08-11"
+    },
+    "polarity": "AFFIRMS",
+    "status": "EXTRACTED",
+    "extraction_method": "fixture_sintetica/v1"
+   },
+   {
+    "claim_id": "cl:t4:c",
+    "evidence_ids": [
+     "ev:fx:t4:c"
+    ],
+    "subject_entity": "sec:XRP",
+    "predicate": "ANNOUNCES_ACTION",
+    "object_entity": null,
+    "object_value": "listing",
+    "temporal_ref": {
+     "occurred_at": "2026-08-10",
+     "published_at": "2026-08-10",
+     "known_at": "2026-08-11"
+    },
+    "polarity": "DENIES",
+    "status": "EXTRACTED",
+    "extraction_method": "fixture_sintetica/v1"
+   }
+  ]
+ },
+ "T5_evento_futuro": {
+  "_esperado": "anuncio el 2026-09-10 con entrada en vigor el 2026-10-01: los dos momentos separados",
+  "evidence": [
+   {
+    "evidence_id": "ev:fx:t5:a",
+    "source": "Reuters",
+    "source_rank": 2,
+    "source_scale": "journalistic_tier",
+    "nature": "DERIVED",
+    "occurred_at": "2026-09-10T09:00:00Z",
+    "known_at": "2026-08-02T00:00:00Z",
+    "metric": "sintetico",
+    "entity_id": "sec:XRP",
+    "value_num": null,
+    "value_text": "x"
+   }
+  ],
+  "claims": [
+   {
+    "claim_id": "cl:t5:a",
+    "evidence_ids": [
+     "ev:fx:t5:a"
+    ],
+    "subject_entity": "sec:XRP",
+    "predicate": "ANNOUNCES_ACTION",
+    "object_entity": null,
+    "object_value": "rule_change",
+    "temporal_ref": {
+     "published_at": "2026-09-10",
+     "occurred_at": "2026-09-10",
+     "effective_at": "2026-10-01",
+     "known_at": "2026-09-10"
+    },
+    "polarity": "AFFIRMS",
+    "status": "EXTRACTED",
+    "extraction_method": "fixture_sintetica/v1"
+   }
+  ]
+ },
+ "T6_fuente_primaria_unica": {
+  "_esperado": "una sola fuente primaria (tier 1) -> CONFIRMED sin necesitar una segunda",
+  "evidence": [
+   {
+    "evidence_id": "ev:fx:t6:a",
+    "source": "SEC",
+    "source_rank": 1,
+    "source_scale": "journalistic_tier",
+    "nature": "DERIVED",
+    "occurred_at": "2026-08-01T10:00:00Z",
+    "known_at": "2026-08-02T00:00:00Z",
+    "metric": "sintetico",
+    "entity_id": "sec:XRP",
+    "value_num": null,
+    "value_text": "x"
+   }
+  ],
+  "claims": [
+   {
+    "claim_id": "cl:t6:a",
+    "evidence_ids": [
+     "ev:fx:t6:a"
+    ],
+    "subject_entity": "sec:XRP",
+    "predicate": "ANNOUNCES_ACTION",
+    "object_entity": null,
+    "object_value": "enforcement_action",
+    "temporal_ref": {
+     "published_at": "2026-08-20",
+     "occurred_at": "2026-08-20",
+     "known_at": "2026-08-20"
+    },
+    "polarity": "AFFIRMS",
+    "status": "EXTRACTED",
+    "extraction_method": "fixture_sintetica/v1"
+   }
+  ]
+ },
+ "T7_revision": {
+  "_esperado": "misma clave, misma fuente, magnitud distinta conocida despues -> REVISED",
+  "evidence": [
+   {
+    "evidence_id": "ev:fx:t7:a",
+    "source": "FRED",
+    "source_rank": 1,
+    "source_scale": "market_data_priority",
+    "nature": "MEASURED",
+    "occurred_at": "2026-08-01T10:00:00Z",
+    "known_at": "2026-08-02T00:00:00Z",
+    "metric": "sintetico",
+    "entity_id": "sec:XRP",
+    "value_num": null,
+    "value_text": "x"
+   },
+   {
+    "evidence_id": "ev:fx:t7:b",
+    "source": "FRED",
+    "source_rank": 1,
+    "source_scale": "market_data_priority",
+    "nature": "MEASURED",
+    "occurred_at": "2026-08-01T10:00:00Z",
+    "known_at": "2026-08-02T00:00:00Z",
+    "metric": "sintetico",
+    "entity_id": "sec:XRP",
+    "value_num": null,
+    "value_text": "x"
+   }
+  ],
+  "claims": [
+   {
+    "claim_id": "cl:t7:a",
+    "evidence_ids": [
+     "ev:fx:t7:a"
+    ],
+    "subject_entity": "sec:XRP",
+    "predicate": "MOVED_PRICE",
+    "object_entity": null,
+    "object_value": 12.0,
+    "temporal_ref": {
+     "occurred_at": "2026-07-01",
+     "known_at": "2026-07-15"
+    },
+    "polarity": "AFFIRMS",
+    "status": "EXTRACTED",
+    "extraction_method": "fixture_sintetica/v1"
+   },
+   {
+    "claim_id": "cl:t7:b",
+    "evidence_ids": [
+     "ev:fx:t7:b"
+    ],
+    "subject_entity": "sec:XRP",
+    "predicate": "MOVED_PRICE",
+    "object_entity": null,
+    "object_value": 12.9,
+    "temporal_ref": {
+     "occurred_at": "2026-07-01",
+     "known_at": "2026-08-15"
+    },
+    "polarity": "AFFIRMS",
+    "status": "EXTRACTED",
+    "extraction_method": "fixture_sintetica/v1"
+   }
+  ]
+ }
+}
