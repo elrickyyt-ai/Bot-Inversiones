@@ -1,6 +1,6 @@
 # Trazabilidad de las fases P0 → P5C
 
-**Fecha**: 2026-09-07 · **Rama**: `claude/bot-inversiones-audit-peh0x2` · **Último commit**: `3c820e8` + P5C
+**Fecha**: 2026-09-07 · **Rama**: `claude/bot-inversiones-audit-peh0x2` · **Último commit**: `61dca44`
 
 Este informe existe para una situación concreta: **que una fase falle en el futuro y haya que recuperar su estado**. Da, por cada fase, el commit exacto, los ficheros que la componen, los tests que la cubren, el comando que la verifica por separado y qué se rompe si cae.
 
@@ -33,7 +33,7 @@ Si los tres pasan, las doce fases están sanas. Si falla alguno, la tabla de aba
 | **P4** | `a9ba0c6` | Event & Claim Layer v1 | `python3 engine/events/consolidar.py --noticias` |
 | **P5A** | `b214082` | Causal Path / traversal | `python3 engine/causal/caminos.py sec:NVDA.NASDAQ` |
 | **P5B** | `0c4003f` | Mecanismo y dirección económica | `python3 engine/causal/valoracion.py sec:NVDA.NASDAQ` |
-| **P5C** | (este commit) | Primera cadena económica real, con fuentes externas | `python3 -m unittest tests.test_cadena_suministro` |
+| **P5C** | `61dca44` | Primera cadena económica real, con fuentes externas | `python3 -m unittest tests.test_cadena_suministro` |
 
 ---
 
