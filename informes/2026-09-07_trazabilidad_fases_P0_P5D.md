@@ -1,6 +1,6 @@
 # Trazabilidad de las fases P0 → P5D
 
-**Fecha**: 2026-09-07 · **Rama**: `claude/bot-inversiones-audit-peh0x2` · **Último commit**: `61dca44` + P5D
+**Fecha**: 2026-09-07 · **Rama**: `claude/bot-inversiones-audit-peh0x2` · **Último commit**: `cfbf38b`
 
 Este informe existe para una situación concreta: **que una fase falle en el futuro y haya que recuperar su estado**. Da, por cada fase, el commit exacto, los ficheros que la componen, los tests que la cubren, el comando que la verifica por separado y qué se rompe si cae.
 
@@ -34,7 +34,7 @@ Si los tres pasan, las trece fases están sanas. Si falla alguno, la tabla de ab
 | **P5A** | `b214082` | Causal Path / traversal | `python3 engine/causal/caminos.py sec:NVDA.NASDAQ` |
 | **P5B** | `0c4003f` | Mecanismo y dirección económica | `python3 engine/causal/valoracion.py sec:NVDA.NASDAQ` |
 | **P5C** | `61dca44` | Primera cadena económica real, con fuentes externas | `python3 -m unittest tests.test_cadena_suministro` |
-| **P5D** | (este commit) | Evidence Gap → Data Requirement | `python3 engine/requirements/resolver.py org:nvidia` |
+| **P5D** | `cfbf38b` | Evidence Gap → Data Requirement | `python3 engine/requirements/resolver.py org:nvidia` |
 
 ---
 
