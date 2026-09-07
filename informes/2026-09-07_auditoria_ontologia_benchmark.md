@@ -1,6 +1,8 @@
 # Auditoría de ontología: qué es un benchmark en una arquitectura multi-activo
 
 **Fecha**: 2026-09-07 · **Rama**: `claude/bot-inversiones-audit-peh0x2` · **Base**: `e158fad`
+**Revisión 2** (2026-09-07, mismo día): cierre con la distinción *Benchmark ≠ Reaction Analysis*, las tres decisiones congeladas por el usuario y CoinDesk 20 registrado como evidencia. Ver §17-§22.
+
 **Naturaleza**: auditoría. **No se ha implementado nada** — ni benchmarks, ni índices, ni cambios en `DimAsset`, Power BI, scoring, Historical Reaction Profiles, `reaction_gap`, pesos ni BUY/SELL. Cero ficheros de código modificados.
 
 **Mediciones en vivo hechas para esta auditoría** (ninguna consume cuota de Alpha Vantage):
@@ -124,7 +126,9 @@ Un "benchmark sectorial" de una acción es aritméticamente indistinguible de es
 
 Lo que sí es defendible para cripto es Comparison Reference: BTC y ETH como referencias descriptivas (`PEER` / `LEADER`), **sin** que de ahí salga ningún retorno anormal.
 
-**Consecuencia que hay que aceptar antes de decidir**: con esta ontología, los eventos de cripto **no tendrán retorno anormal** hasta que aparezca una fuente de índice PIT y gratuita. Y como la suficiencia de muestra ya bloquea toda agregación sin retorno anormal (P6.2c), **el Historical Reaction Profile nacerá cubriendo solo acciones**. Es una limitación real del sistema, no del diseño, y es mejor tenerla escrita que descubrirla dentro de tres fases.
+**Consecuencia que hay que aceptar antes de decidir**: con esta ontología, los eventos de cripto **no tendrán retorno anormal** hasta que aparezca una fuente de índice PIT y gratuita.
+
+> **CORREGIDO EN LA REVISIÓN 2 (§17).** Aquí añadí que *"el Historical Reaction Profile nacerá cubriendo solo acciones"*. Es demasiado fuerte: lo que nace cubriendo solo acciones es el **retorno anormal**, no el análisis de reacciones. Cripto conserva `raw_return`, `peer_relative_return`, `volume_change`, `volatility_change` y `cross_asset_reaction` — todos computables hoy sobre el contrato. Confundir "sin benchmark" con "sin análisis" era exactamente la distinción que faltaba.
 
 ## 9. Qué ocurre cuando no existe benchmark
 
@@ -184,7 +188,9 @@ ajustes: [ {rol, benchmark_id, methodology_version, valor_pct, metodo} ]
 
 Con `metodo` declarado —`DIFERENCIA_SIMPLE` (r_activo − r_benchmark) frente a `MARKET_MODEL` (α+βr, que exige ventana de estimación)— porque **son cosas distintas y D-10 ya prohíbe estimar coeficientes en v1**. En v1 solo cabe `DIFERENCIA_SIMPLE`: es la única que no requiere la capa de modelo que no existe.
 
-Efecto sobre lo ya construido: `suficiencia_de_muestra()` deja de bloquear por `SIN_RETORNO_ANORMAL` **solo para los activos con benchmark**, y pasa a bloquear por muestra insuficiente. Con 3 acciones y ~356 eventos verificados, el mínimo declarado de 30 se supera; el condicionado de 50 probablemente no. Cripto seguirá bloqueado, por el §8.
+Efecto sobre lo ya construido: `suficiencia_de_muestra()` deja de bloquear por `SIN_RETORNO_ANORMAL` **solo para los activos con benchmark**, y pasa a bloquear por muestra insuficiente. Con 3 acciones y ~356 eventos verificados, el mínimo declarado de 30 se supera; el condicionado de 50 probablemente no.
+
+Cripto seguirá sin retorno anormal — pero **la suficiencia tendrá que dejar de ser una única puerta** (§17): bloquear la agregación de retornos anormales es correcto; bloquear también la de `raw_return` o `volume_change` no lo es. La regla pasa a ser por familia de retorno, no por observación.
 
 ## 13. Impacto sobre Power BI
 
@@ -209,7 +215,7 @@ La formulación del criterio de salida es correcta en lo esencial. **Dos modific
 
 **(b) `DimBenchmark` no es una población homogénea.** Contiene índices (no negociables, nivel publicado, sin splits) y ETF (negociables, con comisión, tracking error y splits). Necesita `composition_source` para distinguirlos, y **`CONSTRUCTED` debe declararse y ser rechazado por el validador** — exactamente el patrón de **D-10** con `ESTIMATED`: se nombra para que el día que alguien lo intente salte, en vez de aparecer sin que nadie lo note.
 
-Formulación propuesta:
+Formulación propuesta *(sustituida en §22 tras la revisión 2)*:
 
 > **`DimAsset` representa instrumentos analizados. `DimBenchmark` representa referencias metodológicas versionadas, distinguiendo si su serie es un nivel publicado o el NAV de un instrumento negociable, y rechazando las construidas por el propio sistema. La asignación activo→referencia es una relación de Knowledge con rol y vigencia, no una tabla nueva, y por tanto ningún motor puede escribirla. Un `(activo, rol, periodo)` admite exactamente una asignación. La ausencia de benchmark se propaga como `UNAVAILABLE` y no se sustituye por otra referencia, ni en silencio ni ascendiendo un `PEER`.**
 
@@ -254,12 +260,188 @@ La observación es correcta y ya tiene tres instancias en el código, no dos:
 
 ---
 
-## Qué falta saber antes de cerrar D-21
+## Qué faltaba saber antes de cerrar D-21 — respondido en la revisión 2
 
-Tres cosas que esta auditoría **no** puede responder sola:
+Las tres preguntas abiertas de la revisión 1 las resolvió el usuario el mismo día. Quedan registradas con su respuesta en §18, §19 y §20.
 
-1. **¿Se acepta que cripto quede sin retorno anormal?** Es el 60% del contrato y la consecuencia directa del §8. Con la alternativa siendo un índice casero sesgado, la respuesta recomendada es sí — pero es una decisión del usuario, no técnica.
-2. **¿ETF sectorial, o ningún benchmark sectorial en v1?** Un ETF introduce comisión, tracking error y splits en algo que se usa como referencia limpia. La alternativa es tener solo `MARKET` en v1, que es más pobre y más honesto.
-3. **¿`^GSPC` o `^IXIC`/`^NDX` como `MARKET` de las acciones?** Los tres cubren el periodo. La decisión debe tomarse por criterio declarado y **antes** de mirar ningún resultado (§11), o el sesgo de selección entra por ahí.
+---
 
-**Alto.** Según lo acordado, la implementación de D-21 no empieza hasta que esta ontología esté validada.
+# Revisión 2 — cierre
+
+## 17. Benchmark ≠ Reaction Analysis
+
+La distinción que cierra la auditoría, y corrige una consecuencia excesiva de la revisión 1: **la ausencia de benchmark formal limita qué medidas pueden llamarse retorno anormal, no si el evento puede analizarse.**
+
+En la revisión 1 escribí que *"el Historical Reaction Profile nacerá cubriendo solo acciones"*. Con esta distinción eso es demasiado fuerte: lo que nace cubriendo solo acciones es el **retorno anormal**, no el análisis histórico de reacciones.
+
+### Las cinco familias de retorno
+
+| Familia | Requiere | ¿Es `abnormal_return`? |
+|---|---|---|
+| `RAW_RETURN` | nada | No |
+| `MARKET_ADJUSTED_RETURN` | benchmark formal, rol `MARKET` | **Sí** |
+| `SECTOR_ADJUSTED_RETURN` | benchmark formal, rol `SECTOR` | **Sí** |
+| `ASSET_CLASS_ADJUSTED_RETURN` | benchmark formal, rol `ASSET_CLASS` | **Sí** |
+| `PEER_RELATIVE_RETURN` | *comparison reference* declarada | **No, nunca** |
+
+**Regla**: `abnormal_return` solo existe cuando hay un benchmark formal válido **y temporalmente compatible**. Las otras familias no dependen de eso.
+
+### Qué significa "temporalmente compatible", en concreto
+
+Tres condiciones, todas verificables, ninguna opinable:
+
+1. **Vigencia**: `benchmark.valid_from ≤ evento.first_tradable_at ≤ benchmark.valid_to`. Ejemplo real: XLK no existe antes de 1998-12-22, así que los 6.968 días previos de IBM/XOM no admiten ajuste sectorial por esa vía.
+2. **Observación**: el benchmark tiene valor en la sesión de reacción **y** en la anterior. Sin las dos no hay retorno del benchmark que restar.
+3. **Calendario**: el activo y el benchmark comparten calendario de sesiones. **Medido**: el 28,5% de las sesiones de BTC y de ETH caen en fin de semana (1.184 de 4.150 y 966 de 3.390), y IBM tiene **cero**. Un índice bursátil no puede ser benchmark de un cripto ni aunque alguien quisiera: en más de una de cada cuatro observaciones no habría nada contra qué ajustar. No es una objeción conceptual, es mecánica.
+
+### Lo que ya es computable hoy sin ningún benchmark
+
+Verificado sobre el contrato, los 9 activos con serie de precio:
+
+| Métrica | Cripto | Acciones |
+|---|---|---|
+| `precio` | 6 activos · 15.194 filas | 3 · 35.530 |
+| `volumen` | 6 · 15.182 | 3 · 35.527 |
+| `volatilidad_hist_30d_anualizada_pct` | 6 · 14.948 | 3 · 34.381 |
+| `atr14` / `atr14_pct_precio` | 6 · 15.076 | 3 · 34.981 |
+
+`volume_change`, `volatility_change` y `raw_return` **son computables hoy para cripto**, sin fuente nueva y sin benchmark. La afirmación de la revisión 1 de que cripto quedaba fuera del análisis era una consecuencia de no haber separado las dos cosas.
+
+### `cross_asset_reaction`: representable, sin poblar
+
+`CAMPOS_EVENTO` ya tiene `primary_entity` **y `other_entities`**. Verificado sobre los 43 eventos reales de XRP: el campo existe en todos y está poblado en **cero** — porque la única consulta de noticias hecha hasta hoy filtraba por un solo ticker, no porque el modelo no lo admita.
+
+Un evento regulatorio como el episodio `ep:2026:clarity-act-senado` es exactamente el caso: afecta a XRP y discutiblemente a toda la clase. La reacción cruzada es representable con lo que hay.
+
+### Dos matices que conviene fijar antes de implementar
+
+**`PEER_RELATIVE_RETURN` no es simétrico.** ETH respecto a BTC y BTC respecto a ETH son números distintos con signo opuesto. La *dirección* forma parte de la asignación: `sujeto` y `objeto` no son intercambiables. La relación de Knowledge ya lo impone, porque `subject` y `object` son campos distintos.
+
+**`ASSET_CLASS_ADJUSTED_RETURN` nombra un rol que hoy no tiene población, y su definición no está fijada.** Para una acción estadounidense, `MARKET` (mercado estadounidense) y `ASSET_CLASS` (renta variable como clase) son cosas distintas — la segunda sería algo tipo MSCI World, que no está en el sistema. Para cripto, ambas coincidirían. Mantener el nombre en el vocabulario de retornos es correcto; **poblar el rol sin haber fijado antes cuál de las dos lecturas es, reintroduciría el error de token compartido** que D-13 evitó. Queda declarado y sin poblar.
+
+## 18. Crypto — decisión del usuario y evidencia registrada
+
+**Aceptado**: determinados periodos de cripto quedan sin benchmark formal, y eso **no** excluye a cripto del análisis histórico de eventos. Para eventos regulatorios, políticos o macro se podrá analizar reacción del activo, reacción cruzada y reacción relativa a un *peer* declarado — sin que ninguna de las tres se llame retorno anormal.
+
+El ejemplo del usuario, con la etiqueta correcta:
+
+```
+BTC  −10%
+ETH  −14%
+ETH relativo a BTC = −4 pp     →  PEER_RELATIVE_RETURN
+                               →  NO es ABNORMAL_RETURN
+```
+
+**Prohibiciones confirmadas y ya razonadas en §8**: no construir un índice cripto casero con los holdings actuales; no usar BTC como benchmark de BTC; no seleccionar *peers* después de ver los resultados.
+
+### CoinDesk 20 — registrado como evidencia, no introducido
+
+Existen índices cripto externos reales. Verificado (búsqueda del 2026-09-07):
+
+| | |
+|---|---|
+| Lanzamiento | **2024-01-12** |
+| Fecha base | **2022-10-04** |
+| Constituyentes | 20, del top 250 por capitalización; excluye estables, memecoins, tokens de privacidad, envueltos, en staking y de gas |
+| Ponderación | capitalización con tope (30% el mayor, 20% el resto) |
+| Mantenimiento | reconstitución y rebalanceo **trimestral** |
+
+**Cobertura real sobre el histórico del contrato**, medida:
+
+| Referencia | Sesiones cripto cubiertas |
+|---|---|
+| Desde la fecha base (2022-10-04) | 8.310 de 15.194 — **54,7%** |
+| Desde el lanzamiento (2024-01-12) | 5.802 de 15.194 — **38,2%** |
+
+Por activo, desde la fecha base: BTC 34,5% · ETH 42,2% · XRP 62,4% · ADA 71,7% · SOL 75,1% · DOT 75,1%.
+
+**El hallazgo que más pesa para el futuro**: entre la fecha base y el lanzamiento hay **15 meses** (16,5 puntos porcentuales de cobertura) que son historia **retrocalculada**, no publicada en vivo. Un tramo retrocalculado se computó sabiendo lo que pasó después, así que su semántica temporal **no es la misma** que la del tramo publicado en tiempo real. Para un event study eso importa: no es un detalle de licencia, es la misma familia de problema que P6.2a acaba de corregir en el contrato.
+
+**No se introduce.** Su incorporación futura queda condicionada a los cinco criterios que fijó el usuario, con lo que ya se sabe de cada uno:
+
+| Criterio | Estado |
+|---|---|
+| Disponibilidad histórica real | Base 2022-10-04 → cubre el 54,7%; **no resuelve el histórico completo** |
+| Licencia / acceso | **Sin verificar.** No se ha comprobado si la serie diaria es descargable sin contrato |
+| Semántica temporal | **Problema identificado**: 15 meses retrocalculados frente a publicados en vivo |
+| Compatibilidad con el contrato | Calendario 24/7 compatible con cripto (a diferencia de un índice bursátil) |
+| Estabilidad de metodología | Reconstitución trimestral: exige `methodology_version`, ya previsto en §10 |
+
+## 19. Equity — hipótesis de v1 congelada
+
+**Congelado por el usuario**: `MARKET` de renta variable = **`^GSPC` (S&P 500)**.
+
+`^IXIC` y `^NDX` **no** son benchmark metodológico primario; quedan como *comparison reference*.
+
+**Justificación ex ante, escrita antes de calcular ningún retorno anormal** — que es la condición que la hace válida (§11):
+
+| Índice | Qué mide | Papel en v1 |
+|---|---|---|
+| `^GSPC` | referencia general del mercado estadounidense | **benchmark `MARKET`** |
+| `^IXIC` | exposición Nasdaq | comparison reference |
+| `^NDX` | grandes no financieras del Nasdaq, sesgado a *growth* | comparison reference |
+
+Los tres cubren el periodo (^GSPC desde 1970-01-02, ^IXIC desde 1971-02-05, ^NDX desde 1985-10-01), así que la elección **no** puede justificarse por cobertura: se justifica por lo que cada uno representa. Que quede escrito ahora, con la fecha del commit, es lo que impide que dentro de seis meses se cambie el benchmark porque el retorno anormal saliera más interesante con otro.
+
+## 20. Sector — comparison reference en v1
+
+**Congelado por el usuario**: **no** se introduce ETF sectorial en v1.
+
+```
+MARKET  = S&P 500              benchmark formal
+SECTOR  = comparison reference  hasta que exista fuente sectorial histórica defendible
+```
+
+Coherente con el §7: los constituyentes propios no dan para un benchmark sectorial (2 acciones en tecnología, 1 en energía), y un ETF introduce comisión, *tracking error* y splits en algo que se usa como referencia limpia. `SECTOR_ADJUSTED_RETURN` queda en el vocabulario **sin poder calcularse en v1** — y eso es correcto: el nombre describe lo que sería, no promete que exista.
+
+## 21. La ontología de cuatro piezas, evaluada
+
+Evaluación de `Asset` · `Benchmark` · `ComparisonReference` · `BenchmarkAssignment`:
+
+| Pieza | ¿Necesita entidad nueva? | Evidencia |
+|---|---|---|
+| **Asset** | No. Ya es `DimAsset` + `security` en Knowledge | §1 |
+| **Benchmark** | **Sí.** Ningún tipo actual sirve: un índice no es un `security` ("instrumento negociable") y no tiene `sector`, `industry` ni `exchange` | §2, §13 |
+| **ComparisonReference** | **No como entidad.** Es un **rol de la asignación**, no una clase de objeto: el mismo BTC es *comparison reference* de ETH y no es benchmark de nadie | §3 |
+| **BenchmarkAssignment** | **No como tabla.** La relación de Knowledge ya la representa entera | §5 |
+
+**Confirmado que la relación de Knowledge basta**, y sin romper D-04 ni D-09:
+
+```
+subject        el activo                              ya existe
+object         el benchmark o la referencia           ya existe
+valid_from     desde cuándo rige la asignación        ya existe · D-09 lo gobierna
+valid_to       hasta cuándo                            ya existe
+source_id      quién la acredita                      ya existe
+nature         STRUCTURAL / ASSERTED                   ya existe · INFERRED prohibido
+status         VERIFIED / PROVISIONAL                  ya existe
+last_verified  cuándo se comprobó                      ya existe
+```
+
+Lo único que falta es **vocabulario**, no estructura: un tipo de entidad (`benchmark`), una o dos entradas en `PREDICADOS` con sus pares (sujeto, objeto) legales, y el rol. `PREDICADOS` es justo el mecanismo que hoy impide *"un mercado emitido por un material"*, y ahí impediría *"una acción con benchmark en un sector"*.
+
+**Que `ComparisonReference` sea un rol y no una clase tiene una consecuencia práctica que conviene ver**: si fuera una clase, BTC tendría que existir dos veces —como `security` y como `comparison_reference`— y habría que mantener las dos sincronizadas. Como rol de la asignación, BTC es un `security`, y lo que cambia es el predicado con el que se le apunta.
+
+## 22. D-21 — formulación de cierre
+
+Sustituye a la propuesta en §14. Recoge la formulación del usuario con las dos modificaciones de la revisión 1 (asignación en Knowledge; `CONSTRUCTED` declarado y rechazado) y la distinción de la revisión 2:
+
+> **`DimAsset` representa instrumentos analizados; las referencias de mercado no se convierten en activos por conveniencia.**
+>
+> **Los benchmarks formales son referencias metodológicas versionadas y temporalmente válidas**, distinguiendo si su serie es un nivel publicado o el NAV de un instrumento negociable, y **rechazando las construidas por el propio sistema** (mismo patrón que D-10 con `ESTIMATED`: el token se declara para que salte, no para usarlo).
+>
+> **Las *comparison references* sirven para contextualizar la reacción sin conferirles semántica de benchmark**: son un rol de la asignación, no una clase de objeto, y ninguna asciende a benchmark porque falte el bueno.
+>
+> **La asignación activo→referencia es una relación de Knowledge** con rol y vigencia, no una tabla nueva; por tanto ningún motor puede escribirla (D-04) y su vigencia no se extrapola (D-09). Un `(activo, rol, periodo)` admite exactamente una asignación.
+>
+> **La ausencia de benchmark no elimina el análisis de reacción: limita qué medidas pueden denominarse *abnormal return*.** `raw_return`, `peer_relative_return`, `volume_change`, `volatility_change` y `cross_asset_reaction` siguen siendo computables con `benchmark = UNAVAILABLE`.
+
+**Hipótesis de v1 congeladas**: `MARKET` de renta variable = `^GSPC`; `^IXIC`/`^NDX` como *comparison reference*; sin ETF sectorial; `SECTOR` como *comparison reference*; cripto sin benchmark formal, con CoinDesk 20 registrado y no introducido.
+
+**Estado**: la ontología queda **suficientemente respaldada**. Lo que sigue abierto es la implementación, que no empieza en esta iteración.
+
+## 23. Qué NO se ha implementado (revisión 2)
+
+Lo mismo que en §16, y además: ninguna familia de retorno, ningún rol, ningún tipo de entidad, ningún predicado, ninguna serie de índice descargada, ningún campo nuevo en la observación de reacción. Cero ficheros de código modificados en las dos revisiones de esta auditoría.
+
+**Alto.**

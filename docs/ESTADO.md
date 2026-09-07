@@ -177,16 +177,26 @@ La decisión pendiente es de dónde sale la historia de fundamentales de accione
 
 Eso **no resuelve** la decisión —`EARNINGS` da EPS y sorpresa, no `roe_pct` ni los márgenes, que vienen de `COMPANY_OVERVIEW` y siguen siendo un snapshot— pero sí cambia el planteamiento: hay al menos una serie fundamental con 30 años de profundidad, point-in-time y sin coste, que hoy se está tirando. Las opciones del informe de líneas base deben reevaluarse con ese dato encima de la mesa.
 
-**Segunda decisión abierta, y hoy la que bloquea la cadena**: dónde vive el benchmark (**D-21**). Sin retorno anormal no hay agregación de reacciones, y sin ella no hay Historical Reaction Profile.
+**Segunda decisión: D-21, ontología de benchmark — CERRADA como ontología, pendiente de implementar.**
 
-Ontología auditada en `informes/2026-09-07_auditoria_ontologia_benchmark.md` (2026-09-07). Lo medido:
+Auditada en `informes/2026-09-07_auditoria_ontologia_benchmark.md` (dos revisiones, mismo día, **cero ficheros de código**). Lo que queda fijado:
 
-- **Índices dentro de `DimAsset` rompe cosas verificables**: `calendario(...,"index")` → `'crypto'` (24/7 para un índice que no cotiza fines de semana) y `esperadas(...,"index",...)` → `None`, con lo que `PARTIAL` deja de ser calculable.
-- **La asignación cabe en Knowledge** tal cual: `subject`/`object`/`valid_from`/`valid_to`/`source_id` ya son una `AssetBenchmarkAssignment`, y traen D-04 y D-09 sin escribir una línea. Eso hace estructural la defensa contra el *selection bias*.
-- **Cripto: `MARKET = UNAVAILABLE`.** CoinGecko `/global` da solo el valor actual y `/global/market_cap_chart` responde 401. Un índice con los 6 cripto del contrato sería sesgo de selección por construcción: son los holdings de `CARTERA_A`.
-- **Equity sí**: ^GSPC cubre 1970-01-02 → 2026-09-04, el mismo tramo y la misma fuente que IBM/XOM ya usan.
+> `DimAsset` representa instrumentos analizados; las referencias de mercado no se convierten en activos por conveniencia. Los benchmarks formales son referencias metodológicas versionadas y temporalmente válidas. Las *comparison references* contextualizan sin adquirir semántica de benchmark: son un **rol de la asignación**, no una clase. La asignación es una **relación de Knowledge**, no una tabla nueva. **La ausencia de benchmark no elimina el análisis de reacción: limita qué medidas pueden llamarse *abnormal return*.**
 
-**Tres preguntas pendientes del usuario** antes de implementar: (1) ¿se acepta que cripto quede sin retorno anormal, y por tanto que el primer Historical Reaction Profile cubra solo acciones? (2) ¿ETF sectorial o ningún benchmark sectorial en v1? (3) ¿`^GSPC`, `^IXIC` o `^NDX`, decidido antes de mirar resultados?
+| Hipótesis de v1 | Congelada |
+|---|---|
+| `MARKET` renta variable | `^GSPC` — justificado *ex ante*, no por cobertura |
+| `^IXIC` · `^NDX` | *comparison reference* |
+| `SECTOR` | *comparison reference*; sin ETF sectorial en v1 |
+| Cripto | sin benchmark formal; **análisis de reacción sí** |
+
+**Por qué índices dentro de `DimAsset` está descartado**, medido: `calendario(...,"index")` → `'crypto'` (24/7 para un índice que no cotiza fines de semana) y `esperadas(...,"index",...)` → `None`, con lo que `PARTIAL` deja de ser calculable.
+
+**Por qué cripto no tiene benchmark formal**, medido: CoinGecko `/global` da solo el valor actual y `/global/market_cap_chart` responde 401; un índice con los 6 cripto del contrato sería sesgo de selección por construcción (son los holdings de `CARTERA_A`); y el **28,5%** de las sesiones de BTC/ETH caen en fin de semana, donde ningún índice bursátil observa nada. CoinDesk 20 queda **registrado y no introducido**: base 2022-10-04 (54,7% de cobertura), lanzamiento 2024-01-12 (38,2%), con 15 meses de historia retrocalculada entre ambas.
+
+**Pero cripto NO queda fuera del análisis de eventos**: `raw_return`, `peer_relative_return`, `volume_change`, `volatility_change` y `cross_asset_reaction` son computables hoy — las métricas ya están en el contrato para los 9 activos con serie, y `other_entities` ya existe en `CAMPOS_EVENTO`.
+
+**Lo que falta para implementar** es vocabulario, no estructura: un tipo de entidad `benchmark` y sus entradas en `PREDICADOS`. **No empieza en esta iteración.**
 
 Roadmap acordado: `P6.2 Quantification unlocks` → `P7 Market Impact` → `P8 Mispricing` → `P9 Thesis` → `P10 Portfolio` → `P11 Outcome/Calibration`. Power BI y Web App consumirán una proyección del motor; no lo dictan.
 
