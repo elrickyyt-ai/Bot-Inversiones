@@ -1,5 +1,8 @@
 # Arquitectura de visualización y acceso — planificación (sin código)
 
+> **Estado (2026-09-07)**: **especificación de consumo, no contrato arquitectónico.** Escrito cuando el backend era `JSON → Data Contract → UI`. Sigue vigente en la división de funciones y en la regla de que Web App y Power BI son **consumidores, no la lógica analítica**. Han quedado obsoletos `data/*.json` y las métricas como único nivel analítico: el motor ha crecido con Knowledge, Evidence, Events, Causal Path, Assessment e Impact. Ver `docs/06-diseno-p61-materialidad.md` §7. **No se rediseña hasta que el modelo del motor esté consolidado.**
+
+
 **Fecha:** 2026-09-03 (revisión 2) · **Origen:** propuesta detallada aportada por el usuario (arquitectura híbrida Web App + Power BI), revisada, verificada y ajustada aquí antes de construir nada. No es una de las 10 fases originales de la Fase 0 — es una capa transversal nueva: cómo se **consulta** todo lo que los motores ya producen, sin depender de leer el repositorio de GitHub directamente.
 
 **Revisión 2 (misma fecha):** el usuario aportó una segunda revisión externa con tres correcciones — verificadas todas antes de aplicarlas: (1) Cloudflare recomienda ahora Workers en vez de Pages para proyectos nuevos, Pages en modo mantenimiento; (2) Alpha Vantage sí ofrece peticiones ilimitadas para proyectos open-source/educativos verificados, pero el proceso de verificación no está documentado públicamente — acción pendiente del usuario, no asumida; (3) un dato dentro del bundle de una Web App estática no es equivalente a un dato en backend, aunque el acceso a la página esté protegido por Cloudflare Access. Las tres se incorporan abajo.

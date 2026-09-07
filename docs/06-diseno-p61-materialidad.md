@@ -1,203 +1,251 @@
 # P6.1 · Materiality Model — diseño
 
-**Fecha**: 2026-09-07 · **Estado**: DISEÑO, sin código. Pendiente de revisión.
+**Fecha**: 2026-09-07 · **Revisión 2** · **Estado: CERRADO**, listo para implementar.
 **Pregunta única**: ¿qué significa *"qué parte de X está realmente expuesta a Y"*?
-**Restricción previa**: auditar si la respuesta cabe en `Evidence` **antes** de tocar el esquema de `Knowledge`.
 
 ---
 
-## 0. Resumen
+## 0. La corrección que cambia el diseño
 
-| Hallazgo | Consecuencia |
-|---|---|
-| **P6 v1 ya contiene la ambigüedad**: cuatro significados distintos comparten el nombre `materialidad` | hay que tipar antes de poblar nada |
-| **La tabla está mal claveada**: `MATERIALIDAD[relationship_id]` no puede expresar dirección | defecto real de P6 v1, registrado |
-| **La cifra existe en fuente primaria, pero anonimizada**: TSMC publica "mayor cliente 19%" sin nombrarlo | atribuirla a NVIDIA sería inferencia |
-| **Varía 25% → 22% → 19% en tres años** | es una **observación**, no una propiedad estructural → **Evidence, no Knowledge** |
-| Pero el contrato está claveado por **un solo** `asset_id` | falta una **contraparte**, no un `weight` en Knowledge |
-| Se puede acotar sin conocer | propongo un estado **`BOUNDED`**: información real sin atribución |
+La revisión 1 decía *"materialidad es propiedad de un par ordenado"*. Es demasiado fuerte, y por serlo me llevó a plantear un cambio en el contrato que resulta que **no hace falta**. La formulación correcta:
+
+> **La materialidad usada por una evaluación causal debe estar resuelta respecto al sujeto y, cuando corresponda, a su contraparte; la evidencia que la sustenta puede ser de entidad, de relación, o una cota derivada sobre un conjunto de contrapartes.**
+
+De ahí sale todo lo demás. En particular: **la materialidad no se almacena, se deriva.**
+
+### Lo que esto disuelve
+
+La revisión 1 terminaba con una pregunta abierta — *¿añadimos `counterparty` a `METRIC_FIELDS`?* — con el aviso de que eso tocaría el esquema que sostiene el cron y Power BI.
+
+**La pregunta desaparece.** Si la materialidad es derivada, la observación que la sustenta es **de entidad**:
+
+```
+asset_id   TSMC
+metric     largest_customer_revenue_share
+value      19        unit  %
+data_as_of 2025-12-31
+source     TSMC 20-F FY2025
+```
+
+Una sola entidad. **Cabe en el contrato tal cual, sin tocar `METRIC_FIELDS`.** La contraparte aparece únicamente en la derivación, que se calcula y no se guarda — igual que `data/coverage.json`, `data/requirements.json` y la propia Evidence.
 
 ---
 
-## 1. Primero, dos defectos de mi propio P6 v1
+## 1. Tres niveles, y solo el primero se almacena
 
-Antes de proponer nada, medí lo que ya escribí. Las dos cosas son mías, no heredadas.
-
-### 1.1 Cuatro significados ya comparten el nombre
+### A · Evidence — el hecho publicado
 
 ```
-CUSTOMER_DEMAND    % de los ingresos del proveedor que vienen de ese cliente
-INPUT_COST         peso del insumo en la base de coste
-PRICING_POWER      cuánto del negocio pasa por ese recurso
-SUPPLY_SHORTAGE    % del suministro afectado
+TSMC · largest_customer_revenue_share · 19% · 2025 · TSMC 20-F
 ```
 
-Los cuatro se llaman `materialidad` y los cuatro entran por el mismo hueco (`RM.materialidad(...)`). Es exactamente el `weight = 0.25` genérico contra el que avisas, solo que con un nombre en vez de un número. **Que el validador exija materialidad no sirve de nada si no exige *cuál*.**
+Es una observación fechada, con fuente, sobre **una** entidad. Va a Evidence (vía el contrato). **No toca Knowledge.**
 
-### 1.2 La tabla no puede expresar dirección
+### B · Materiality — la derivación auditable
 
-```python
-MATERIALIDAD[relationship_id] -> un solo valor
+```
+Evidence:   el mayor cliente de TSMC representó ≤19% de sus ingresos (2025)
+Knowledge:  TSMC SUPPLIES NVIDIA, vigente en 2025
+─────────────────────────────────────────────────────────────────────
+Materiality: TSMC ← NVIDIA
+             status      BOUNDED
+             upper_bound 19 %
+             basis       SUPPLIER_REVENUE_EXPOSURE
+             scope       POPULATION_BOUND
+             derivation  largest_customer_revenue_share
+             evidence_ids [...]
+             support     SUPPORTED
 ```
 
-Pero `rel:0046` es `org:tsmc SUPPLIES org:nvidia`, y sobre esa **única** relación hay al menos tres porcentajes distintos:
+**Esto ya no es el hecho publicado: es una derivación**, y por eso lleva su propia trazabilidad. No se guarda: se recalcula, como todo lo derivado del proyecto.
 
-| Porcentaje | Sujeto | Qué responde |
+### C · Economic Impact — el consumo
+
+```
+materiality BOUNDED ≤19%  →  magnitude BOUNDED, nunca POINT
+```
+
+Y nunca, bajo ninguna circunstancia:
+
+```
+19%  →  exposición asumida = 19%
+```
+
+---
+
+## 2. La derivación, y las dos condiciones que la hacen válida
+
+La cota se deduce sin inferir nada: si el mayor cliente de TSMC es el 19%, **cualquier** cliente concreto es ≤19%. Es deductivo, no probabilístico. Pero solo si se cumplen dos cosas.
+
+### 2.1 La relación tiene que existir en Knowledge
+
+Sin `TSMC SUPPLIES NVIDIA` no sabemos siquiera que NVIDIA está en esa población. Es exactamente el papel que le corresponde a Knowledge: **aporta la relación que permite aplicar la cota**, no la cota.
+
+### 2.2 La relación tiene que estar vigente en el periodo de la evidencia
+
+Esto no lo había visto en la revisión 1, y tiene una consecuencia concreta. El 20-F publica **tres** cifras:
+
+| Ejercicio | Mayor cliente | `rel:0046` vigente | ¿Aplicable a NVIDIA? |
+|---|---|---|---|
+| 2023 | 25% | no | **no** |
+| 2024 | 22% | no | **no** |
+| 2025 | **19%** | sí (desde 2025-01-27) | **sí** |
+
+`rel:0046` está atestiguada desde el 2025-01-27 porque eso es lo que el 10-K acredita —P5C decidió deliberadamente no extrapolar hacia atrás—, así que **las cotas de 2023 y 2024 no se pueden aplicar a NVIDIA**. No porque sean viejas, sino porque en esos años el sistema no sabe que NVIDIA fuera cliente de TSMC.
+
+> **Regla**: una cota poblacional solo se aplica a una contraparte si la relación que la incluye en la población está vigente en el periodo de la observación.
+
+Es la misma disciplina de no extrapolar `valid_from`, propagada un nivel hacia arriba.
+
+### 2.3 Y el alcance de la población limita a quién puede acotar
+
+Una cota observada sobre la entidad **S** solo acota contrapartes **C** para las que hay una relación S↔C atestiguada. De ahí que:
+
+```
+org:samsung SUPPLIES org:nvidia   +   TSMC: mayor cliente ≤19%
+        →  NADA sobre Samsung
+```
+
+Samsung no es contraparte de TSMC en Knowledge: es proveedor de NVIDIA. La cota no le alcanza, y el sistema tiene que decirlo en vez de callarse.
+
+---
+
+## 3. Los cuatro vocabularios, cerrados
+
+Auditados contra los 18 vocabularios cerrados del sistema.
+
+### `materiality_status`
+
+| Valor | Significa | Token |
 |---|---|---|
-| % de los ingresos de **TSMC** que vienen de NVIDIA | TSMC | si NVIDIA tose, ¿cuánto le importa a TSMC? |
-| % de las obleas de **NVIDIA** que fabrica TSMC | NVIDIA | si TSMC falla, ¿cuánto le importa a NVIDIA? |
-| % de la **capacidad** de TSMC comprometida con NVIDIA | TSMC | ¿queda margen para otros? |
+| `POINT` | valor puntual con fuente y atribución | libre |
+| `BOUNDED` | cota (o intervalo) con fuente, sin atribución puntual | libre |
+| `UNKNOWN` | podría conocerse, hoy no | compartido, mismo significado |
+| `NOT_APPLICABLE` | el mecanismo no la necesita | compartido, mismo significado |
 
-Una clave por relación solo puede guardar uno. **Materialidad es una propiedad de un par ordenado, no de una relación.**
+**`BOUND` y `BOUNDED` no pueden existir los dos.** En tu revisión aparecen ambos (`BOUND` en el objeto derivado, `BOUNDED` en el resto); me quedo con **`BOUNDED`**, que es el que ya estaba auditado y el que concuerda con `magnitude BOUNDED`.
 
----
+`POINT` y `BOUNDED` son epistemológicamente distintos y por eso son dos valores: `19%` y `≤19%` no son la misma afirmación.
 
-## 2. La medición decisiva: qué publican de verdad las fuentes
+### `materiality_scope`
 
-No teoricé sobre dónde guardarlo antes de comprobar si existe. Busqué en los dos *filings* que P5C ya tiene verificados.
+`ENTITY` · `RELATIONSHIP` · `POPULATION_BOUND` — los tres libres.
 
-### TSMC, 20-F FY2025 — lo publica, **anonimizado**
+Hoy **solo `POPULATION_BOUND` es alcanzable**: es el único tipo de evidencia que existe. `RELATIONSHIP` requeriría que alguien publicara el par explícito, que es justo lo que ninguna fuente hace.
 
-> *"Our largest customer in 2023, 2024 and 2025 accounted for **25%, 22% and 19%** of our net revenue in the respective year."*
-> *"Our second largest customer in 2023, 2024 and 2025 accounted for **11%, 12%, and 17%**..."*
-> *"our ten largest customers ... accounted for approximately **70%, 76% and 78%** of our net revenue."*
+### `materiality_basis` — cuatro de tus seis, y por qué no las otras dos
 
-**El número existe. La atribución no.** El 20-F no dice quién es ese cliente. Que "todo el mundo sepa" que los dos primeros son Apple y NVIDIA no es una fuente: escribir `19% → NVIDIA` sería exactamente la inferencia disfrazada de hecho que el proyecto lleva catorce fases impidiendo.
+Aplicando tu regla — *solo los que aparezcan en mecanismos existentes*:
 
-### NVIDIA, 10-K FY2026 — publica lo contrario de lo que hace falta
-
-> *"For fiscal year 2026, sales to one direct customer represented **22%** of total revenue and sales to another direct customer represented **14%**..."*
-
-Es la concentración de **sus clientes**, no de sus proveedores. No dice nada sobre su dependencia de TSMC.
-
-### Lo que **nadie** publica
-
-El porcentaje de obleas de NVIDIA fabricadas por TSMC. Ni el 10-K ni el 20-F lo dan. La deuda registrada en P5C sigue siendo real y **no se resuelve leyendo mejor**.
-
----
-
-## 3. La respuesta a tu pregunta: `Evidence`, y está medido
-
-No hace falta razonarlo en abstracto. La propia cifra lo dice:
-
-```
-mayor cliente de TSMC:   2023 → 25%     2024 → 22%     2025 → 19%
-```
-
-**Seis puntos de variación en tres años.** Una propiedad estructural estable no se mueve así. Es una **observación fechada**, con fuente y con periodo — que es la definición exacta de Evidence en este proyecto.
-
-Y hay una segunda prueba, cualitativa: si fuera `Knowledge`, cada publicación anual del 20-F obligaría a editar a mano una relación estructural. `Knowledge` se mantiene a mano *porque su historial de cambios es información*; un número que cambia cada año por el mero paso del tiempo no es eso.
-
-> **Veredicto: no hay que tocar el esquema de P2.** `TSMC SUPPLIES NVIDIA` sigue siendo la relación estructural; el porcentaje es una observación sobre ella.
-
-### Pero hay un problema, y no es donde se esperaba
-
-`Evidence` es una **vista derivada y regenerable** del Data Contract — no es un sitio donde escribir a mano. Y el contrato está claveado así:
-
-```python
-METRIC_REQUIRED = {"asset_id", "asset_type", "domain", "metric",
-                   "data_as_of", "retrieved_at", "source", "source_priority"}
-```
-
-**Un solo `asset_id`.** Una fila de materialidad necesita dos entidades: el sujeto y la contraparte. Ese, y no el esquema de Knowledge, es el cambio mínimo real:
-
-```
-     hoy   (asset_id, domain, metric, value, unit, data_as_of, source)
-    haría  (asset_id, counterparty, materiality_type, value, unit, ...)
-             falta ──┘            └── falta
-```
-
-Es un cambio **acotado y en la capa correcta**: el contrato ya sabe de observaciones fechadas con fuente; solo no sabe de pares.
-
----
-
-## 4. `BOUNDED` — el hallazgo que creo más útil
-
-Que no podamos atribuir el 19% a NVIDIA **no significa que no sepamos nada**. Del 20-F se deduce, sin inferir nada:
-
-```
-la exposición de TSMC a CUALQUIER cliente individual es ≤ 19% (2025)
-y la de sus diez mayores juntos, 78%
-```
-
-Eso está publicado, fechado y es citable. Y es **suficiente para acotar un impacto** aunque nunca lleguemos a conocerlo:
-
-> *el efecto sobre los ingresos de TSMC es, como mucho, el 19% de lo que le pase a un cliente*
-
-Propongo por tanto un cuarto estado para la pieza:
-
-| estado | significa |
-|---|---|
-| `KNOWN` | valor puntual con fuente y atribución |
-| **`BOUNDED`** | **cota superior (o intervalo) con fuente, sin atribución** |
-| `UNKNOWN` | podría conocerse, hoy no |
-| `NOT_APPLICABLE` | el mecanismo no la necesita |
-
-Y la consecuencia en P6, que me parece lo más valioso de esta fase:
-
-> **una materialidad `BOUNDED` produce una magnitud `BOUNDED`, nunca puntual.**
-
-El sistema podría decir *"como mucho X"* sin decir nunca *"X"*. Sospecho que ése es el techo honesto de este proyecto durante bastante tiempo, y prefiero que sea un estado explícito a que se presente como una limitación temporal.
-
-**`BOUNDED` está libre**: auditado contra los 18 vocabularios cerrados del sistema (42 tokens), no colisiona con ninguno.
-
----
-
-## 5. La taxonomía: materialidad es una magnitud **tipada y dirigida**
-
-No un porcentaje. Cuatro cosas, siempre juntas:
-
-```
-(tipo, sujeto, contraparte, base)
-```
-
-De los seis candidatos que listaste, éstos son los que P6 pide de verdad hoy, uno por mecanismo:
-
-| `materiality_type` | Sujeto | Base | Lo pide | ¿Publicado? |
+| `basis` | Mecanismo | Sujeto | Base | ¿Publicado? |
 |---|---|---|---|---|
-| `revenue_share_from_counterparty` | proveedor | ingresos totales | `CUSTOMER_DEMAND` | **sí, anonimizado** (TSMC 19%) |
-| `input_share_of_cost` | quien usa | base de coste | `INPUT_COST` | no |
-| `supply_share_from_counterparty` | cliente | suministro total | `SUPPLY_SHORTAGE` | no |
-| `capacity_share_committed` | dueño del recurso | capacidad total | `PRICING_POWER` | no |
+| `SUPPLIER_REVENUE_EXPOSURE` | `CUSTOMER_DEMAND` | proveedor | sus ingresos | **sí, anonimizado** |
+| `COST_SHARE` | `INPUT_COST` | quien usa el insumo | su base de coste | no |
+| `VOLUME_SHARE` | `SUPPLY_SHORTAGE` | cliente | su suministro total | no |
+| `CAPACITY_SHARE` | `PRICING_POWER` | dueño del recurso | su capacidad total | no |
 
-Cuatro tipos, no un `weight`. Y `revenue_share_from_counterparty(TSMC ← NVIDIA)` es **una fila distinta** de `supply_share_from_counterparty(NVIDIA ← TSMC)`: mismo par, sentido opuesto, conclusiones opuestas.
+**`DEMAND_SHARE` no se introduce**: ningún mecanismo actual la pide.
 
-**Regla que propongo**: cada mecanismo declara **qué tipo** de materialidad necesita, y el validador rechaza una de otro tipo. Hoy `RM.materialidad()` aceptaría cualquiera.
+**`CUSTOMER_REVENUE_SHARE` tampoco, y esto merece un párrafo**: describe *la misma magnitud* que `SUPPLIER_REVENUE_EXPOSURE`, mirada desde el otro lado de la mesa. Tener las dos sería dos nombres para una idea — el error espejo que el proyecto acaba de reformular como invariante. Me quedo con `SUPPLIER_REVENUE_EXPOSURE` porque **nombra al sujeto**, que es justo lo que hay que resolver.
 
----
+### `materiality_basis_evidence`
 
-## 6. Lo que NO propongo
+Toda materialidad derivada tiene que poder responder a las cinco preguntas, y son campos, no prosa:
 
-- **No** añadir `weight` a Knowledge. La medición dice que no es estructural.
-- **No** tocar el esquema de P2 en absoluto.
-- **No** atribuir el 19% a NVIDIA por plausibilidad, ni con una nota, ni con `support_level: BAJO`. Una atribución sin fuente no mejora por venir etiquetada.
-- **No** tocar P5B por lo de CoWoS. Coincido contigo: `INPUT_COST` y `CAPACITY_CONSTRAINT` responden a preguntas económicas distintas, y una relación `USES` no debe implicar automáticamente ninguna de las dos. Que P5D/P6 descubran qué evidencia pediría de verdad `CAPACITY_CONSTRAINT`, como pasó con `capacity_utilization(tech:cowos)`.
-- **No** implementar nada de esto todavía.
-
----
-
-## 7. Alcance propuesto para P6.1, si lo apruebas
-
-Pequeño, y en este orden:
-
-1. **Tipar** `materiality_type` (4 valores) y hacer que cada mecanismo declare cuál necesita. Cierra el defecto 1.1.
-2. **Reclavear** la materialidad por `(tipo, sujeto, contraparte)` en vez de por relación. Cierra el defecto 1.2.
-3. **`BOUNDED`** como estado de pieza, con la regla `materialidad BOUNDED ⇒ magnitud BOUNDED`.
-4. **Una sola fila real**: la exposición de TSMC a su mayor cliente, `BOUNDED` a 19%, citando el 20-F — **sin atribuir a NVIDIA**, y comprobando que P6 la usa para acotar sin llegar a `KNOWN`.
-5. Decidir si esa fila vive en el contrato con `counterparty` o en una tabla declarada aparte.
-
-El punto 4 es el que de verdad valida la fase: demuestra que el sistema puede usar una cifra anonimizada para acotar, sin convertirla en una atribución.
+| Pregunta | Campo |
+|---|---|
+| ¿de dónde sale? | `evidence_ids` |
+| ¿sobre qué entidad? | `observed_on` |
+| ¿sobre qué fecha? | `observed_period` |
+| ¿qué relación permite aplicarla? | `applied_via` (el `relationship_id`) |
+| ¿punto o cota? | `status` |
 
 ---
 
-## 8. La pregunta que te devuelvo
+## 4. La cota trivial no se emite
 
-**¿Dónde vive la fila?** Tres opciones, y no tengo una preferencia clara:
+`UNKNOWN` no es `0%`, y tampoco es `BOUNDED ≤100%`. Un límite matemáticamente cierto pero vacío es peor que un `UNKNOWN` honesto, porque **parece información**.
 
-| Opción | A favor | En contra |
-|---|---|---|
-| **Contrato + `counterparty`** | el sitio semánticamente correcto; hereda cobertura, frescura y QA | toca `METRIC_FIELDS`, que hoy alimenta Power BI y el cron |
-| **Tabla declarada en `engine/impact/`** | cero riesgo para lo que ya funciona; es lo que ya hacen `cadencias.py` y `catalogo.py` | una observación fechada con fuente **no es** una declaración; sería la primera vez que el proyecto guarda un dato externo fuera del contrato |
-| **`knowledge/` como fuente, no como relación** | ya sabe de fuentes citables | Knowledge no guarda series, y esto va a cambiar cada año |
+> **Regla**: una cota solo se emite si es **estricta** — menor que el 100%, y procedente de una observación, nunca de un tope aritmético. Sin observación no hay `BOUNDED`; hay `UNKNOWN`.
 
-Mi instinto es la primera, precisamente porque `data_as_of` / `retrieved_at` / `source_priority` / cobertura / frescura ya existen y esta cifra los necesita todos. Pero es un cambio en el esquema que sostiene el cron y Power BI, y ésa es una decisión tuya, no mía.
+---
+
+## 5. Los fixtures que cierran la fase
+
+Los tres primeros son tuyos; el cuarto sale de la condición temporal.
+
+| # | Entrada | Debe producir | Y **no** debe producir |
+|---|---|---|---|
+| 1 | `largest_customer 19%` + `TSMC SUPPLIES NVIDIA` (2025) | `NVIDIA ≤ 19%`, `BOUNDED` | `NVIDIA = 19%` |
+| 2 | lo mismo + `Samsung SUPPLIES NVIDIA` | **nada sobre Samsung** | cualquier cota sobre Samsung |
+| 3 | materialidad `BOUNDED` en P6 | `magnitude BOUNDED` | `magnitude POINT`, ni `UNKNOWN` |
+| 4 | `largest_customer 25%` (2023) + `rel:0046` desde 2025 | **nada**: fuera de vigencia | aplicar el 25% a NVIDIA |
+
+El 2 y el 4 son los que de verdad prueban la fase: demuestran que el sistema sabe **hasta dónde llega** una cota poblacional, en el eje de las entidades y en el del tiempo.
+
+---
+
+## 6. Lo que NO hay que tocar
+
+- **`METRIC_FIELDS`**: la observación es de entidad y cabe tal cual. La revisión 1 se equivocaba.
+- **Knowledge (P2)**: ni `weight` ni `counterparty`. La cifra va 25% → 22% → 19% en tres años; no es estructural.
+- **P5B**: `INPUT_COST` y `CAPACITY_CONSTRAINT` responden a preguntas distintas y `USES` no implica ninguna. Que P5D/P6 descubran qué evidencia pediría de verdad.
+- **Power BI y Web App**: quedan desacoplados. Ver §7.
+- **La atribución del 19% a NVIDIA**: ni con nota, ni con `support_level: BAJO`. Una atribución sin fuente no mejora por venir etiquetada.
+
+---
+
+## 7. Power BI y Web App: especificación de consumo, no contrato arquitectónico
+
+`docs/03` y `docs/04` se escribieron cuando el mundo era `JSON → Data Contract → Power BI/Web App`. Siguen siendo válidos en lo que importa —la división de funciones, y sobre todo la regla de que **ambos son consumidores y no la lógica analítica**— pero ya no describen el backend.
+
+Lo que ha quedado obsoleto en ellos: `FactMetrics` como representación principal, `data/*.json`, las métricas como único nivel analítico, y los conteos de septiembre. **La regla de que el Data Contract precede a la UI sigue vigente; lo que cambió es qué representa hoy el Data Contract.**
+
+No se rediseñan ahora. Cuando llegue el momento, ambos consumirán una **proyección** del estado del motor, no al revés.
+
+---
+
+## 8. Alcance de implementación propuesto
+
+1. Cerrar los cuatro vocabularios (`esquema_materialidad.py`), con la regla de la cota trivial y `BOUNDED` en `ESTADOS_PIEZA` de P6.
+2. `resolver_materialidad(basis, sujeto, contraparte, as_of)` — deriva; no almacena. Comprueba vigencia y alcance de población.
+3. Cablear `RM.materialidad()` a esa derivación, tipada por mecanismo: cada mecanismo declara **qué `basis`** necesita y el validador rechaza otra.
+4. Reclavear por `(basis, sujeto, contraparte)` en vez de por `relationship_id`.
+5. Regla `materialidad BOUNDED ⇒ magnitud BOUNDED` en el validador de P6.
+6. Una fila real de Evidence: `TSMC · largest_customer_revenue_share · 19% · 2025`, citando el 20-F.
+7. Los cuatro fixtures de §5.
+
+---
+
+## 9. Roadmap acordado
+
+```
+P0 … P6      ✅
+P6.1  Materiality            ← esta fase
+P6.2  Quantification unlocks
+P7    Market Impact
+P8    Mispricing
+P9    Thesis integration
+P10   Portfolio
+P11   Outcome / Calibration
+──────────────────────────────
+CONSUMPTION  Power BI + Web App — se adaptan al modelo consolidado, no lo dictan
+```
+
+---
+
+## 10. Lo que P6.1 añade al desacoplamiento
+
+Con esta fase, `UNKNOWN` deja de ser binario:
+
+```
+direction    POSITIVE     (P5B)
+materiality  BOUNDED ≤19% (P6.1)
+magnitude    BOUNDED      (P6)
+```
+
+Mucho más informativo que `UNKNOWN`, y sin haber inventado una sola cifra puntual. La cadena de desacoplamiento queda:
+
+```
+CAUSE ≠ MECHANISM ≠ EVIDENCE ≠ MATERIALITY ≠ QUANTIFIABILITY ≠ MAGNITUDE ≠ MARKET IMPACT
+```

@@ -1,5 +1,8 @@
 # Modelo de datos para Power BI (Fases B-G, sin código de interfaz)
 
+> **Estado (2026-09-07)**: **especificación de consumo, no contrato arquitectónico.** El modelo estrella (`DimAsset`, `DimDate`, `FactMetrics`, `FactThesis`…) sigue siendo válido **para la capa de consumo que describe**, pero ya no es el modelo central del proyecto: `FactMetrics` no representa Knowledge, Evidence, Events, CausalPath, CausalAssessment ni EconomicImpact, y no hay que forzarlos dentro. Los conteos y ejemplos son del 2026-09-03. Ver `docs/06-diseno-p61-materialidad.md` §7. **Ningún motor se diseña pensando primero en `FactMetrics`.**
+
+
 **Fecha:** 2026-09-03 · **Precede a:** `docs/03-arquitectura-visualizacion-y-acceso.md` (arquitectura general) · **Basado en:** el diagnóstico real de `engine/contract/qa.py`, no en suposiciones — ver `informes/2026-09-03_data_qa_v1.md`.
 
 ## Hallazgo que condiciona todo lo demás — actualización 2026-09-03 (resuelto)

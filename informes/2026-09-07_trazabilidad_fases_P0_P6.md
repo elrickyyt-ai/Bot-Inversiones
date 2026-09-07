@@ -240,6 +240,25 @@ Reglas que han aparecido más de una vez y que conviene no volver a romper:
 
 ---
 
+## Roadmap acordado (2026-09-07)
+
+```
+P0 · P1 · P1b · P2 · P3 · P4 · P5A · P5B · P5C · P5D · P6      ✅ cerradas
+P6.1  Materiality              ← diseño CERRADO (docs/06), sin implementar
+P6.2  Quantification unlocks
+P7    Market Impact
+P8    Mispricing
+P9    Thesis integration
+P10   Portfolio
+P11   Outcome / Calibration
+────────────────────────────────────────────────────────────────
+CONSUMPTION   Power BI + Web App
+```
+
+**Power BI y la Web App quedan desacoplados del motor.** `docs/03` y `docs/04` pasan a ser **especificación de consumo, no contrato arquitectónico**: siguen siendo válidos en la división de funciones y en la regla de que ambos son consumidores, pero `FactMetrics` ya no representa el sistema y ningún motor se diseña pensando primero en él. Cuando llegue el momento, ambos consumirán una **proyección** del estado del motor.
+
+---
+
 ## Deudas registradas y no corregidas
 
 | Deuda | Dónde está registrada | Por qué no se corrigió |
@@ -254,7 +273,8 @@ Reglas que han aparecido más de una vez y que conviene no volver a romper:
 | `rel:0046` no documenta la **materialidad** de la relación de suministro | informe de P5C | El 10-K no dice qué fracción de wafers fabrica TSMC. Toda medida de impacto que lo necesite tendrá que decir que no lo sabe |
 | `demand(org:nvidia)` sale `FRESH` con un dato de hace 5 semanas | informe de P5D | Correcto por cadencia (trimestral), pero la frescura dice que el dato está al día para su cadencia, no que sirva para el mecanismo. P6 debe mirarlo dos veces |
 | Las 5 variables de mecanismo no tienen `concept_id` | `catalogo.CONCEPTO_DE_VARIABLE` + test | Ausencia medida, no hueco: declarar un concepto vacío sería peor que no declararlo |
-| `MATERIALIDAD`, `COEFICIENTES` y `LINEAS_BASE` vacías | `requisitos_magnitud.py` + test | Decisión de P6 v1, no olvido. Poblar `MATERIALIDAD` exigiría un campo de peso en Knowledge: cambio de esquema de P2 con su propia decisión |
+| `MATERIALIDAD`, `COEFICIENTES` y `LINEAS_BASE` vacías | `requisitos_magnitud.py` + test | Decisión de P6 v1, no olvido. **Resuelto en el diseño de P6.1**: la materialidad se **deriva**, no se almacena; la evidencia es de entidad y cabe en el contrato sin tocar `METRIC_FIELDS` ni Knowledge |
+| Cuatro significados comparten el nombre `materialidad` en P6 | `requisitos_magnitud.py::ENTRADAS` | Medido al diseñar P6.1. Se cierra tipando `materiality_basis` (4 valores) y reclaveando por `(basis, sujeto, contraparte)` |
 | `tech:cowos` se evalúa como insumo de coste, no como restricción de capacidad | informe de P6 | P5B enruta ese impulso por R5 y no por la vía de capacidad. Coherente con P5B, no tocado; el ángulo de capacidad es el económicamente interesante |
 
 ---
