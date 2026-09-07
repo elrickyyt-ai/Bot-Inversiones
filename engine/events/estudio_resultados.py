@@ -109,6 +109,23 @@ def leer_eventos(path):
     return eventos
 
 
+def series_del_activo(asset_id):
+    """{metrica: {fecha: valor}} para las metricas que el perfil necesita.
+
+    Una sola lectura del contrato para las tres: volver a resolver las
+    capas por cada metrica multiplicaria por tres el coste sin ganar nada.
+    """
+    asset_type = storage.asset_type_of(asset_id)
+    if asset_type is None:
+        raise EstudioError(f"{asset_id} no esta en DimAsset")
+    quiero = {"precio", "volumen", "volatilidad_hist_30d_anualizada_pct"}
+    out = {m: {} for m in quiero}
+    for r in storage.resolve(storage.all_layers(asset_type, asset_id)):
+        if r["domain"] == "tecnico" and r["metric"] in quiero:
+            out[r["metric"]][r["data_as_of"].isoformat()] = r["value"]
+    return out
+
+
 def serie_de_precios(asset_id):
     """(fechas ordenadas, {fecha: precio}) desde el Data Contract resuelto.
 
@@ -177,8 +194,37 @@ def _benchmark_id(entidad):
     return entidad["entity_id"].split(":", 1)[1].upper()
 
 
-def observar(evento, fechas, px, benchmark=None):
-    """Una ObservacionDeReaccion. Nunca inventa: cada ausencia lleva su razon."""
+def _sesiones_del_horizonte(fechas, s0, s1, horizonte):
+    """(desde, hasta) del horizonte, o (None, None, motivo) si la serie no
+    llega. Nunca se acorta la ventana para que quepa: un horizonte de 60
+    sesiones medido sobre 12 no es ese horizonte."""
+    origen, adelante = HORIZONTES[horizonte]
+    desde = s0 if origen == "previa" else s1
+    i1 = fechas.index(s1)
+    if i1 + adelante >= len(fechas):
+        return None, None, SIN_SESIONES_SUFICIENTES
+    return desde, fechas[i1 + adelante], None
+
+
+def _variacion(serie, desde, hasta):
+    """(hasta/desde - 1) en %, o (None, motivo) si falta alguna de las dos
+    observaciones. No se sustituye por la sesion mas cercana."""
+    if desde not in serie or hasta not in serie:
+        return None, SIN_SERIE_DE_LA_MEDIDA
+    v0 = serie[desde]
+    if not v0:
+        return None, SIN_SERIE_DE_LA_MEDIDA
+    return round((serie[hasta] - v0) / v0 * 100, 2), None
+
+
+def observar(evento, fechas, px, benchmark=None, series=None):
+    """Una ObservacionDeReaccion. Nunca inventa: cada ausencia lleva su razon.
+
+    `medidas` lleva una entrada por (measure_type, horizonte) con su valor
+    o su motivo. Los campos planos `raw_return_1s_pct`,
+    `market_adjusted_return_pct` y compania son la entrada de 0_1d, que se
+    conserva porque es la interfaz que el Event Study MVP ya publicaba.
+    """
     obs = dict(evento)
     obs["available_at"] = evento["published_at"]  # dia, no instante
     t1, razon = first_tradable_at(fechas, evento["published_at"], evento["report_time"])
@@ -186,20 +232,24 @@ def observar(evento, fechas, px, benchmark=None):
     obs["raw_return_1s_pct"] = None
     obs["sesion_previa"] = None
     obs["razon_sin_reaccion"] = razon
+    obs["medidas"] = {}
+    obs["motivos"] = {}
+    # Sesiones que ocupa la ventana de cada horizonte. Las necesita el
+    # perfil para no usar, en un analisis fechado en as_of, una ventana que
+    # TERMINA despues de as_of -- eso seria look-ahead aunque el evento si
+    # fuese conocible.
+    obs["ventanas"] = {}
 
+    s0 = None
     if t1 is not None:
         i = fechas.index(t1)
         if i == 0:
             obs["razon_sin_reaccion"] = SIN_PRECIO_ANTERIOR
         else:
-            t0 = fechas[i - 1]
-            obs["sesion_previa"] = t0
-            obs["raw_return_1s_pct"] = round((px[t1] - px[t0]) / px[t0] * 100, 2)
+            s0 = fechas[i - 1]
+            obs["sesion_previa"] = s0
+            obs["raw_return_1s_pct"] = round((px[t1] - px[s0]) / px[s0] * 100, 2)
 
-    # Retorno anormal. Un retorno bruto NO es un retorno anormal, y
-    # llamarlos igual seria el mismo error de token compartido que el
-    # proyecto ya se prohibio: por eso viajan en campos distintos y el
-    # ajustado lleva siempre la identidad del benchmark que lo produjo.
     obs["market_adjusted_return_pct"] = None
     obs["benchmark_return_1s_pct"] = None
     obs["benchmark_id"] = None
@@ -207,25 +257,69 @@ def observar(evento, fechas, px, benchmark=None):
     obs["metodo_ajuste"] = None
     obs["razon_sin_ajuste"] = SIN_BENCHMARK
 
-    if benchmark is not None and obs["raw_return_1s_pct"] is not None:
-        asig, entidad, bfechas, bpx, calendario = benchmark
-        ok, motivo = benchmark_elegible(t1, calendario, asig, entidad)
-        if not ok:
-            obs["razon_sin_ajuste"] = motivo
-        elif obs["sesion_previa"] not in bpx or t1 not in bpx:
-            # El benchmark tiene que observar EXACTAMENTE las dos mismas
-            # sesiones. Si le falta una, no hay nada que restar y no se
-            # sustituye por la sesion mas cercana.
-            obs["razon_sin_ajuste"] = SIN_OBSERVACION_BENCHMARK
+    if s0 is None:
+        return obs
+
+    series = series or {"precio": px}
+    bench_ok, bench_motivo, bpx, entidad = False, SIN_BENCHMARK, None, None
+    if benchmark is not None:
+        asig, entidad, _bf, bpx, calendario = benchmark
+        bench_ok, bench_motivo = benchmark_elegible(t1, calendario, asig, entidad)
+        if not bench_ok:
+            bench_motivo = bench_motivo or SIN_BENCHMARK
+
+    for h in HORIZONTES:
+        desde, hasta, motivo = _sesiones_del_horizonte(fechas, s0, t1, h)
+        obs["ventanas"][h] = (desde, hasta)
+        if motivo:
+            for m in ("RAW_RETURN", "ABNORMAL_RETURN", "VOLUME_CHANGE", "VOLATILITY_CHANGE"):
+                obs["motivos"][(m, h)] = motivo
+            obs["motivos"][("PEER_RELATIVE_RETURN", h)] = SIN_REFERENCIA
+            continue
+
+        raw, mot = _variacion(series["precio"], desde, hasta)
+        obs["medidas"][("RAW_RETURN", h)] = raw
+        if mot:
+            obs["motivos"][("RAW_RETURN", h)] = mot
+
+        # ABNORMAL: mismas dos sesiones, benchmark declarado, y siempre con
+        # la identidad de quien lo produjo.
+        if not bench_ok:
+            obs["motivos"][("ABNORMAL_RETURN", h)] = bench_motivo
         else:
-            b0, b1 = bpx[obs["sesion_previa"]], bpx[t1]
-            bret = (b1 - b0) / b0 * 100
-            obs["benchmark_return_1s_pct"] = round(bret, 2)
-            obs["market_adjusted_return_pct"] = round(obs["raw_return_1s_pct"] - bret, 2)
-            obs["benchmark_id"] = entidad["entity_id"]
-            obs["benchmark_methodology_version"] = entidad["benchmark"]["methodology_version"]
-            obs["metodo_ajuste"] = DIFERENCIA_SIMPLE
-            obs["razon_sin_ajuste"] = None
+            bret, mot_b = _variacion(bpx, desde, hasta)
+            if mot_b:
+                obs["motivos"][("ABNORMAL_RETURN", h)] = SIN_OBSERVACION_BENCHMARK
+            elif raw is None:
+                obs["motivos"][("ABNORMAL_RETURN", h)] = mot
+            else:
+                obs["medidas"][("ABNORMAL_RETURN", h)] = round(raw - bret, 2)
+                if h == "0_1d":
+                    obs["benchmark_return_1s_pct"] = bret
+                    obs["market_adjusted_return_pct"] = round(raw - bret, 2)
+                    obs["benchmark_id"] = entidad["entity_id"]
+                    obs["benchmark_methodology_version"] = entidad["benchmark"]["methodology_version"]
+                    obs["metodo_ajuste"] = DIFERENCIA_SIMPLE
+                    obs["razon_sin_ajuste"] = None
+
+        for medida, metrica in (("VOLUME_CHANGE", "volumen"),
+                                ("VOLATILITY_CHANGE", "volatilidad_hist_30d_anualizada_pct")):
+            if metrica not in series:
+                obs["motivos"][(medida, h)] = SIN_SERIE_DE_LA_MEDIDA
+                continue
+            valor, mot_m = _variacion(series[metrica], desde, hasta)
+            if mot_m:
+                obs["motivos"][(medida, h)] = mot_m
+            else:
+                obs["medidas"][(medida, h)] = valor
+
+        # PEER_RELATIVE: no hay ninguna comparison reference declarada.
+        obs["motivos"][("PEER_RELATIVE_RETURN", h)] = SIN_REFERENCIA
+
+    if obs["razon_sin_ajuste"] is None:
+        pass
+    elif bench_motivo:
+        obs["razon_sin_ajuste"] = bench_motivo
     return obs
 
 
@@ -270,11 +364,20 @@ def _benchmark_para(asset_id, k=None):
 
 
 def estudiar(asset_id, path_eventos, ventana_sesiones=20, con_benchmark=True):
-    fechas, px = serie_de_precios(asset_id)
+    series = series_del_activo(asset_id)
+    px = series["precio"]
+    fechas = sorted(px)
     eventos = leer_eventos(path_eventos)
     benchmark = _benchmark_para(asset_id) if con_benchmark else None
-    obs = [observar(e, fechas, px, benchmark) for e in eventos]
-    return marcar_solapamientos(obs, ventana_sesiones, fechas)
+    obs = [observar(e, fechas, px, benchmark, series) for e in eventos]
+    marcar_solapamientos(obs, ventana_sesiones, fechas)
+    # Solapamiento POR HORIZONTE: una ventana de 60 sesiones alcanza al
+    # trimestre siguiente y una de 1 no. Un solo booleano no sirve.
+    for h, ventana in VENTANA_SESIONES.items():
+        marcados = marcar_solapamientos([dict(o) for o in obs], ventana, fechas)
+        for o, m in zip(obs, marcados):
+            o.setdefault("solapa_por_horizonte", {})[h] = m["solapa_con"]
+    return obs
 
 
 # --------------------------------------------------------------------------
@@ -334,6 +437,35 @@ SIN_OBSERVACION_BENCHMARK = "BENCHMARK_SIN_OBSERVACION_EN_ESAS_SESIONES"
 DIFERENCIA_SIMPLE = "DIFERENCIA_SIMPLE"
 
 CALENDARIO_POR_TIPO = {"equity": "equity", "crypto": "crypto"}
+
+# --- Horizontes (D-26) -----------------------------------------------------
+# Todos se cuentan en SESIONES REALES de la serie del activo, nunca en dias
+# naturales: el proyecto ya rechazo esa aproximacion al construir
+# trading_calendar.py. `s0` es la sesion previa al evento y `s1` la primera
+# NEGOCIABLE (que depende de reportTime, no del dia del anuncio).
+#
+#   0_1d    s0 -> s1        la reaccion inmediata: lo que el MVP ya media
+#   2_5d    s1 -> s1+4      deriva posterior, dias +2..+5 en notacion de evento
+#   2_20d   s1 -> s1+19
+#   2_60d   s1 -> s1+59
+#
+# Los tres ultimos arrancan en s1 y no en s0 a proposito: si arrancasen en
+# s0 incluirian la reaccion inmediata y no serian deriva, serian la misma
+# medida con mas ruido.
+HORIZONTES = {
+    "0_1d":  ("previa", 0),
+    "2_5d":  ("primera", 4),
+    "2_20d": ("primera", 19),
+    "2_60d": ("primera", 59),
+}
+
+# Sesiones que ocupa la ventana de cada horizonte, para detectar
+# solapamiento con el evento siguiente.
+VENTANA_SESIONES = {"0_1d": 1, "2_5d": 5, "2_20d": 20, "2_60d": 60}
+
+SIN_SESIONES_SUFICIENTES = "SERIE_SIN_SESIONES_SUFICIENTES_PARA_EL_HORIZONTE"
+SIN_SERIE_DE_LA_MEDIDA = "SIN_SERIE_PARA_ESA_MEDIDA_EN_ESAS_SESIONES"
+SIN_REFERENCIA = "SIN_COMPARABLE_DECLARADO"
 
 
 def _entre(fecha, desde, hasta):

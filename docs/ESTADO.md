@@ -104,13 +104,15 @@ Estos invariantes no son preferencias de estilo: cada uno nació de un fallo rea
 | **Una referencia de mercado no es un instrumento analizado** | meter índices en `DimAsset` rompe `calendario()` y `esperadas()` de forma medible (D-21) |
 | **La ausencia de benchmark limita qué medidas, no si hay análisis** | `RAW_RETURN` es elegible con n=52 mientras `ABNORMAL_RETURN` no lo es, sobre las mismas observaciones (D-22) |
 | **Una relación de medida no es un mecanismo económico** | el S&P 500 como referencia de NVIDIA no la conecta con las demás del índice (D-23) |
+| **La validez temporal es también de la ventana** | un evento conocible cuya ventana termina después de `as_of` sigue siendo look-ahead (D-26) |
+| **Un perfil nunca desaparece: devuelve por qué no puede construirse** | 10 de 20 perfiles no son `VALID` y los 10 dicen su motivo |
 | **Un test que se apoya en que algo NO existe caduca** cuando ese algo se documenta | cinco tests reescritos en P5C |
 
 ---
 
 ## 5. Estado actual, medido
 
-**Suite**: 547 tests · OK — **QA**: `STATUS: VERIFIED` — **Knowledge**: PASS (25 entidades · 48 relaciones · 10 fuentes)
+**Suite**: 581 tests · OK — **QA**: `STATUS: VERIFIED` — **Knowledge**: PASS (25 entidades · 48 relaciones · 10 fuentes)
 
 ```bash
 python3 -m unittest discover -s tests
@@ -198,9 +200,30 @@ Eso **no resuelve** la decisión —`EARNINGS` da EPS y sorpresa, no `roe_pct` n
 | `PEER_RELATIVE_RETURN` | sin asignación declarada |
 | Cripto | sin benchmark formal — y **sin excluir del análisis** |
 
-**La siguiente decisión ya no es de ontología ni de datos: es el `HistoricalReactionProfile`**, que nacerá con dos ramas —`market-adjusted` para acciones, `raw / peer-relative / volume / volatility` para cripto— y cada perfil con su `measure_type`, `benchmark_id`, `benchmark_version` y `eligibility_status`. Un perfil que no puede calcularse debe decir por qué (`INELIGIBLE / NO_VALID_BENCHMARK`), no desaparecer.
+**Tercera pieza: `HistoricalReactionProfile v1` — CONSTRUIDO** (`informes/2026-09-07_historical_reaction_profile_v1.md`). Descriptivo, no predictivo: ninguna señal, ningún score, ningún `reaction_gap`.
 
-**Antes de sacar conclusiones de los ~356 eventos disponibles** hay que medir `n`, `n_effective` y la distribución. Los 52 de hoy validan la cadena, no describen ningún patrón.
+De los **20 perfiles** de la rejilla `event_class × measure_type × horizon`: **10 `VALID` y 10 con su motivo**. Que la mitad no sea válida es el resultado correcto.
+
+| Medida | 0_1d | 2_5d | 2_20d | 2_60d |
+|---|---|---|---|---|
+| `RAW_RETURN` | VALID n=52 | VALID n=52 | VALID n=51 | VALID n=46 |
+| `ABNORMAL_RETURN` | VALID n=52 | VALID n=52 | VALID n=51 | VALID n=46 |
+| `PEER_RELATIVE_RETURN` | — sin comparable declarado (×4) | | | |
+| `VOLUME` / `VOLATILITY` | VALID | — medida de nivel sin ventana base (D-27) | | |
+
+**Lo más informativo**, y es descriptivo: a 60 sesiones la mediana **bruta** es +2,25% con `prob+` 0,65, y la **anormal** −0,88% con `prob+` 0,46. Descontar el mercado cambia por completo la lectura de la deriva larga. **No se afirma que la clase prediga nada**: la mediana anormal es ~0 en los cuatro horizontes y el IQR es entre 7 y 15 veces mayor que ella.
+
+**Look-ahead encontrado y corregido en la propia implementación** (D-26): un evento conocible en `as_of` cuya ventana termina después sigue siendo look-ahead. Reproducibilidad histórica verificada — `as_of` 2020-01-01 → n=18, 2010-01-01 → n=5, 1990-01-01 → `PIT_INVALID`.
+
+**Limitación que hay que leer con los números**: `n_activos = 3` y **no existe `n_effective`** — 52 observaciones de 3 acciones del mismo mercado no son 52 unidades independientes de información.
+
+**Lo siguiente**, por orden de lo que desbloquea:
+
+1. **Ventana base para medidas de nivel** (D-27) — decisión metodológica, desbloquea 6 perfiles.
+2. **`n_effective`** — sin él, `n` sobreestima la evidencia.
+3. **Ampliar la cohorte** a los ~356 eventos reales (ingesta manual de `EARNINGS`), que también haría representativa la tasa de solape.
+4. Después: cripto (`RAW / PEER_RELATIVE / VOLUME / VOLATILITY`, sin benchmark formal) y macro (una sorpresa → varios activos), cada uno con estructura propia.
+5. Solo entonces: régimen y `reaction_gap`.
 
 Roadmap acordado: `P6.2 Quantification unlocks` → `P7 Market Impact` → `P8 Mispricing` → `P9 Thesis` → `P10 Portfolio` → `P11 Outcome/Calibration`. Power BI y Web App consumirán una proyección del motor; no lo dictan.
 

@@ -11,12 +11,12 @@ No sustituye a los README de cada módulo (que explican *por qué* está hecho a
 ## Verificación completa en tres comandos
 
 ```bash
-python3 -m unittest discover -s tests           # 547 tests, debe dar OK
+python3 -m unittest discover -s tests           # 581 tests, debe dar OK
 python3 engine/contract/qa.py --require-parquet # debe dar STATUS: VERIFIED
 git status --short data/ knowledge/             # debe salir vacío
 ```
 
-Si los tres pasan, las veintiuna fases están sanas. Si falla alguno, la tabla de abajo dice qué fase mirar.
+Si los tres pasan, las veintidós fases están sanas. Si falla alguno, la tabla de abajo dice qué fase mirar.
 
 ---
 
@@ -43,6 +43,7 @@ Si los tres pasan, las veintiuna fases están sanas. Si falla alguno, la tabla d
 | **P6.2d** | `f30ffc5` | Episodios declarados sobre P4 | `python3 -m unittest tests.test_episodios` |
 | **D-21** | `2ee412a` | Ontología de benchmark y elegibilidad por familia | `python3 -m unittest tests.test_benchmark_ontologia` |
 | **D-21 (datos)** | `22ef8aa` | `bm:sp500` declarado y consumido por el event study | `python3 -m unittest tests.test_benchmark_sp500` |
+| **HRP v1** | *(este commit)* | Perfiles históricos descriptivos, 20 celdas con estado | `python3 engine/events/perfil_reaccion.py` |
 
 ---
 
@@ -314,6 +315,9 @@ CONSUMPTION   Power BI + Web App
 | La metodología de S&P DJI no es citable | `src:yahoo-gspc` (nota) | `spglobal.com` responde 403, misma situación que D-07. `point_in_time_capable` se afirma sobre comprobación propia; hash de la serie registrado para detectar una reformulación |
 | `data/benchmarks/` fuera de `qa.py` | D-24 | Tiene validación propia y un test sobre la serie real, pero no entra en el `STATUS: VERIFIED` global |
 | El cron no actualiza el benchmark | `fetch_benchmark.py` | Se ejecuta a mano. Si la serie se queda atrás, la observación sale `SIN_OBSERVACION_BENCHMARK` — visible, no silencioso |
+| Sin ventana base para medidas de nivel | D-27 · `perfil_reaccion.MEDIDAS_DE_NIVEL` | Bloquea 6 de los 20 perfiles. Es una decisión metodológica, no un problema de datos |
+| No existe `n_effective` | informe de HRP v1 §11 | 52 observaciones de 3 acciones del mismo mercado no son 52 unidades independientes de información. Los `n` reportados son de eventos |
+| La cohorte son 52 de ~356 eventos reales | fixtures de `eventos_resultados/` | Subconjunto disperso: la tasa de solape medida (11,5% a 2_60d) no es representativa de la serie completa |
 | `ASSET_CLASS` declarado y rechazado | `modelo.ROLES_NO_ACTIVOS` | Su definición no está cerrada: para una acción `MARKET` y `ASSET_CLASS` difieren, para un cripto coinciden. Reactivarlo cuesta una línea |
 
 ---

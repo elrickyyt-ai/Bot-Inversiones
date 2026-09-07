@@ -216,3 +216,24 @@ La justificación de `^GSPC` es **ex ante y por lo que cada índice representa**
 - **Se descartó**: (a) un ETF como SPY, que metería comisión, *tracking error*, distribuciones y acciones corporativas propias dentro del benchmark metodológico; (b) reconstruir el índice desde sus constituyentes, que es `CONSTRUCTED` y el validador lo rechaza.
 - **Límite registrado**: la metodología de S&P Dow Jones Indices **no es citable** desde este entorno (403, misma situación que D-07). `point_in_time_capable = true` se afirma sobre la comprobación propia y no sobre una declaración del proveedor; queda el hash de la serie registrado para detectar una reformulación futura. `methodology_version = "yahoo-^GSPC-close-1d/v1"` describe cómo consume la serie **este sistema**, no la versión de S&P.
 
+## D-26 · La validez temporal es también de la ventana, no solo del dato
+
+**Vigente** (HistoricalReactionProfile v1, 2026-09-07).
+- **Evidencia**: la primera versión del perfil filtraba por `available_at <= as_of` y nada más. Eso deja pasar un evento **conocible** en `as_of` cuya ventana de 60 sesiones **termina después** de `as_of`. Un perfil fechado en 2020-01-25 no puede saber cómo acabó una ventana que aún no había terminado.
+- **Decisión vigente**: la sesión final del horizonte también tiene que ser `<= as_of`, con motivo de exclusión propio. Es la misma familia de error que P6.2a corrigió en el contrato, ahora en la dimensión del horizonte.
+- **Consecuencia**: `n` depende del horizonte incluso con el mismo `as_of`, y eso es correcto — un horizonte largo tiene menos historia utilizable que uno corto.
+
+## D-27 · Una medida de nivel no puede usar la sesión del evento como base
+
+**Vigente** (HistoricalReactionProfile v1, 2026-09-07).
+- **Evidencia medida**: acumular `VOLUME_CHANGE` desde `s1` da mediana **−43,5%** a 2_5d con `prob_positive` **0,08**. No mide volumen anormal: mide la vuelta a la normalidad **después del pico**, porque `s1` *es* la sesión del evento. Publicado tal cual, se leería al revés.
+- **Decisión vigente**: `VOLUME_CHANGE` y `VOLATILITY_CHANGE` solo se publican en `0_1d` (sesión del evento frente a la anterior, base limpia). En los horizontes de deriva devuelven `INSUFFICIENT_COMPARABILITY` con su motivo.
+- **Se descartó**: publicarlas con una advertencia. Un número correcto con una lectura natural equivocada es peor que una ausencia explicada.
+- **Lo que desbloquearía**: declarar una **ventana base anterior al evento** para medidas de nivel. Es una decisión metodológica, no un problema de datos, y afecta a 6 de los 10 perfiles no válidos.
+
+## D-28 · Un episodio no aplica a un evento programado
+
+**Vigente** (HistoricalReactionProfile v1, 2026-09-07).
+- **Evidencia**: el episodio es una construcción de la capa de noticias — varios documentos sobre el mismo hecho (D-19). Una publicación de resultados no procede de documentos agrupables.
+- **Decisión vigente**: `n_episodes` y `n_independent_episodes` valen **`NOT_APPLICABLE`**, no `0` ni `UNKNOWN`. Ningún dato adicional le daría un `episode_id`, y el proyecto ya distingue las dos cosas desde P6: *"`NOT_APPLICABLE` no mejora con más datos; `UNKNOWN` sí"*.
+- **Se descartó**: contar cada evento como su propio episodio, que inflaría artificialmente la independencia a nivel de episodio y haría indistinguible una cohorte de resultados de una cohorte de noticias.
