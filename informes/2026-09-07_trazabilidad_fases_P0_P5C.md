@@ -1,6 +1,6 @@
-# Trazabilidad de las fases P0 → P5B
+# Trazabilidad de las fases P0 → P5C
 
-**Fecha**: 2026-09-07 · **Rama**: `claude/bot-inversiones-audit-peh0x2` · **Último commit**: `0c4003f`
+**Fecha**: 2026-09-07 · **Rama**: `claude/bot-inversiones-audit-peh0x2` · **Último commit**: `3c820e8` + P5C
 
 Este informe existe para una situación concreta: **que una fase falle en el futuro y haya que recuperar su estado**. Da, por cada fase, el commit exacto, los ficheros que la componen, los tests que la cubren, el comando que la verifica por separado y qué se rompe si cae.
 
@@ -11,12 +11,12 @@ No sustituye a los README de cada módulo (que explican *por qué* está hecho a
 ## Verificación completa en tres comandos
 
 ```bash
-python3 -m unittest discover -s tests           # 329 tests, debe dar OK
+python3 -m unittest discover -s tests           # 354 tests, debe dar OK
 python3 engine/contract/qa.py --require-parquet # debe dar STATUS: VERIFIED
 git status --short data/ knowledge/             # debe salir vacío
 ```
 
-Si los tres pasan, las once fases están sanas. Si falla alguno, la tabla de abajo dice qué fase mirar.
+Si los tres pasan, las doce fases están sanas. Si falla alguno, la tabla de abajo dice qué fase mirar.
 
 ---
 
@@ -33,6 +33,7 @@ Si los tres pasan, las once fases están sanas. Si falla alguno, la tabla de aba
 | **P4** | `a9ba0c6` | Event & Claim Layer v1 | `python3 engine/events/consolidar.py --noticias` |
 | **P5A** | `b214082` | Causal Path / traversal | `python3 engine/causal/caminos.py sec:NVDA.NASDAQ` |
 | **P5B** | `0c4003f` | Mecanismo y dirección económica | `python3 engine/causal/valoracion.py sec:NVDA.NASDAQ` |
+| **P5C** | (este commit) | Primera cadena económica real, con fuentes externas | `python3 -m unittest tests.test_cadena_suministro` |
 
 ---
 
@@ -152,7 +153,26 @@ Data Contract (migración)
     ├─→ P3  Evidence              (lee el contrato + P2 para entidades)
     │        └─→ P4  Event        (lee Evidence)
     └─→ P2  Knowledge  ───────────┴─→ P5A Path  ─→ P5B Assessment
+        └─ P5C amplía SUS DATOS (no su código): fuentes externas
 ```
+
+### P5C · Economic Knowledge Seed v2 — cadena `NVIDIA → TSMC → CoWoS`
+
+**Ficheros**: `knowledge/relationships/cadena_suministro.json` (nuevo) · `knowledge/entities/{organizations,technologies}.json` · `knowledge/sources/sources.json` · `knowledge/pendiente/nvidia_cadena.json` · `tests/test_cadena_suministro.py` (nuevo)
+
+**Qué añade**: `rel:0046` (`org:tsmc SUPPLIES org:nvidia`), `rel:0047` (`org:nvidia USES tech:cowos`) y `rel:0048` (`org:tsmc USES tech:cowos`), más las entidades `org:tsmc` y `tech:cowos` y las **dos primeras fuentes externas del proyecto**: el 10-K FY2026 de NVIDIA y el 20-F FY2025 de TSMC, ambos en EDGAR.
+
+**Por qué importa**: hasta aquí, las 45 relaciones de Knowledge procedían del propio repositorio (`INTERNAL_RULE`, `DATA_PROVIDER`, `OWN_ANALYSIS`) — evidencia de lo que el software hace, no del mundo. P5C es la primera vez que el sistema afirma algo sobre el mundo citando un documento que cualquiera puede reabrir.
+
+**Ningún módulo del motor se tocó.** P5A recorre la cadena y P5B la valora con el código que ya tenían.
+
+**Efecto observable**: primer camino `VERIFIED` + `COMPLETE` hasta una entidad no financiera (`rel:0005>rel:0046>rel:0048`), y `requires_evidence` deja de estar vacío: `demand(org:nvidia)` y `capacity_utilization(tech:cowos)`.
+
+**Si falla**: no rompe ninguna capa inferior — Knowledge se lee, no se escribe desde ningún motor. `python3 engine/knowledge/consulta.py --validar` localiza el problema; borrar `knowledge/relationships/cadena_suministro.json` devuelve el sistema al estado de P5B.
+
+**Informe**: `informes/2026-09-07_p5c_cadena_economica_real.md`.
+
+---
 
 **La dirección es única**: cada capa lee la anterior y **ninguna escribe hacia atrás**. Está comprobado por hash dentro de la propia suite en P3, P4, P5A y P5B.
 
@@ -167,7 +187,8 @@ Reglas que han aparecido más de una vez y que conviene no volver a romper:
 3. **Dos ejes, no un enum.** Cobertura y frescura (P1b), validez y completitud (P5A).
 4. **La fecha del bloque es la del componente más antiguo**, nunca la del más reciente.
 5. **Nombres de módulo únicos en `engine/`** salvo `score.py` y `fetch_data.py`, que se repiten a propósito. Guardia en `tests/test_events.py`.
-6. **Un test no debe inspeccionar la prosa.** Dos veces escribí tests que buscaban palabras en comentarios y encontraban justo la documentación que explica que esa cosa no existe. Se comprueban esquemas y comportamiento.
+6. **Un test que se apoya en que algo NO existe caduca cuando ese algo se documenta**, y eso es lo correcto. En P5C hubo que reescribir cinco tests de P2/P5A/P5B que afirmaban ausencias hoy superadas. La forma de escribirlos es separar la ausencia medida ("ninguno llega") de la propiedad permanente ("lo que llega, llega por conocimiento con fuente").
+7. **Un test no debe inspeccionar la prosa.** Dos veces escribí tests que buscaban palabras en comentarios y encontraban justo la documentación que explica que esa cosa no existe. Se comprueban esquemas y comportamiento.
 
 ---
 
@@ -180,7 +201,9 @@ Reglas que han aparecido más de una vez y que conviene no volver a romper:
 | `CLAUDE.md` describe `data/metrics/*.json`, que ya no existe | acordado dejarlo | Documentación desfasada, sin impacto funcional |
 | `consolidate.py` huérfano | — | No lo consume nadie |
 | `confluencia_sesgo` emite dos vocabularios distintos para cripto y acciones | P0 | Excluido de la migración a propósito |
-| Seed B de NVIDIA sin fuente | `knowledge/pendiente/nvidia_cadena.json` | Entrará por el procedimiento de alta de P2, no antes |
+| Seed B de NVIDIA: HBM y sustrato ABF | `knowledge/pendiente/nvidia_cadena.json` | **Buscados en P5C** en los dos filings primarios: cero menciones. Siguen sin fuente |
+| Samsung, SK Hynix y Micron como proveedores de NVIDIA | `knowledge/pendiente/nvidia_cadena.json::_candidatas_documentadas_pendientes_de_alta` | **Ya tienen fuente verificada** (misma frase del 10-K que `rel:0046`). Fuera del alcance acordado de P5C, promovibles en un paso |
+| `rel:0046` no documenta la **materialidad** de la relación de suministro | informe de P5C | El 10-K no dice qué fracción de wafers fabrica TSMC. Toda medida de impacto que lo necesite tendrá que decir que no lo sabe |
 
 ---
 

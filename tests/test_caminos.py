@@ -86,8 +86,14 @@ class TestUnoRecorridoReal(unittest.TestCase):
         self.assertIn("rel:", self._t1()[0]["path_id"])
 
     def test_una_entidad_no_declarada_no_se_crea(self):
+        # El ejemplo original era org:tsmc. Dejo de servir en P5C, cuando
+        # TSMC entro al Knowledge con su fuente: un test que se apoya en
+        # que algo NO existe caduca en cuanto ese algo se documenta, y eso
+        # es exactamente lo que tiene que pasar. Se sustituye por un
+        # identificador que no va a existir nunca.
         with self.assertRaises(caminos.PathError):
-            caminos.descubrir("ev4:x", "org:tsmc", self.k, HOY)
+            caminos.descubrir("ev4:x", "org:esta-organizacion-no-esta-declarada",
+                              self.k, HOY)
 
 
 class TestDosRelacionProvisional(unittest.TestCase):
@@ -152,23 +158,43 @@ class TestTresVigencia(unittest.TestCase):
 
 
 class TestCuatroCaminoIncompleto(unittest.TestCase):
-    """T4: NVDA hacia una entidad no financiera. Nunca se infiere el eslabón."""
+    """T4: NVDA hacia una entidad no financiera. Nunca se infiere el eslabón.
+
+    Escrito en P5A, cuando NINGÚN camino llegaba. En P5C llegan cuatro,
+    porque se dieron de alta org:tsmc y tech:cowos con sus filings. Lo
+    que se prueba aquí no cambia — no inventar eslabones, y decir dónde
+    se interrumpe el que no llega — pero se separa en dos poblaciones,
+    porque afirmar hoy "ninguno llega" sería falso y afirmarlo para
+    siempre habría convertido una ausencia medida en un dogma.
+    """
 
     @classmethod
     def setUpClass(cls):
         cls.k = _k()
         cls.cs = caminos.descubrir("ev4:t4", "sec:NVDA.NASDAQ", cls.k, HOY, max_depth=3,
                                    tipos_objetivo={"product", "technology", "material"})
+        cls.incompletos = [c for c in cls.cs if c["completeness"] == "PATH_INCOMPLETE"]
+        cls.completos = [c for c in cls.cs if c["completeness"] == "COMPLETE"]
 
-    def test_ningun_camino_llega(self):
-        self.assertTrue(self.cs)
-        self.assertEqual({c["completeness"] for c in self.cs}, {"PATH_INCOMPLETE"})
+    def test_la_mayoria_de_caminos_sigue_sin_llegar(self):
+        self.assertTrue(self.incompletos)
 
     def test_cada_camino_dice_donde_se_interrumpe(self):
-        for c in self.cs:
+        for c in self.incompletos:
             self.assertTrue(c["incomplete_at"])
             self.assertIn(c["incomplete_reason"], caminos.MOTIVOS_INCOMPLETO)
             self.assertTrue(any("camino incompleto en" in u for u in c["unknowns"]))
+
+    def test_el_que_llega_llega_por_conocimiento_documentado(self):
+        """No basta con que exista un camino completo: cada arista suya
+        tiene que resolver a una relación con fuente."""
+        self.assertTrue(self.completos)
+        por_id = {r["relationship_id"]: r for r in self.k["relationships"]}
+        fuentes = {s["source_id"] for s in self.k["sources"]}
+        for c in self.completos:
+            for a in c["edges"]:
+                r = por_id[a["relationship_id"]]
+                self.assertIn(r["source_id"], fuentes)
 
     def test_no_se_inventa_ninguna_relacion(self):
         por_id = {r["relationship_id"] for r in self.k["relationships"]}
@@ -176,12 +202,15 @@ class TestCuatroCaminoIncompleto(unittest.TestCase):
             for a in c["edges"]:
                 self.assertIn(a["relationship_id"], por_id)
 
-    def test_la_unica_entidad_no_financiera_solo_tiene_negaciones(self):
-        """Por eso no se alcanza: tech:defi-smart-contracts existe, pero
-        sus dos únicas relaciones son DENIES y una negación no se recorre."""
+    def test_una_entidad_solo_negada_sigue_sin_alcanzarse(self):
+        """tech:defi-smart-contracts existe, pero sus únicas relaciones
+        son DENIES y una negación no se recorre. Es el caso que P5C NO
+        cambia: documentar CoWoS no documenta esto."""
         rels = [r for r in self.k["relationships"] if r["object"] == "tech:defi-smart-contracts"]
         self.assertTrue(rels)
         self.assertEqual({r["polarity"] for r in rels}, {"DENIES"})
+        self.assertFalse(any(a["to"] == "tech:defi-smart-contracts"
+                             for c in self.cs for a in c["edges"]))
 
     def test_una_negacion_no_es_un_camino(self):
         cs = caminos.descubrir("ev4:t4b", "sec:BTC", self.k, HOY, max_depth=2)

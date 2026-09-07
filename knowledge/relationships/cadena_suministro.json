@@ -1,0 +1,50 @@
+[
+ {
+  "relationship_id": "rel:0046",
+  "subject": "org:tsmc",
+  "predicate": "SUPPLIES",
+  "object": "org:nvidia",
+  "polarity": "AFFIRMS",
+  "nature": "STRUCTURAL",
+  "status": "VERIFIED",
+  "support_level": "ALTO",
+  "source_id": "src:nvda-10k-fy2026",
+  "statement": "NVIDIA, Item 1 Business, epigrafe 'Manufacturing', literal: \"We utilize foundries, such as Taiwan Semiconductor Manufacturing Company Limited, or TSMC, and Samsung Electronics Co., Ltd., or Samsung, to produce our semiconductor wafers.\" El 'such as' es del original: la lista NO es exhaustiva, pero TSMC esta nombrada.",
+  "valid_from": "2025-01-27",
+  "valid_to": null,
+  "last_verified": "2026-09-07",
+  "verification_method": "descarga del 10-K desde EDGAR y lectura literal del parrafo citado. valid_from = primer dia del ejercicio que cubre el documento (el anterior cerro el 2025-01-26); la relacion es casi con seguridad muy anterior, pero ESTA fuente no lo acredita y no se extrapola."
+ },
+ {
+  "relationship_id": "rel:0047",
+  "subject": "org:nvidia",
+  "predicate": "USES",
+  "object": "tech:cowos",
+  "polarity": "AFFIRMS",
+  "nature": "STRUCTURAL",
+  "status": "VERIFIED",
+  "support_level": "ALTO",
+  "source_id": "src:nvda-10k-fy2026",
+  "statement": "NVIDIA, Item 1 Business, epigrafe 'Manufacturing', literal: \"We utilize CoWoS technology for semiconductor packaging.\" La frase no dice QUIEN ejecuta el encapsulado; eso lo acredita rel:0048, no esta.",
+  "valid_from": "2025-01-27",
+  "valid_to": null,
+  "last_verified": "2026-09-07",
+  "verification_method": "misma descarga y lectura literal que rel:0046. Relacion NO prevista en pendiente/: aparece porque la fuente la dice explicitamente, no porque se buscara."
+ },
+ {
+  "relationship_id": "rel:0048",
+  "subject": "org:tsmc",
+  "predicate": "USES",
+  "object": "tech:cowos",
+  "polarity": "AFFIRMS",
+  "nature": "STRUCTURAL",
+  "status": "VERIFIED",
+  "support_level": "ALTO",
+  "source_id": "src:tsmc-20f-fy2025",
+  "statement": "TSMC, Item 4.B Business Overview, plataforma HPC, literal: \"We also offer multiple TSMC 3DFabric advanced silicon stacking and packaging solutions, such as TSMC-SoIC manufacturing services and CoWoS advanced packaging services\". El mismo 20-F lista \"CoWoS\" entre las marcas registradas de TSMC.",
+  "valid_from": "2025-01-01",
+  "valid_to": null,
+  "last_verified": "2026-09-07",
+  "verification_method": "descarga del 20-F desde EDGAR y lectura literal. Se lee 'offer ... services' como USES (TSMC ejecuta el proceso), no como una venta de producto; la palabra exacta de la fuente queda en statement para que quien lea pueda discrepar. valid_from = primer dia del ejercicio cubierto."
+ }
+]

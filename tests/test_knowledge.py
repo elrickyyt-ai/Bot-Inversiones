@@ -257,17 +257,29 @@ class TestElBloqueBNoValidaAProposito(unittest.TestCase):
                 self.assertTrue(c.get("documento_a_citar"), c["subject"])
                 self.assertIn("tipo_de_fuente_esperado", c)
 
-    def test_no_hay_camino_desde_nvda_a_una_entidad_no_financiera(self):
-        """La consecuencia observable de que el bloque B no esté cargado:
-        el sistema demuestra que no conoce el mundo en vez de completarlo."""
+    def test_lo_que_queda_del_bloque_b_sigue_sin_alcanzarse(self):
+        """En P2 este test decía que NINGUNA entidad no financiera era
+        alcanzable desde NVDA. En P5C dejó de ser cierto, y con razón:
+        org:tsmc y tech:cowos entraron con sus filings y ahora hay camino
+        hasta CoWoS. Lo que sigue siendo cierto, y es lo que importa, es
+        que lo que NO se ha documentado no se alcanza: HBM y el sustrato
+        ABF siguen siendo candidatos y ninguna ruta llega a ellos."""
         k = modelo.cargar()
-        tipos = {e["entity_id"]: e["type"] for e in k["entities"]}
+        ids = {e["entity_id"] for e in k["entities"]}
+        sin_documentar = {c["object"] for c in modelo.cargar_pendiente() if c.get("predicate")}
+        self.assertTrue(sin_documentar)
+        self.assertEqual(sin_documentar & ids, set())
+        tocadas = {r["subject"] for r in k["relationships"]} | {r["object"] for r in k["relationships"]}
+        self.assertEqual(sin_documentar & tocadas, set())
+
+    def test_lo_alcanzable_desde_nvda_solo_llega_via_conocimiento_con_fuente(self):
+        tipos = {e["entity_id"]: e["type"] for e in modelo.cargar()["entities"]}
+        k = modelo.cargar()
+        fuentes = {s["source_id"] for s in k["sources"]}
         no_financieras = {e for e, t in tipos.items() if t in consulta.TIPOS_NO_FINANCIEROS}
-        alcanzables = set()
         for r in k["relationships"]:
-            if r["polarity"] == "AFFIRMS" and r["subject"] == "sec:NVDA.NASDAQ":
-                alcanzables.add(r["object"])
-        self.assertEqual(alcanzables & no_financieras, set())
+            if r["polarity"] == "AFFIRMS" and r["object"] in no_financieras:
+                self.assertIn(r["source_id"], fuentes, r["relationship_id"])
 
 
 if __name__ == "__main__":

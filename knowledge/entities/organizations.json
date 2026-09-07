@@ -44,5 +44,22 @@
   "asset_id": null,
   "aliases": [],
   "source_id": "src:dimasset-crypto"
+ },
+ {
+  "entity_id": "org:tsmc",
+  "type": "organization",
+  "nombre": "Taiwan Semiconductor Manufacturing Company Limited",
+  "status": "ACTIVE",
+  "asset_id": null,
+  "aliases": [
+   {
+    "scheme": "sec_cik",
+    "value": "0001046179",
+    "valid_from": "1997-10-08",
+    "valid_to": null
+   }
+  ],
+  "source_id": "src:tsmc-20f-fy2025",
+  "nota": "Primera organizacion del grafo que NO es ni un activo de la watchlist ni un proveedor de datos de este sistema: entra porque una fuente externa la nombra, no porque el codigo la mencione."
  }
 ]

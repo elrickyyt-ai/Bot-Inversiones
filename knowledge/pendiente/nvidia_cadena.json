@@ -1,48 +1,44 @@
 [
  {
-  "_nota": "BLOQUE B — CONOCIMIENTO CANDIDATO, NO VÁLIDO. Vive fuera de knowledge/ a propósito: modelo.cargar() no lo lee y el validador lo rechazaría por no tener source_id. No existe hoy ninguna fuente en este repositorio que justifique estas relaciones. Conocerlas el modelo que las escribe NO es una fuente. Cada entrada lleva el documento que hay que leer para promoverla a knowledge/relationships/.",
+  "_nota": "BLOQUE B — CONOCIMIENTO CANDIDATO, NO VÁLIDO. Vive fuera de knowledge/ a propósito: modelo.cargar() no lo lee y el validador lo rechazaría por no tener source_id. Conocer algo el modelo que lo escribe NO es una fuente. Cada entrada lleva el documento que hay que leer para promoverla a knowledge/relationships/.",
   "_procedimiento": "CANDIDATE -> búsqueda de fuente -> validación de la fuente -> creación de la relación con source_id -> validador -> VERIFIED",
-  "_entidades_que_habria_que_crear": ["org:tsmc", "prod:cowos", "prod:hbm", "mat:abf-substrate", "org:sk-hynix"]
+  "_entidades_que_habria_que_crear": [
+   "prod:hbm",
+   "mat:abf-substrate",
+   "org:samsung",
+   "org:sk-hynix",
+   "org:micron"
+  ],
+  "_promovidas_en_P5C_2026_09_07": [
+   "org:tsmc SUPPLIES org:nvidia -> rel:0046 (src:nvda-10k-fy2026)",
+   "org:tsmc USES tech:cowos -> rel:0048 (src:tsmc-20f-fy2025). Se tipó como tech:cowos, no prod:cowos; ver la nota de la entidad.",
+   "Además, sin estar prevista aquí: org:nvidia USES tech:cowos -> rel:0047, porque el 10-K la dice literalmente."
+  ],
+  "_hallazgo_2026_09_07": "La MISMA frase del 10-K que acredita rel:0046 nombra también a Samsung como fundición y a SK Hynix, Micron y Samsung como proveedores de memoria. Esas relaciones ya NO son candidatas sin fuente: tienen fuente primaria identificada y verificada. No se dan de alta aquí sólo porque el alcance acordado de P5C era la cadena NVIDIA -> TSMC -> CoWoS, no porque falte documentación. Son promovibles en un paso, sin buscar nada nuevo.",
+  "_candidatas_documentadas_pendientes_de_alta": [
+   {
+    "relacion": "org:samsung SUPPLIES org:nvidia",
+    "fuente": "src:nvda-10k-fy2026",
+    "literal": "We utilize foundries, such as ... TSMC, and Samsung Electronics Co., Ltd., or Samsung, to produce our semiconductor wafers.",
+    "por_que_importa": "es el único substituto documentado de TSMC como fundición; sin él, P5B no puede distinguir 'no se sabe si hay alternativa' de 'la hay'."
+   },
+   {
+    "relacion": "org:sk-hynix SUPPLIES org:nvidia",
+    "fuente": "src:nvda-10k-fy2026",
+    "literal": "We purchase memory from SK Hynix Inc., Micron Technology, Inc., and Samsung.",
+    "por_que_importa": "es la puerta de entrada documentada a la memoria; HBM sigue SIN fuente (ver abajo): el 10-K dice 'memory', no 'HBM'."
+   },
+   {
+    "relacion": "org:micron SUPPLIES org:nvidia",
+    "fuente": "src:nvda-10k-fy2026",
+    "literal": "We purchase memory from SK Hynix Inc., Micron Technology, Inc., and Samsung.",
+    "por_que_importa": "igual que la anterior."
+   }
+  ]
  },
  {
   "relationship_id": null,
-  "subject": "org:tsmc",
-  "predicate": "SUPPLIES",
-  "object": "org:nvidia",
-  "polarity": "AFFIRMS",
-  "nature": "STRUCTURAL",
-  "status": "PROVISIONAL",
-  "support_level": null,
-  "source_id": null,
-  "statement": null,
-  "valid_from": null,
-  "valid_to": null,
-  "documento_a_citar": "10-K de NVIDIA, sección de factores de riesgo sobre dependencia de fundiciones externas",
-  "tipo_de_fuente_esperado": "FILING",
-  "publisher_esperado": "org:nvidia",
-  "sesgo_a_anotar": "la fuente es la parte interesada: NVIDIA describiendo su propia cadena de suministro"
- },
- {
-  "relationship_id": null,
-  "subject": "org:tsmc",
-  "predicate": "USES",
-  "object": "prod:cowos",
-  "polarity": "AFFIRMS",
-  "nature": "STRUCTURAL",
-  "status": "PROVISIONAL",
-  "support_level": null,
-  "source_id": null,
-  "statement": null,
-  "valid_from": null,
-  "valid_to": null,
-  "documento_a_citar": "comunicación técnica de TSMC sobre su plataforma de encapsulado avanzado",
-  "tipo_de_fuente_esperado": "COMPANY_STATEMENT",
-  "publisher_esperado": "org:tsmc",
-  "sesgo_a_anotar": "comunicación comercial de la propia empresa"
- },
- {
-  "relationship_id": null,
-  "subject": "prod:cowos",
+  "subject": "tech:cowos",
   "predicate": "DEPENDS_ON",
   "object": "prod:hbm",
   "polarity": "AFFIRMS",
@@ -56,11 +52,12 @@
   "documento_a_citar": "sin fuente primaria identificada — probablemente research de terceros",
   "tipo_de_fuente_esperado": "RESEARCH",
   "publisher_esperado": null,
-  "sesgo_a_anotar": "si sólo hay research, el support_level máximo alcanzable es BAJO"
+  "sesgo_a_anotar": "si sólo hay research, el support_level máximo alcanzable es BAJO",
+  "_estado_2026_09_07": "SIGUE SIN FUENTE. Se buscó explícitamente en los dos documentos primarios leídos hoy (10-K de NVIDIA FY2026 y 20-F de TSMC FY2025): ninguno afirma que CoWoS dependa de HBM ni de sustrato ABF. El 10-K sólo dice 'memory'. No se promueve."
  },
  {
   "relationship_id": null,
-  "subject": "prod:cowos",
+  "subject": "tech:cowos",
   "predicate": "DEPENDS_ON",
   "object": "mat:abf-substrate",
   "polarity": "AFFIRMS",
@@ -74,6 +71,7 @@
   "documento_a_citar": "sin fuente primaria identificada",
   "tipo_de_fuente_esperado": "RESEARCH",
   "publisher_esperado": null,
-  "sesgo_a_anotar": "igual que la anterior"
+  "sesgo_a_anotar": "igual que la anterior",
+  "_estado_2026_09_07": "SIGUE SIN FUENTE. Se buscó explícitamente en los dos documentos primarios leídos hoy (10-K de NVIDIA FY2026 y 20-F de TSMC FY2025): ninguno afirma que CoWoS dependa de HBM ni de sustrato ABF. El 10-K sólo dice 'memory'. No se promueve."
  }
 ]

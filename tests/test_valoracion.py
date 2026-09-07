@@ -268,12 +268,22 @@ class TestReal(unittest.TestCase):
         self.assertEqual(self.a["support"], "UNKNOWN")
         self.assertTrue(any("identidad" in u or "clasificacion" in u for u in self.a["unknowns"]))
 
-    def test_no_existe_ninguna_relacion_economica_afirmativa(self):
-        """El motivo de fondo, medido sobre el Knowledge real."""
+    def test_ninguna_variable_de_mecanismo_esta_medida(self):
+        """El motivo de fondo, medido sobre el Knowledge y la Evidence
+        reales. En P5B eran DOS motivos a la vez: no había ninguna
+        relación económica afirmativa Y no había ninguna variable medida.
+        P5C resolvió el primero (rel:0046/0047/0048, con filings). El
+        segundo sigue en pie, y es el que de verdad bloquea: aunque ahora
+        hay cadena que recorrer, no hay nada que observar sobre ella."""
         economicos = {"SUPPLIES", "USES", "SUBSTITUTES"}
         afirmativas = [r for r in self.k["relationships"]
                        if r["predicate"] in economicos and r["polarity"] == "AFFIRMS"]
-        self.assertEqual(afirmativas, [])
+        self.assertTrue(afirmativas, "P5C dio de alta la primera cadena económica real")
+
+        sys.path.insert(0, os.path.join(RAIZ, "engine", "evidence"))
+        import adaptadores
+        medidas = {e["metric"] for e in adaptadores.evidencia_de_metricas(["NVDA"], limite=3000)}
+        self.assertEqual(medidas & set(mecanismos.VARIABLES_MECANISMO), set())
 
 
 class TestInvariantes(unittest.TestCase):
