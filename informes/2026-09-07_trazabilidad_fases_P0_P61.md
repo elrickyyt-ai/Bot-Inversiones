@@ -1,6 +1,6 @@
-# Trazabilidad de las fases P0 → P6
+# Trazabilidad de las fases P0 → P6.1
 
-**Fecha**: 2026-09-07 · **Rama**: `claude/bot-inversiones-audit-peh0x2` · **Último commit**: `4f22a88`
+**Fecha**: 2026-09-07 · **Rama**: `claude/bot-inversiones-audit-peh0x2` · **Último commit**: `4f22a88` + P6.1
 
 Este informe existe para una situación concreta: **que una fase falle en el futuro y haya que recuperar su estado**. Da, por cada fase, el commit exacto, los ficheros que la componen, los tests que la cubren, el comando que la verifica por separado y qué se rompe si cae.
 
@@ -11,12 +11,12 @@ No sustituye a los README de cada módulo (que explican *por qué* está hecho a
 ## Verificación completa en tres comandos
 
 ```bash
-python3 -m unittest discover -s tests           # 422 tests, debe dar OK
+python3 -m unittest discover -s tests           # 447 tests, debe dar OK
 python3 engine/contract/qa.py --require-parquet # debe dar STATUS: VERIFIED
 git status --short data/ knowledge/             # debe salir vacío
 ```
 
-Si los tres pasan, las catorce fases están sanas. Si falla alguno, la tabla de abajo dice qué fase mirar.
+Si los tres pasan, las quince fases están sanas. Si falla alguno, la tabla de abajo dice qué fase mirar.
 
 ---
 
@@ -36,6 +36,7 @@ Si los tres pasan, las catorce fases están sanas. Si falla alguno, la tabla de 
 | **P5C** | `61dca44` | Primera cadena económica real, con fuentes externas | `python3 -m unittest tests.test_cadena_suministro` |
 | **P5D** | `cfbf38b` | Evidence Gap → Data Requirement | `python3 engine/requirements/resolver.py org:nvidia` |
 | **P6** | `4f22a88` | Economic Impact v1 | `python3 engine/impact/impacto.py org:nvidia` |
+| **P6.1** | (este commit) | Materiality derivada | `python3 -m unittest tests.test_materialidad` |
 
 ---
 
@@ -158,6 +159,7 @@ Data Contract (migración)
         └─ P5C amplía SUS DATOS (no su código): fuentes externas
                                               └─→ P5D Requirement (lee P1b + P5B)
                                                     └─→ P6 Impact (lee P5B + P5D)
+                                                          └─→ P6.1 Materiality (deriva de Evidence + Knowledge)
 ```
 
 ### P5C · Economic Knowledge Seed v2 — cadena `NVIDIA → TSMC → CoWoS`
@@ -216,6 +218,26 @@ Data Contract (migración)
 
 ---
 
+### P6.1 · Materiality derivada
+
+**Ficheros**: `engine/impact/{esquema_materialidad,observaciones,materialidad}.py` (nuevos) · `tests/test_materialidad.py` (nuevo) · `esquema_impacto.py`, `requisitos_magnitud.py`, `impacto.py` (modificados).
+
+**Qué hace**: `Evidence` (de entidad) + `Knowledge` (la relación) → `Materiality` (derivada, nunca almacenada). Cuatro pasos separados: `OBSERVATION → APPLICABILITY CHECK (entidad · relación · vigencia) → DERIVATION → status`.
+
+**Resultado real**: `TSMC ← NVIDIA` = `BOUNDED ≤19%`, vía `rel:0046`, citando el 20-F **sin atribuir el 19% a NVIDIA**. En P6, la materialidad del tramo real pasa de `UNKNOWN` a `BOUNDED` y `MATERIALITY_UNKNOWN` se sustituye por `MATERIALITY_ONLY_BOUNDED`.
+
+**El test central**: el 20-F da 25% (2023), 22% (2024), 19% (2025) y `rel:0046` solo está atestiguada desde 2025-01-27. Como el 19% es a la vez la menor y la más reciente, hay una fixture que invierte el caso (relación válida solo en 2023) donde la aplicable pasa a ser la **mayor y más antigua** — demostrando que la selección es por intersección temporal, no por `min`/`max`/`latest`.
+
+**Dos motivos que no se colapsan**: `NO_SUPPORTING_EVIDENCE` (hace falta una fuente) frente a `EVIDENCE_EXISTS_BUT_NOT_APPLICABLE` (la hay y no alcanza). Los dos dan `UNKNOWN`; no son el mismo `UNKNOWN`.
+
+**`POINT` no se introdujo**: `KNOWN` ya significa eso. Magnitud y materialidad comparten `ESTADOS_PIEZA`, ahora con `BOUNDED`.
+
+**Si falla**: solo lee. `python3 -m unittest tests.test_materialidad` es el diagnóstico; si `TSMC ← NVIDIA` deja de dar `BOUNDED ≤19%`, mirar `observaciones.py` y la vigencia de `rel:0046`.
+
+**Informe**: `informes/2026-09-07_p61_materialidad_v1.md`.
+
+---
+
 **La dirección es única**: cada capa lee la anterior y **ninguna escribe hacia atrás**. Está comprobado por hash dentro de la propia suite en P3, P4, P5A y P5B.
 
 ---
@@ -244,7 +266,7 @@ Reglas que han aparecido más de una vez y que conviene no volver a romper:
 
 ```
 P0 · P1 · P1b · P2 · P3 · P4 · P5A · P5B · P5C · P5D · P6      ✅ cerradas
-P6.1  Materiality              ← diseño CERRADO (docs/06), sin implementar
+P6.1  Materiality              ✅ implementada
 P6.2  Quantification unlocks
 P7    Market Impact
 P8    Mispricing
@@ -274,7 +296,8 @@ CONSUMPTION   Power BI + Web App
 | `demand(org:nvidia)` sale `FRESH` con un dato de hace 5 semanas | informe de P5D | Correcto por cadencia (trimestral), pero la frescura dice que el dato está al día para su cadencia, no que sirva para el mecanismo. P6 debe mirarlo dos veces |
 | Las 5 variables de mecanismo no tienen `concept_id` | `catalogo.CONCEPTO_DE_VARIABLE` + test | Ausencia medida, no hueco: declarar un concepto vacío sería peor que no declararlo |
 | `MATERIALIDAD`, `COEFICIENTES` y `LINEAS_BASE` vacías | `requisitos_magnitud.py` + test | Decisión de P6 v1, no olvido. **Resuelto en el diseño de P6.1**: la materialidad se **deriva**, no se almacena; la evidencia es de entidad y cabe en el contrato sin tocar `METRIC_FIELDS` ni Knowledge |
-| Cuatro significados comparten el nombre `materialidad` en P6 | `requisitos_magnitud.py::ENTRADAS` | Medido al diseñar P6.1. Se cierra tipando `materiality_basis` (4 valores) y reclaveando por `(basis, sujeto, contraparte)` |
+| ~~Cuatro significados comparten el nombre `materialidad`~~ | — | **Cerrada en P6.1**: `BASIS_POR_MECANISMO` tipa la base y el extremo sujeto de cada mecanismo |
+| El contrato no admite observaciones sobre entidades que no son activos | `engine/impact/observaciones.py` (cabecera) | Medido en P6.1: `asset_type_of('TSM') → None`. Las 3 filas del 20-F viven ahí, marcadas como observaciones y no declaraciones. Misma familia que `capacity_utilization(tech:cowos)` |
 | `tech:cowos` se evalúa como insumo de coste, no como restricción de capacidad | informe de P6 | P5B enruta ese impulso por R5 y no por la vía de capacidad. Coherente con P5B, no tocado; el ángulo de capacidad es el económicamente interesante |
 
 ---

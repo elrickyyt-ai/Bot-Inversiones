@@ -31,6 +31,7 @@ for _s in ("causal", "contract", "impact", "knowledge", "requirements"):
         sys.path.insert(0, _p)
 
 import esquema_impacto as E  # noqa: E402
+import materialidad as MT  # noqa: E402
 import mecanismos as M  # noqa: E402
 import requisitos_magnitud as RM  # noqa: E402
 import resolver as R5D  # noqa: E402
@@ -72,7 +73,7 @@ def _fitness(requisitos, requiere):
     return peor
 
 
-def derecho_a_magnitud(mecanismo, relationship_id, fitness):
+def derecho_a_magnitud(mecanismo, relationship_id, fitness, materialidad=None):
     """Tendria el sistema DERECHO a emitir un numero para este tramo?
 
     Es el nucleo de P6 v1. La version NO produce magnitudes -- no hay
@@ -101,9 +102,14 @@ def derecho_a_magnitud(mecanismo, relationship_id, fitness):
         motivos.append("REQUIRED_EVIDENCE_MISSING")
     elif fitness in ("PROXY", "UNKNOWN"):
         motivos.append("EVIDENCE_ONLY_BY_PROXY")
-    # 2. Materialidad: causalidad no es materialidad.
-    if ent["materialidad"] and not RM.materialidad(relationship_id):
-        motivos.append("MATERIALITY_UNKNOWN")
+    # 2. Materialidad: causalidad no es materialidad. Y una COTA no
+    #    puntualiza: da derecho a una magnitud acotada, nunca a un punto.
+    if ent["materialidad"]:
+        est = (materialidad or {}).get("status", "UNKNOWN")
+        if est == "BOUNDED":
+            motivos.append("MATERIALITY_ONLY_BOUNDED")
+        elif est != "KNOWN":
+            motivos.append("MATERIALITY_UNKNOWN")
     # 3. Coeficiente de transmision de origen declarado.
     if ent["coeficiente"] and not RM.coeficiente(mecanismo, relationship_id):
         motivos.append("NO_TRANSMISSION_COEFFICIENT")
@@ -113,26 +119,40 @@ def derecho_a_magnitud(mecanismo, relationship_id, fitness):
     return not motivos, motivos
 
 
-def impacto_de_tramo(assessment, tramo, requisitos):
+def _fecha(v):
+    return datetime.date.fromisoformat(v) if isinstance(v, str) else v
+
+
+def impacto_de_tramo(assessment, tramo, requisitos, k):
     """Un tramo de P5B -> un EconomicImpact."""
     mec = tramo["mechanism"]
     cap, motivo_cap = RM.capacidad(mec)
     fit = _fitness(requisitos, tramo["requires_evidence"])
     razones, unknowns = [], []
 
-    # --- materialidad: la deuda de P5C, hecha ejecutable ---
-    mat_decl = RM.materialidad(tramo["relationship_id"])
-    if mat_decl:
-        materialidad = _pieza("KNOWN", value=mat_decl["value"],
-                              unit=mat_decl["unit"], source_id=mat_decl["source_id"])
-    elif RM.entradas(mec)["materialidad"] is None:
+    # --- materialidad: derivada (P6.1), no declarada ---
+    decl = RM.basis_de(mec)
+    resuelta = None
+    if decl is None:
         materialidad = _pieza("NOT_APPLICABLE", value=None, unit=None, source_id=None)
     else:
-        materialidad = _pieza("UNKNOWN", value=None, unit=None, source_id=None)
-        unknowns.append(
-            f"{tramo['relationship_id']} acredita que la relacion existe, no en que "
-            f"proporcion: falta {RM.entradas(mec)['materialidad']}. Causalidad no es "
-            f"materialidad")
+        basis, extremo = decl
+        sujeto = tramo["to_entity"] if extremo == "to" else tramo["from_entity"]
+        contraparte = tramo["from_entity"] if extremo == "to" else tramo["to_entity"]
+        resuelta = MT.resolver_materialidad(basis, sujeto, contraparte, k,
+                                            _fecha(assessment["as_of"]))
+        if resuelta["status"] == "BOUNDED":
+            materialidad = _pieza("BOUNDED", value=None, unit=resuelta["unit"],
+                                  source_id=resuelta["applied_via"])
+            materialidad["upper_bound"] = resuelta["upper_bound"]
+        else:
+            materialidad = _pieza(resuelta["status"], value=None, unit=None, source_id=None)
+        unknowns += resuelta["unknowns"]
+        if resuelta["status"] not in ("KNOWN", "BOUNDED"):
+            unknowns.append(
+                f"{tramo['relationship_id']} acredita que la relacion existe, no en que "
+                f"proporcion: falta {RM.entradas(mec)['materialidad']}. Causalidad no es "
+                f"materialidad")
 
     # --- coeficiente de transmision ---
     coef = RM.coeficiente(mec, tramo["relationship_id"])
@@ -147,7 +167,8 @@ def impacto_de_tramo(assessment, tramo, requisitos):
     # v1 NUNCA la emite. Lo que se calcula es el DERECHO a emitirla, y
     # cuando no lo hay, exactamente por que. No hay ninguna formula en
     # este modulo y eso es el diseno, no una carencia.
-    tiene_derecho, motivos = derecho_a_magnitud(mec, tramo["relationship_id"], fit)
+    tiene_derecho, motivos = derecho_a_magnitud(mec, tramo["relationship_id"], fit,
+                                                resuelta)
     razones += motivos
     if cap == "NOT_QUANTIFIABLE":
         # "No puedo" no es "no se". Un mecanismo asi no mejora con datos.
@@ -207,8 +228,8 @@ def impacto_de_tramo(assessment, tramo, requisitos):
     }
 
 
-def impactos_de(assessment, requisitos):
-    return [impacto_de_tramo(assessment, t, requisitos) for t in assessment["segments"]]
+def impactos_de(assessment, requisitos, k):
+    return [impacto_de_tramo(assessment, t, requisitos, k) for t in assessment["segments"]]
 
 
 def combinar(impactos):
@@ -258,7 +279,9 @@ def explicar(i):
          f"  sobre       {i['affected_variable']} de {i['entity_id']}",
          f"  direccion   {i['economic_direction']}   (heredada de P5B)",
          f"  magnitud    {i['magnitude']['state']:15} valor {i['magnitude']['value']}",
-         f"  materialidad{i['materiality']['state']:>16}",
+         f"  materialidad{i['materiality']['state']:>16}"
+         + (f"  <= {i['materiality']['upper_bound']}{i['materiality']['unit']}"
+            if i["materiality"]["state"] == "BOUNDED" else ""),
          f"  horizonte   {i['horizon']['state']}",
          f"  fitness     {i['fitness']}   ·  soporte {i['support']}",
          f"  coeficiente {i['magnitude_basis']['coefficient_origin']}"]
@@ -295,7 +318,7 @@ def main(argv=None):
 
     todos = []
     for a in vals:
-        todos += impactos_de(a, requisitos)
+        todos += impactos_de(a, requisitos, k)
 
     incidencias = [x for i in todos for x in E.validar(i)]
     print(f"IMPACTO ECONOMICO — {hoy}   ({len(todos)} tramo(s) sobre {len(vals)} camino(s))")

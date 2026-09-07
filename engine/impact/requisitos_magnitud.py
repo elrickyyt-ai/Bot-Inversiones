@@ -130,9 +130,22 @@ ENTRADAS = {
 # ESTIMATED, que es de la futura capa de modelo.
 COEFICIENTES = {}
 
-# Materialidad declarada por relacion. VACIO en v1: ninguna relacion de
-# Knowledge lleva peso. Es la deuda registrada de P5C hecha ejecutable --
-# rel:0046 dice que TSMC suministra a NVIDIA y no dice en que proporcion.
+# Que TIPO de materialidad necesita cada mecanismo, y cual de los dos
+# extremos del tramo es el SUJETO. Sin esto, "materialidad" volveria a ser
+# el weight generico: cuatro significados entrando por el mismo hueco.
+# `sujeto` dice de quien es la fraccion; la contraparte es el otro extremo.
+BASIS_POR_MECANISMO = {
+    "CUSTOMER_DEMAND":  ("SUPPLIER_REVENUE_EXPOSURE", "to"),    # del proveedor
+    "INPUT_COST":       ("COST_SHARE", "from"),                 # de quien usa el insumo
+    "SUPPLY_SHORTAGE":  ("VOLUME_SHARE", "to"),                 # del cliente
+    "PRICING_POWER":    ("CAPACITY_SHARE", "to"),               # del dueno del recurso
+}
+
+# Materialidad DECLARADA a mano por relacion. Sigue vacia en P6.1 y ya no
+# es el unico camino: la materialidad se DERIVA (engine/impact/
+# materialidad.py) de una observacion de entidad mas la relacion que
+# permite aplicarla. Esta tabla queda para el caso en que algun dia una
+# fuente publique el par explicito, que hoy no publica ninguna.
 MATERIALIDAD = {}
 
 
@@ -160,3 +173,8 @@ def coeficiente(mecanismo, relationship_id):
 
 def materialidad(relationship_id):
     return MATERIALIDAD.get(relationship_id)
+
+
+def basis_de(mecanismo):
+    """(base, extremo_sujeto) o None si el mecanismo no pide materialidad."""
+    return BASIS_POR_MECANISMO.get(mecanismo)

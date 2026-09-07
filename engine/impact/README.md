@@ -62,6 +62,46 @@ Un coeficiente estimado estadísticamente **no será Evidence ni Knowledge**: se
 
 `combinar()` **no tiene campo `total`**, y no existe por diseño. Devuelve `conocido[]` + `unresolved[]`, el soporte del **peor** componente, y `UNKNOWN` si algún tramo no resuelve o si los horizontes difieren.
 
+## Materialidad (P6.1) — se deriva, no se almacena
+
+```
+Evidence (de entidad)  +  Knowledge (la relación)  →  Materiality (derivada)
+```
+
+`materialidad.py` mantiene los cuatro pasos separados a propósito:
+
+```
+OBSERVATION → APPLICABILITY CHECK (entidad · relación · vigencia) → DERIVATION → status
+```
+
+Si la aplicabilidad estuviera mezclada con la búsqueda, una observación **válida pero inaplicable** acabaría indistinguible de un hueco de datos, y el sistema mandaría a buscar una fuente que ya tiene. De ahí dos motivos y no uno:
+
+| motivo | significa |
+|---|---|
+| `NO_SUPPORTING_EVIDENCE` | no hay observación: hace falta una fuente |
+| `EVIDENCE_EXISTS_BUT_NOT_APPLICABLE` | la hay y es válida, pero no alcanza a esta contraparte o periodo |
+
+**No hay fichero de materialidades ni función de escritura**: si se guardara, en dos meses nadie sabría si el 19% es lo que dijo el 20-F o lo que dedujo el sistema.
+
+### El caso real
+
+```
+MATERIALIDAD mat:SUPPLIER_REVENUE_EXPOSURE:org:tsmc:org:nvidia
+  ESTADO     BOUNDED  <= 19.0%
+  observado  org:tsmc · 2025 · aplicada via rel:0046
+      · cota, no atribución: la fuente dice que el mayor cliente de org:tsmc
+        representa 19.0%, sin nombrarlo. Que org:nvidia sea ese cliente NO se afirma
+      · 2 observaciones descartadas por no ser aplicables, no por ser peores
+```
+
+El 20-F publica **tres** cotas (25% 2023 · 22% 2024 · 19% 2025) y `rel:0046` solo está atestiguada desde 2025-01-27, así que **solo la de 2025 aplica** — no por ser menor ni más reciente, sino por ser la única cuyo periodo intersecta con la vigencia de la relación.
+
+### `BOUNDED` y `POINT`
+
+`BOUNDED` se añade a `ESTADOS_PIEZA` y lo comparten magnitud y materialidad. **`POINT` no se introduce**: `KNOWN` ya significa eso, y añadirlo serían dos nombres para una idea.
+
+Una cota solo se emite si es **estricta** (`< 100%`) y procede de una observación. Un tope aritmético no es una cota: parece información sin serlo.
+
 ## Uso
 
 ```bash

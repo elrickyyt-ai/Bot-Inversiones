@@ -60,7 +60,10 @@ RULE_VERSION = "p6/v1"
 # podria darla y hoy no puede por falta de datos (UNKNOWN). Colapsarlos
 # perderia justo la informacion que dice donde merece la pena invertir.
 ESTADOS_PIEZA = {
-    "KNOWN":          "sostenido por evidencia y por parametros declarados",
+    "KNOWN":          "valor puntual sostenido por evidencia y parametros declarados",
+    "BOUNDED":        "cota estricta procedente de una observacion real (P6.1). "
+                      "No es un KNOWN peor: es una afirmacion distinta -- '<=19%' y "
+                      "'19%' no dicen lo mismo",
     "UNKNOWN":        "podria conocerse, y hoy no se conoce",
     "NOT_APPLICABLE": "el mecanismo no produce esta pieza, por como es",
 }
@@ -111,6 +114,8 @@ MOTIVOS = {
     "REQUIRED_EVIDENCE_MISSING":   "falta una variable que el mecanismo necesita observar",
     "EVIDENCE_ONLY_BY_PROXY":      "la variable solo se resuelve con un proxy declarado",
     "MATERIALITY_UNKNOWN":         "no se sabe que fraccion de la entidad toca la variable",
+    "MATERIALITY_ONLY_BOUNDED":    "la materialidad es una cota, no un valor: la magnitud "
+                                   "puede acotarse pero nunca puntualizarse",
     "NO_TRANSMISSION_COEFFICIENT": "no hay coeficiente declarado y v1 no lo estima",
     "NO_BASELINE":                 "no hay linea base contra la que medir el cambio",
     "MECHANISM_CANNOT_QUANTIFY":   "el mecanismo no produce magnitud por su naturaleza",
@@ -134,9 +139,13 @@ CAMPOS = {
     "magnitude", "magnitude_basis", "materiality", "horizon",
     "fitness", "evidence_ids", "support", "reasons", "unknowns",
 }
-CAMPOS_MAGNITUD = {"state", "value", "unit", "baseline"}
+# `upper_bound` acompana a BOUNDED igual que en la materialidad: las dos
+# piezas comparten forma porque comparten vocabulario de estados. v1 no
+# emite magnitud BOUNDED -- seguiria faltandole coeficiente y linea base --
+# pero el contrato queda cerrado para cuando los haya.
+CAMPOS_MAGNITUD = {"state", "value", "unit", "baseline", "upper_bound"}
 CAMPOS_BASE = {"coefficient_origin", "coefficient_ref", "inputs"}
-CAMPOS_MATERIALIDAD = {"state", "value", "unit", "source_id"}
+CAMPOS_MATERIALIDAD = {"state", "value", "unit", "source_id", "upper_bound"}
 # Horizonte en DIAS, no en categorias. Medido antes de decidir: el
 # proyecto no tiene ningun vocabulario categorico de horizonte, y si
 # tiene una convencion en dias (ledger.py, horizonte_evaluacion_dias=90).
@@ -224,6 +233,21 @@ def validar(r):
         e.append("un coeficiente OBSERVED o DECLARED sin referencia no es verificable")
 
     # --- Reglas de magnitud ---
+    if mag["state"] == "BOUNDED":
+        # Una cota en la magnitud exige lo mismo que un punto, salvo el punto.
+        if mag.get("upper_bound") is None:
+            e.append("magnitude BOUNDED sin upper_bound")
+        if mag.get("value") is not None:
+            e.append("magnitude BOUNDED con value: si se conociera el punto no seria cota")
+        for c in ("unit", "baseline"):
+            if not mag.get(c):
+                e.append(f"magnitude BOUNDED sin {c}")
+        if mat["state"] not in ("KNOWN", "BOUNDED"):
+            e.append("magnitude BOUNDED con materiality sin resolver: una cota tambien "
+                     "necesita saber que parte de la entidad toca")
+    elif mag.get("upper_bound") is not None:
+        e.append(f"magnitude {mag['state']} con upper_bound: solo BOUNDED lleva cota")
+
     if mag["state"] == "KNOWN":
         # (valor, unidad, base): las tres o ninguna. P4 ya exigia las dos
         # primeras; la tercera es de aqui -- un 10% no significa nada sin
@@ -237,7 +261,10 @@ def validar(r):
             e.append("magnitude=0 sin evidence_ids — un cero medido lleva su evidencia; "
                      "un cero por ausencia es informacion inventada")
         # Regla general, no solo para NVDA/TSMC: causalidad != materialidad.
-        if mat["state"] != "KNOWN":
+        if mat["state"] == "BOUNDED":
+            e.append("magnitude KNOWN con materiality BOUNDED — una cota no puntualiza: "
+                     "el maximo alcanzable es una magnitud BOUNDED")
+        elif mat["state"] != "KNOWN":
             e.append("magnitude KNOWN con materiality no KNOWN — no se puede valorar el "
                      "efecto sobre una entidad sin saber que parte de su economia toca")
         if origen not in ("OBSERVED", "DECLARED"):
@@ -248,7 +275,7 @@ def validar(r):
                      f"afirmacion cuantitativa a cualitativa, nunca al reves")
         if r["magnitude_capability"] == "NOT_QUANTIFIABLE":
             e.append("magnitude KNOWN en un mecanismo NOT_QUANTIFIABLE")
-    else:
+    elif mag["state"] != "BOUNDED":
         if mag.get("value") is not None:
             e.append(f"magnitude {mag['state']} con un value de {mag['value']!r}: "
                      f"si no se conoce, el valor es null y esta presente")

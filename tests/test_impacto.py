@@ -304,7 +304,7 @@ class TestElCaminoRealDeP5C(unittest.TestCase):
         cls.vals = [valoracion.valorar(evento, c, [], cls.k, modelo.vigente, HOY) for c in cs]
         res = R5D.resolver_valoraciones(cls.vals, cls.k, HOY, True)
         cls.requisitos = {f"{r['variable']}({r['entity_id']})": r for r in res}
-        cls.impactos = [i for a in cls.vals for i in impacto.impactos_de(a, cls.requisitos)]
+        cls.impactos = [i for a in cls.vals for i in impacto.impactos_de(a, cls.requisitos, cls.k)]
 
     def test_todos_validan(self):
         for i in self.impactos:
@@ -333,13 +333,17 @@ class TestElCaminoRealDeP5C(unittest.TestCase):
         self.assertEqual(i["mechanism"], "CUSTOMER_DEMAND")
         self.assertEqual(i["entity_id"], "org:tsmc")
         self.assertEqual(i["magnitude_capability"], "CONDITIONALLY_QUANTIFIABLE")
-        self.assertIn("MATERIALITY_UNKNOWN", i["reasons"])
+        # P6.1: la materialidad pasa de UNKNOWN a BOUNDED <=19%.
+        self.assertEqual(i["materiality"]["state"], "BOUNDED")
+        self.assertEqual(i["materiality"]["upper_bound"], 19.0)
+        self.assertIn("MATERIALITY_ONLY_BOUNDED", i["reasons"])
         self.assertIn("NO_TRANSMISSION_COEFFICIENT", i["reasons"])
 
-    def test_la_deuda_de_p5c_aparece_nombrada(self):
-        """rel:0046 acredita que la relacion existe, no en que proporcion."""
+    def test_la_cota_no_se_convierte_en_atribucion(self):
+        """P6.1 cierra la deuda de P5C a medias, y lo dice: hay una cota
+        del 19%, pero la fuente no nombra al cliente."""
         i = next(x for x in self.impactos if x["relationship_id"] == "rel:0046")
-        self.assertTrue(any("Causalidad no es materialidad" in u for u in i["unknowns"]))
+        self.assertTrue(any("NO se afirma" in u for u in i["unknowns"]))
 
     def test_p6_no_recalcula_la_direccion(self):
         """Si la recalculara habria dos motores opinando sobre lo mismo, y
@@ -347,7 +351,7 @@ class TestElCaminoRealDeP5C(unittest.TestCase):
         tramo, no contra el conjunto de valores posibles."""
         pares = 0
         for a in self.vals:
-            impactos = impacto.impactos_de(a, self.requisitos)
+            impactos = impacto.impactos_de(a, self.requisitos, self.k)
             self.assertEqual(len(impactos), len(a["segments"]))
             for tramo, i in zip(a["segments"], impactos):
                 self.assertEqual(i["economic_direction"], tramo["economic_direction"])
@@ -357,20 +361,27 @@ class TestElCaminoRealDeP5C(unittest.TestCase):
         self.assertGreater(pares, 10)
 
     def test_el_derecho_a_magnitud_no_es_una_rama_muerta(self):
-        """El control positivo del motor completo: con las tablas de
-        declaracion pobladas, la comprobacion se enciende. Sin este test,
-        'siempre False' podria ser un bug en vez de una decision."""
+        """El control positivo del motor completo: con los parametros
+        presentes, la comprobacion se enciende. Sin este test, 'siempre
+        False' podria ser un bug en vez de una decision."""
+        punto = {"status": "KNOWN"}
+        cota = {"status": "BOUNDED"}
         ok, motivos = impacto.derecho_a_magnitud("CUSTOMER_DEMAND", "rel:0046", "MEASURES")
         self.assertFalse(ok)
         self.assertEqual(set(motivos), {"MATERIALITY_UNKNOWN", "NO_TRANSMISSION_COEFFICIENT",
                                         "NO_BASELINE"})
         with _declarado(coef={("CUSTOMER_DEMAND", "rel:0046"): {"origin": "DECLARED",
                                                                "ref": "src:x"}},
-                        mat={"rel:0046": {"value": 30.0, "unit": "%", "source_id": "src:x"}},
                         base={"rel:0046": "media 8 trimestres"}):
-            ok, motivos = impacto.derecho_a_magnitud("CUSTOMER_DEMAND", "rel:0046", "MEASURES")
+            ok, motivos = impacto.derecho_a_magnitud("CUSTOMER_DEMAND", "rel:0046",
+                                                     "MEASURES", punto)
             self.assertTrue(ok, motivos)
             self.assertEqual(motivos, [])
+            # P6.1: una COTA no puntualiza, aunque todo lo demas este.
+            ok, motivos = impacto.derecho_a_magnitud("CUSTOMER_DEMAND", "rel:0046",
+                                                     "MEASURES", cota)
+            self.assertFalse(ok)
+            self.assertEqual(motivos, ["MATERIALITY_ONLY_BOUNDED"])
 
     def test_un_proxy_sigue_bloqueando_aunque_todo_lo_demas_este(self):
         """Y FRESH no habilita nada: demand(org:nvidia) esta FRESH y
@@ -380,9 +391,9 @@ class TestElCaminoRealDeP5C(unittest.TestCase):
         self.assertEqual(req["availability"], "PARTIAL")
         with _declarado(coef={("CUSTOMER_DEMAND", "rel:0046"): {"origin": "DECLARED",
                                                                "ref": "src:x"}},
-                        mat={"rel:0046": {"value": 30.0, "unit": "%", "source_id": "src:x"}},
                         base={"rel:0046": "media 8 trimestres"}):
-            ok, motivos = impacto.derecho_a_magnitud("CUSTOMER_DEMAND", "rel:0046", "PROXY")
+            ok, motivos = impacto.derecho_a_magnitud("CUSTOMER_DEMAND", "rel:0046", "PROXY",
+                                                     {"status": "KNOWN"})
             self.assertFalse(ok)
             self.assertEqual(motivos, ["EVIDENCE_ONLY_BY_PROXY"])
 
@@ -419,9 +430,8 @@ class TestInvariantes(unittest.TestCase):
         req = {f"{r['variable']}({r['entity_id']})": r for r in res}
         with _declarado(coef={("CUSTOMER_DEMAND", "rel:0046"): {"origin": "DECLARED",
                                                                "ref": "src:x"}},
-                        mat={"rel:0046": {"value": 30.0, "unit": "%", "source_id": "src:x"}},
                         base={"rel:0046": "media"}):
-            todos = [i for a in vals for i in impacto.impactos_de(a, req)]
+            todos = [i for a in vals for i in impacto.impactos_de(a, req, k)]
         self.assertTrue(todos)
         self.assertTrue(all(i["magnitude"]["value"] is None for i in todos))
 
