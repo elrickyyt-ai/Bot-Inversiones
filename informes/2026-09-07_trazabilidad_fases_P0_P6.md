@@ -1,6 +1,6 @@
 # Trazabilidad de las fases P0 → P6
 
-**Fecha**: 2026-09-07 · **Rama**: `claude/bot-inversiones-audit-peh0x2` · **Último commit**: `cfbf38b` + P6
+**Fecha**: 2026-09-07 · **Rama**: `claude/bot-inversiones-audit-peh0x2` · **Último commit**: `4f22a88`
 
 Este informe existe para una situación concreta: **que una fase falle en el futuro y haya que recuperar su estado**. Da, por cada fase, el commit exacto, los ficheros que la componen, los tests que la cubren, el comando que la verifica por separado y qué se rompe si cae.
 
@@ -35,7 +35,7 @@ Si los tres pasan, las catorce fases están sanas. Si falla alguno, la tabla de 
 | **P5B** | `0c4003f` | Mecanismo y dirección económica | `python3 engine/causal/valoracion.py sec:NVDA.NASDAQ` |
 | **P5C** | `61dca44` | Primera cadena económica real, con fuentes externas | `python3 -m unittest tests.test_cadena_suministro` |
 | **P5D** | `cfbf38b` | Evidence Gap → Data Requirement | `python3 engine/requirements/resolver.py org:nvidia` |
-| **P6** | (este commit) | Economic Impact v1 | `python3 engine/impact/impacto.py org:nvidia` |
+| **P6** | `4f22a88` | Economic Impact v1 | `python3 engine/impact/impacto.py org:nvidia` |
 
 ---
 
