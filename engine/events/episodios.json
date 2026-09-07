@@ -1,0 +1,25 @@
+{
+  "_nota": "Registro DECLARADO de episodios. No lo escribe ningun motor: se cura a mano, con fuente, igual que knowledge/ (D-04). Un episodio agrupa documentos que hablan del MISMO hecho economico en curso; la pertenencia es una decision documentada, nunca una similitud de texto calculada.",
+  "_version": "v1 (P6.2d, 2026-09-07)",
+  "episodios": [
+    {
+      "episode_id": "ep:2026:clarity-act-senado",
+      "titulo": "Tramitacion de la CLARITY Act en el Senado de EE.UU.",
+      "entidad_principal": "sec:XRP",
+      "estado": "OPEN",
+      "criterio": "El documento se refiere explicitamente a la tramitacion legislativa de la CLARITY Act en el Congreso de EE.UU. (o a la alternativa regulatoria de la CFTC ante su bloqueo) como factor para XRP. NO entran documentos sobre otra regulacion cripto: la aprobacion irlandesa del fondo de Aviva o la actividad de Sberbank mencionan 'regulacion' y no pertenecen a este episodio.",
+      "documentos": [
+        {"news_id": "c8701010415253ad", "fecha": "2026-07-20", "fuente": "Cointelegraph", "por_que": "la suerte de la CLARITY Act como titular de la semana"},
+        {"news_id": "146049b8509e6f60", "fecha": "2026-08-07", "fuente": "Decrypt.co", "por_que": "el Senado aplaza la votacion -- el hecho central del episodio"},
+        {"news_id": "d61fa14d338bb732", "fecha": "2026-08-09", "fuente": "Motley Fool", "por_que": "comentario sobre el mismo aplazamiento, proyectado a las elecciones de medio mandato"},
+        {"news_id": "9c5d7c4c43059462", "fecha": "2026-08-10", "fuente": "Decrypt.co", "por_que": "atribuye la perdida de impulso del precio al mismo bloqueo legislativo"},
+        {"news_id": "30e933e77f4a8c25", "fecha": "2026-08-21", "fuente": "Decrypt.co", "por_que": "la via CFTC como alternativa ante el bloqueo del Congreso, mismo hilo"}
+      ],
+      "fuentes": [
+        "informes/2026-09-03_noticias_sentimiento_v2.md",
+        "engine/reasoning/thesis.py::NEWS_FINDINGS"
+      ],
+      "por_que_importa": "En julio de 2026 el sistema registro la aprobacion en COMITE como si el catalizador estuviese resuelto, y hubo que corregirlo a mano en la v2 de la Fase 4 cuando el Senado pleno aplazo la votacion el 7 de agosto. Un episodio con estado OPEN habria hecho visible que el hilo seguia abierto, en vez de dejar cinco documentos sueltos que se cuentan como cinco evidencias independientes."
+    }
+  ]
+}

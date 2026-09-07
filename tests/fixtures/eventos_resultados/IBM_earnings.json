@@ -1,0 +1,22 @@
+{
+  "_procedencia": "Alpha Vantage EARNINGS, consultado en vivo el 2026-09-07. El payload real trae 123 trimestres desde 1996-03-31; aqui se congela un SUBCONJUNTO de 16 elegido para cubrir ambos valores de reportTime y tres decadas. No es la serie completa y el informe lo dice: la ingesta completa es el paso manual que engine/equity/README.md ya documenta para acciones.",
+  "symbol": "IBM",
+  "quarterlyEarnings": [
+    {"fiscalDateEnding": "2026-06-30", "reportedDate": "2026-07-22", "reportedEPS": "2.93", "estimatedEPS": "2.93", "surprise": "0", "surprisePercentage": "0", "reportTime": "post-market"},
+    {"fiscalDateEnding": "2026-03-31", "reportedDate": "2026-04-22", "reportedEPS": "1.91", "estimatedEPS": "1.81", "surprise": "0.1", "surprisePercentage": "5.5249", "reportTime": "post-market"},
+    {"fiscalDateEnding": "2025-12-31", "reportedDate": "2026-01-28", "reportedEPS": "4.52", "estimatedEPS": "4.29", "surprise": "0.23", "surprisePercentage": "5.3613", "reportTime": "post-market"},
+    {"fiscalDateEnding": "2025-09-30", "reportedDate": "2025-10-22", "reportedEPS": "2.65", "estimatedEPS": "2.45", "surprise": "0.2", "surprisePercentage": "8.1633", "reportTime": "post-market"},
+    {"fiscalDateEnding": "2024-12-31", "reportedDate": "2025-01-29", "reportedEPS": "3.92", "estimatedEPS": "3.78", "surprise": "0.14", "surprisePercentage": "3.7037", "reportTime": "post-market"},
+    {"fiscalDateEnding": "2023-12-31", "reportedDate": "2024-01-24", "reportedEPS": "3.87", "estimatedEPS": "3.78", "surprise": "0.09", "surprisePercentage": "2.381", "reportTime": "post-market"},
+    {"fiscalDateEnding": "2022-12-31", "reportedDate": "2023-01-25", "reportedEPS": "3.6", "estimatedEPS": "3.61", "surprise": "-0.01", "surprisePercentage": "-0.277", "reportTime": "post-market"},
+    {"fiscalDateEnding": "2021-12-31", "reportedDate": "2022-01-24", "reportedEPS": "3.35", "estimatedEPS": "3.29", "surprise": "0.06", "surprisePercentage": "1.8237", "reportTime": "post-market"},
+    {"fiscalDateEnding": "2020-12-31", "reportedDate": "2021-01-21", "reportedEPS": "2.07", "estimatedEPS": "1.88", "surprise": "0.19", "surprisePercentage": "10.1064", "reportTime": "post-market"},
+    {"fiscalDateEnding": "2019-12-31", "reportedDate": "2020-01-21", "reportedEPS": "4.71", "estimatedEPS": "4.69", "surprise": "0.02", "surprisePercentage": "0.4264", "reportTime": "post-market"},
+    {"fiscalDateEnding": "2018-12-31", "reportedDate": "2019-01-22", "reportedEPS": "4.87", "estimatedEPS": "4.82", "surprise": "0.05", "surprisePercentage": "1.0373", "reportTime": "post-market"},
+    {"fiscalDateEnding": "2018-09-30", "reportedDate": "2018-10-16", "reportedEPS": "3.42", "estimatedEPS": "3.4", "surprise": "0.02", "surprisePercentage": "0.5882", "reportTime": "post-market"},
+    {"fiscalDateEnding": "2014-09-30", "reportedDate": "2014-10-20", "reportedEPS": "3.54", "estimatedEPS": "4.32", "surprise": "-0.78", "surprisePercentage": "-18.0556", "reportTime": "pre-market"},
+    {"fiscalDateEnding": "2009-06-30", "reportedDate": "2009-07-16", "reportedEPS": "2.32", "estimatedEPS": "2.01", "surprise": "0.31", "surprisePercentage": "15.4229", "reportTime": "post-market"},
+    {"fiscalDateEnding": "2007-12-31", "reportedDate": "2008-01-14", "reportedEPS": "2.8", "estimatedEPS": "2.6", "surprise": "0.2", "surprisePercentage": "7.6923", "reportTime": "pre-market"},
+    {"fiscalDateEnding": "1999-03-31", "reportedDate": "1999-04-21", "reportedEPS": "0.78", "estimatedEPS": "0.7", "surprise": "0.08", "surprisePercentage": "11.4286", "reportTime": "pre-market"}
+  ]
+}

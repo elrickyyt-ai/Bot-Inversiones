@@ -305,10 +305,26 @@ def adapt_macro_backfill():
 
 
 def adapt_equity(symbol):
-    """Fase 2, Bloque B -- engine/equity/score.py. Aqui SI hay una
-    distincion real entre data_as_of y retrieved_at: los ratios
-    fundamentales corresponden al ultimo trimestre reportado
-    (LatestQuarter de Alpha Vantage), no al momento de la descarga."""
+    """Fase 2, Bloque B -- engine/equity/score.py.
+
+    TRES relojes, no dos (corregido en P6.2a, 2026-09-07):
+
+        price_as_of        el ultimo cierre de mercado
+        fundamental_as_of  el fin del trimestre (LatestQuarter)
+        publicacion_as_of  el dia en que ese trimestre se publico
+
+    Hasta esta correccion, nueve metricas del trimestre se fechaban con
+    `fundamental_as_of`, que es cuando el periodo TERMINO, no cuando el
+    dato fue conocible. Sobre las fixtures reales el desfase es de 22 dias
+    en IBM y 31 en XOM: un analisis fechado dentro de esa ventana habria
+    usado unos resultados que todavia no se habian publicado. Es
+    look-ahead, y la fuente ya daba la fecha correcta en el mismo payload.
+
+    Las CINCO metricas de `cadencias.DEFECTO_DE_FECHADO` (pe_ratio,
+    peg_ratio y las tres de analistas) NO se tocan aqui: su defecto es de
+    signo contrario -- valor de hoy con fecha del trimestre -- y ya estaba
+    registrado por P1b. Ver engine/contract/temporal.py.
+    """
     mod = _load_module("equity", "score")
     e = mod.score_asset(symbol)
     retrieved_at = now_utc_iso()
@@ -319,6 +335,13 @@ def adapt_equity(symbol):
         overview = json.load(fh)
     fundamental_as_of = overview.get("LatestQuarter", e["fecha_dato"])
     price_as_of = e["fuente_ultima_cotizacion"]
+    # Si no se puede emparejar el trimestre con su fecha de publicacion, las
+    # metricas del GRUPO A no se emiten. No se cae de vuelta a
+    # fundamental_as_of: seria reintroducir a proposito el look-ahead que
+    # esta correccion elimina. Su ausencia la ve la cobertura declarada en
+    # cadencias.ESPERADAS, que es el mecanismo que el proyecto ya tiene
+    # para que una ausencia no pase inadvertida.
+    publicacion_as_of = e["fecha_publicacion_fundamental"]
 
     rows = [
         _row(symbol, "equity", "tecnico", "precio", e["precio"], "USD",
@@ -337,10 +360,10 @@ def adapt_equity(symbol):
                           fundamental_as_of, retrieved_at, "Alpha Vantage",
                           data_quality_pct=dq, calculation_method=method))
     rows.append(_row(symbol, "equity", "fundamental", "roe_pct", e["roe_pct"], "%",
-                      fundamental_as_of, retrieved_at, "Alpha Vantage",
+                      publicacion_as_of, retrieved_at, "Alpha Vantage",
                       data_quality_pct=dq, calculation_method=method))
     rows.append(_row(symbol, "equity", "fundamental", "revenue_growth_yoy_pct", e["revenue_growth_yoy_pct"], "%",
-                      fundamental_as_of, retrieved_at, "Alpha Vantage",
+                      publicacion_as_of, retrieved_at, "Alpha Vantage",
                       data_quality_pct=dq, calculation_method=method))
 
     # EPS: presente en el overview crudo (Alpha Vantage) pero score.py no lo
@@ -349,32 +372,32 @@ def adapt_equity(symbol):
     # nuevo, es un campo de la fuente que faltaba extraer.
     if overview.get("EPS") not in (None, "None"):
         rows.append(_row(symbol, "equity", "fundamental", "eps", float(overview["EPS"]), "USD",
-                          fundamental_as_of, retrieved_at, "Alpha Vantage",
+                          publicacion_as_of, retrieved_at, "Alpha Vantage",
                           data_quality_pct=dq, calculation_method=method))
 
     rows.append(_row(symbol, "equity", "fundamental", "profit_margin_pct", e["profit_margin_pct"], "%",
-                      fundamental_as_of, retrieved_at, "Alpha Vantage",
+                      publicacion_as_of, retrieved_at, "Alpha Vantage",
                       data_quality_pct=dq, calculation_method=method))
     rows.append(_row(symbol, "equity", "fundamental", "operating_margin_pct", e["operating_margin_pct"], "%",
-                      fundamental_as_of, retrieved_at, "Alpha Vantage",
+                      publicacion_as_of, retrieved_at, "Alpha Vantage",
                       data_quality_pct=dq, calculation_method=method))
 
     # Sorpresa de resultados -- ya calculada en score.py sobre los ultimos
     # 8 trimestres de engine/equity/_data/{symbol}_earnings.json.
     sorpresa = e["sorpresa_resultados"]
     rows.append(_row(symbol, "equity", "fundamental", "earnings_beats_8q", sorpresa["ultimos_8_trimestres_beats"],
-                      "trimestres", fundamental_as_of, retrieved_at, "Alpha Vantage",
+                      "trimestres", publicacion_as_of, retrieved_at, "Alpha Vantage",
                       data_quality_pct=dq, calculation_method=method))
     rows.append(_row(symbol, "equity", "fundamental", "earnings_misses_8q", sorpresa["ultimos_8_trimestres_misses"],
-                      "trimestres", fundamental_as_of, retrieved_at, "Alpha Vantage",
+                      "trimestres", publicacion_as_of, retrieved_at, "Alpha Vantage",
                       data_quality_pct=dq, calculation_method=method))
     if sorpresa["sorpresa_media_pct"] is not None:
         rows.append(_row(symbol, "equity", "fundamental", "earnings_surprise_avg_pct",
-                          sorpresa["sorpresa_media_pct"], "%", fundamental_as_of, retrieved_at, "Alpha Vantage",
+                          sorpresa["sorpresa_media_pct"], "%", publicacion_as_of, retrieved_at, "Alpha Vantage",
                           data_quality_pct=dq, calculation_method=method))
     if sorpresa["ultima_sorpresa_pct"] is not None:
         rows.append(_row(symbol, "equity", "fundamental", "earnings_surprise_last_pct",
-                          sorpresa["ultima_sorpresa_pct"], "%", fundamental_as_of, retrieved_at, "Alpha Vantage",
+                          sorpresa["ultima_sorpresa_pct"], "%", publicacion_as_of, retrieved_at, "Alpha Vantage",
                           data_quality_pct=dq, calculation_method=method))
 
     # Precio objetivo de analistas -- real (AnalystTargetPrice de Alpha
@@ -395,7 +418,16 @@ def adapt_equity(symbol):
         rows.append(_row(symbol, "equity", "fundamental", "analyst_n_analistas",
                           analistas["n_analistas"], "analistas", fundamental_as_of, retrieved_at, "Alpha Vantage",
                           data_quality_pct=dq, calculation_method=method))
-    return rows
+
+    # Una fila sin fecha no se emite con una fecha aproximada: no se emite.
+    # Hoy esto solo puede pasar con el GRUPO A, cuando el trimestre del
+    # overview no aparece en la serie de resultados. La ausencia queda
+    # visible en la cobertura declarada (cadencias.ESPERADAS), no en
+    # silencio, y es preferible a un dato con una fecha que sabemos falsa.
+    sin_fecha = [r["metric"] for r in rows if r["data_as_of"] is None]
+    if sin_fecha:
+        print(f"  [adapt_equity] {symbol}: sin fecha de publicacion, no se emiten {sin_fecha}")
+    return [r for r in rows if r["data_as_of"] is not None]
 
 
 def _parse_av_time_published(s):

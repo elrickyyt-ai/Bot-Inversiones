@@ -101,6 +101,12 @@ CAMPOS_EVENTO = {
     "expected", "actual", "surprise", "claim_ids", "evidence_count",
     "independent_support_count", "primary_support", "contradictory_support",
     "status", "status_reason", "unknowns",
+    # P6.2d (2026-09-07). OPCIONAL y siempre DECLARADO, nunca inferido:
+    # lo pone episodios.py a partir del registro curado episodios.json.
+    # None no significa "hecho aislado", significa "no se ha declarado que
+    # pertenezca a ningun episodio" -- que es una ausencia de declaracion,
+    # no una afirmacion sobre el mundo.
+    "episode_id",
 }
 
 # Cuatro relojes distintos. Ninguno se inventa: si no existe, es None.

@@ -353,9 +353,23 @@ class TestAdapters(unittest.TestCase):
         self.assertIn("earnings_beats_8q", by_metric)
         self.assertIn("earnings_misses_8q", by_metric)
         self.assertIn("analyst_target_price", by_metric)
-        # todas las metricas nuevas comparten fundamental_as_of con pe_ratio,
-        # no con el precio -- vienen del mismo overview, no de la cotizacion
-        self.assertEqual(by_metric["eps"]["data_as_of"], by_metric["pe_ratio"]["data_as_of"])
+        # REESCRITO EN P6.2a (2026-09-07). Este test afirmaba que eps y
+        # pe_ratio compartian fecha ("vienen del mismo overview"). Era
+        # cierto y era justo el defecto: venir del mismo overview no los
+        # hace conocibles el mismo dia. eps es un hecho del trimestre,
+        # publicado en reportedDate; pe_ratio se calcula con el precio de
+        # hoy. La propiedad que sigue siendo cierta -- y la que ahora
+        # importa -- es que son DOS RELOJES DISTINTOS y no deben coincidir.
+        self.assertNotEqual(by_metric["eps"]["data_as_of"], by_metric["pe_ratio"]["data_as_of"])
+        # ...y que las nueve del GRUPO A si comparten la suya entre ellas.
+        grupo_a = ["eps", "roe_pct", "revenue_growth_yoy_pct", "profit_margin_pct",
+                   "operating_margin_pct", "earnings_beats_8q", "earnings_misses_8q",
+                   "earnings_surprise_avg_pct", "earnings_surprise_last_pct"]
+        fechas_a = {by_metric[m]["data_as_of"] for m in grupo_a}
+        self.assertEqual(len(fechas_a), 1, f"el grupo A no comparte fecha: {fechas_a}")
+        # la fecha del grupo A es la de PUBLICACION, posterior al cierre del
+        # trimestre con el que se fecha el grupo B
+        self.assertGreater(by_metric["eps"]["data_as_of"], by_metric["pe_ratio"]["data_as_of"])
 
     def test_adapt_news_filas_validas_una_por_articulo(self):
         """Paso 4 (2026-09-03): fixture congelada de 3 articulos reales de

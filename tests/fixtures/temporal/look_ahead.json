@@ -1,0 +1,22 @@
+{
+  "_nota": "Fixture NEGATIVO de P6.2a (2026-09-07). Las dos filas describen el MISMO hecho -- la sorpresa de resultados de IBM del trimestre cerrado el 2026-06-30 -- con las dos fechas que se le han puesto. 'defectuosa' es la fila tal y como estuvo escrita en data/incoming/IBM_2026.csv hasta esta correccion; 'corregida' es como se escribe ahora. Las dos cumplen data_as_of <= retrieved_at: esa invariante no distingue entre ellas, y ese es exactamente el punto del fixture.",
+  "_procedencia": "tests/fixtures/equity/IBM_earnings.json -> quarterlyEarnings[0]: fiscalDateEnding 2026-06-30, reportedDate 2026-07-22, surprisePercentage 0.",
+  "defectuosa": {
+    "asset_id": "IBM", "asset_type": "equity", "domain": "fundamental",
+    "metric": "earnings_surprise_last_pct", "value": 0.0, "value_text": null, "unit": "%",
+    "data_as_of": "2026-06-30", "retrieved_at": "2026-09-03T12:15:39Z",
+    "source": "Alpha Vantage", "source_priority": 2,
+    "confidence_pct": null, "data_quality_pct": 75,
+    "calculation_method": "engine/equity/README.md", "source_url": null
+  },
+  "corregida": {
+    "asset_id": "IBM", "asset_type": "equity", "domain": "fundamental",
+    "metric": "earnings_surprise_last_pct", "value": 0.0, "value_text": null, "unit": "%",
+    "data_as_of": "2026-07-22", "retrieved_at": "2026-09-03T12:15:39Z",
+    "source": "Alpha Vantage", "source_priority": 2,
+    "confidence_pct": null, "data_quality_pct": 75,
+    "calculation_method": "engine/equity/README.md", "source_url": null
+  },
+  "analysis_as_of_intermedio": "2026-07-01",
+  "_por_que_esa_fecha": "2026-07-01 cae DESPUES del cierre del trimestre (2026-06-30) y ANTES de su publicacion (2026-07-22). Es la ventana de 22 dias en la que el dato existia economicamente pero nadie podia conocerlo."
+}

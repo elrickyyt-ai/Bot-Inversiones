@@ -29,6 +29,7 @@ import os
 import re
 
 import storage
+import temporal
 from schema import (
     validate_metric_row, validate_thesis_row, validate_asset_row, validate_news_row, ContractError,
     METRIC_FIELDS, THESIS_FIELDS, ASSET_FIELDS, NEWS_FIELDS,
@@ -291,6 +292,74 @@ def run_qa(require_parquet=False):
     p(f"Filas donde coinciden (normal para datos en vivo: precio, técnico cripto): {len(same_examples)}")
     p("")
 
+    # --- INTEGRIDAD TEMPORAL (available_at) ---
+    # El bloque de arriba comprueba que data_as_of y retrieved_at son
+    # independientes. Eso NO detecta un look-ahead: una fila puede cumplir
+    # data_as_of <= retrieved_at y aun asi estar fechada ANTES de que su
+    # valor fuese conocible. Es lo que pasaba con las nueve metricas del
+    # trimestre de acciones hasta 2026-09-07 (22-31 dias de adelanto) y lo
+    # que este bloque si ve. Ver engine/contract/temporal.py.
+    p("## INTEGRIDAD TEMPORAL (¿cuándo fue CONOCIBLE cada fila?)")
+    por_clase = {"SAFE": 0, "LOOK_AHEAD": 0, "STALE": 0, "AMBIGUOUS": 0}
+    look_ahead_detalle, ambiguas_detalle = {}, {}
+    for _fname, row in all_metric_rows:
+        clase = temporal.clasificar(row["domain"], row["metric"])
+        por_clase[clase] += 1
+        if clase == "LOOK_AHEAD":
+            look_ahead_detalle.setdefault((row["domain"], row["metric"]), 0)
+            look_ahead_detalle[(row["domain"], row["metric"])] += 1
+        elif clase == "AMBIGUOUS":
+            ambiguas_detalle.setdefault((row["domain"], row["metric"]), 0)
+            ambiguas_detalle[(row["domain"], row["metric"])] += 1
+    for clase in ("SAFE", "LOOK_AHEAD", "STALE", "AMBIGUOUS"):
+        p(f"  {clase:11} {por_clase[clase]:>7} filas")
+
+    # Un LOOK_AHEAD declarado no es un fallo silencioso: esta reconocido,
+    # acotado y con su razon escrita. Lo que si es un fallo es uno NUEVO,
+    # que aparezca en una metrica sin declaracion (AMBIGUOUS).
+    temporal_ok = not ambiguas_detalle
+    if look_ahead_detalle:
+        p("  LOOK_AHEAD declarados y acotados (no bloquean; deuda registrada):")
+        for (d, m), n in sorted(look_ahead_detalle.items()):
+            p(f"    {d}/{m}: {n} filas — {temporal.semantica(d, m)[2]}")
+    if ambiguas_detalle:
+        p("  SIN DECLARACIÓN TEMPORAL (bloquea — ninguna métrica puede quedar sin reloj):")
+        for (d, m), n in sorted(ambiguas_detalle.items()):
+            p(f"    {d}/{m}: {n} filas")
+
+    # Invariante que habria cazado el defecto corregido en P6.2a: los dos
+    # grupos de fundamentales de acciones llevan relojes distintos, asi que
+    # no pueden compartir data_as_of. Si vuelven a compartirlo, alguien ha
+    # vuelto a fechar el grupo A con el fin del trimestre.
+    choques = []
+    for asset in {r["asset_id"] for _f, r in all_metric_rows if r["asset_type"] == "equity"}:
+        fechas = {"SAFE": set(), "STALE": set()}
+        for _f, r in all_metric_rows:
+            if r["asset_id"] != asset or r["domain"] != "fundamental":
+                continue
+            clase = temporal.clasificar(r["domain"], r["metric"])
+            if clase in fechas:
+                fechas[clase].add(r["data_as_of"])
+        comun = fechas["SAFE"] & fechas["STALE"]
+        if comun:
+            choques.append((asset, sorted(comun)))
+    if choques:
+        temporal_ok = False
+        p("  COLISIÓN DE RELOJES (bloquea):")
+        for asset, fechas_comunes in choques:
+            p(f"    {asset}: el grupo del trimestre y el de valores vivos comparten {fechas_comunes}")
+    else:
+        p("  Sin colisión de relojes en fundamentales de acciones.")
+
+    try:
+        temporal.comprobar_coherencia_con_cadencias()
+        p("  cadencias.DEFECTO_DE_FECHADO y temporal.SEMANTICA_DATA_AS_OF: coherentes.")
+    except temporal.TemporalError as e:
+        temporal_ok = False
+        p(f"  INCOHERENCIA ENTRE TABLAS (bloquea): {e}")
+    p(f"RESULTADO: {_fmt_pass_fail(temporal_ok)}")
+    p("")
+
     # --- VALIDACIÓN DE FUENTES ---
     p("## VALIDACIÓN DE FUENTES (asset → metric → source)")
     no_source = [row for _, row in all_metric_rows if not row.get("source")]
@@ -447,6 +516,7 @@ def run_qa(require_parquet=False):
         and not asset_schema_errors and not asset_privacy_issues and not no_currency
         and not news_schema_errors and not news_privacy_issues and not news_duplicates and not news_no_source
         and not hash_errors
+        and temporal_ok
     )
 
     # --- QA-PARQUET: contenido real de las particiones. Solo con PyArrow. ---

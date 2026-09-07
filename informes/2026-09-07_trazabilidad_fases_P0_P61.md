@@ -11,12 +11,12 @@ No sustituye a los README de cada módulo (que explican *por qué* está hecho a
 ## Verificación completa en tres comandos
 
 ```bash
-python3 -m unittest discover -s tests           # 447 tests, debe dar OK
+python3 -m unittest discover -s tests           # 491 tests, debe dar OK
 python3 engine/contract/qa.py --require-parquet # debe dar STATUS: VERIFIED
 git status --short data/ knowledge/             # debe salir vacío
 ```
 
-Si los tres pasan, las quince fases están sanas. Si falla alguno, la tabla de abajo dice qué fase mirar.
+Si los tres pasan, las diecinueve fases están sanas. Si falla alguno, la tabla de abajo dice qué fase mirar.
 
 ---
 
@@ -37,6 +37,10 @@ Si los tres pasan, las quince fases están sanas. Si falla alguno, la tabla de a
 | **P5D** | `cfbf38b` | Evidence Gap → Data Requirement | `python3 engine/requirements/resolver.py org:nvidia` |
 | **P6** | `4f22a88` | Economic Impact v1 | `python3 engine/impact/impacto.py org:nvidia` |
 | **P6.1** | `02c31ad` | Materiality derivada | `python3 -m unittest tests.test_materialidad` |
+| **P6.2a** | *(este commit)* | Integridad temporal: los cinco relojes | `python3 -m unittest tests.test_temporal` |
+| **P6.2b** | *(este commit)* | Look-ahead corregido en la familia `earnings_*` | `python3 engine/contract/qa.py` → bloque `INTEGRIDAD TEMPORAL` |
+| **P6.2c** | *(este commit)* | Event study mínimo sobre resultados | `python3 engine/events/estudio_resultados.py` |
+| **P6.2d** | *(este commit)* | Episodios declarados sobre P4 | `python3 -m unittest tests.test_episodios` |
 
 ---
 
@@ -299,6 +303,11 @@ CONSUMPTION   Power BI + Web App
 | ~~Cuatro significados comparten el nombre `materialidad`~~ | — | **Cerrada en P6.1**: `BASIS_POR_MECANISMO` tipa la base y el extremo sujeto de cada mecanismo |
 | El contrato no admite observaciones sobre entidades que no son activos | `engine/impact/observaciones.py` (cabecera) | Medido en P6.1: `asset_type_of('TSM') → None`. Las 3 filas del 20-F viven ahí, marcadas como observaciones y no declaraciones. Misma familia que `capacity_utilization(tech:cowos)` |
 | `tech:cowos` se evalúa como insumo de coste, no como restricción de capacidad | informe de P6 | P5B enruta ese impulso por R5 y no por la vía de capacidad. Coherente con P5B, no tocado; el ángulo de capacidad es el económicamente interesante |
+| 2.148 filas macro con `data_as_of` = fecha del periodo, no de publicación | `temporal.SEMANTICA_DATA_AS_OF` + bloque de QA | IPC, HICP y tipo efectivo de la Fed. La fecha real vive en ALFRED (vintages), que este sistema no usa. Acotadas por cota conservadora y visibles en cada QA; **no corregidas**, porque corregirlas sin la fuente sería inventar precisión |
+| Las 15 filas del grupo B siguen fechadas con el trimestre | `cadencias.DEFECTO_DE_FECHADO` | `STALE`, no `LOOK_AHEAD` (D-18). No se re-fecharon: por decisión explícita del usuario y porque no falsean ningún backtest hacia el futuro |
+| No hay benchmark en el contrato | D-21 | Sin él no hay retorno anormal, y sin retorno anormal la suficiencia de muestra bloquea toda agregación de reacciones. **Sin resolver para cripto** |
+| La dirección causal noticia↔precio no se representa | informe de P6.2 §10 | Una noticia puede escribirse *porque* el precio ya se movió. No se inventa un campo que no se pueda rellenar |
+| Un solo episodio declarado | `engine/events/episodios.json` | El mecanismo existe y está probado con 5 documentos reales; poblarlo es trabajo de curación con fuente, no de código |
 
 ---
 

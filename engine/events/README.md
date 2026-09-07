@@ -75,3 +75,39 @@ El corpus real **no contiene** los casos 3 a 7. Medido: 0 titulares idénticos, 
 ## Regla arquitectónica
 
 Un Event puede **consumir** Knowledge para resolver entidades y **jamás** escribirlo. Ni un evento ni una inferencia modifican una relación estructural: eso exige `nueva fuente → verificación → actualización controlada`. Los tres módulos de P4 no tienen ninguna llamada de escritura a fichero, y hay un test que lo verifica sobre el código además de comprobar por hash que `knowledge/` y `data/` no cambian.
+
+---
+
+## Episodios (P6.2d, 2026-09-07)
+
+La tercera unidad, sobre las dos que esta capa ya tenía:
+
+```
+DOCUMENTO   una pieza concreta        → Evidence, con su source_ref
+EVENTO      un hecho identificable    → Event, deduplicado por identity_key
+EPISODIO    una secuencia en curso    → episodios.json + episodios.py
+```
+
+P4 ya evitaba el doble conteo por **redundancia** (`evidence_count` vs `independent_support_count`). No evitaba el doble conteo por **continuidad**: cinco piezas sobre momentos distintos del mismo hilo son cinco eventos legítimos y **un solo asunto abierto**.
+
+```bash
+python3 engine/events/episodios.py     # valida el registro declarado
+```
+
+Sobre los datos reales de XRP: **50 documentos → 100 evidencias → 43 eventos → 5 eventos en 1 episodio**.
+
+**Un episodio se declara, nunca se infiere** (D-19). Agrupar por parecido de texto es justo lo que esta capa se prohibió en su regla de identidad. La pertenencia se ancla al `news_id` del Data Contract (estable), no al `event_id` (derivado, se regenera). El estado `OPEN`/`RESOLVED` importa: en julio de 2026 el sistema trató la aprobación en comité de la CLARITY Act como catalizador resuelto y hubo que corregirlo a mano cuando el Senado aplazó la votación.
+
+`episode_id = None` significa *"no se ha declarado que pertenezca a ningún episodio"*, **no** *"es un hecho aislado"*.
+
+## Event study mínimo (P6.2c)
+
+```bash
+python3 engine/events/estudio_resultados.py
+```
+
+Responde, de extremo a extremo: *¿qué información estaba disponible, qué sorpresa implicaba, cuándo pudo negociarse por primera vez y cómo reaccionó el activo?*
+
+Emite **observaciones individuales**. No agrega, no calcula medianas, no produce señales y no afirma causalidad — `suficiencia_de_muestra()` bloquea la agregación y explica por qué (hoy: `SIN_BENCHMARK_EN_EL_CONTRATO`).
+
+Lo que hace visible el `reportTime` de Alpha Vantage: **`pre-market` se negocia la misma sesión, `post-market` la siguiente**. XOM publica casi siempre pre-market; IBM y NVDA post-market. Sin ese campo, 28 de los 52 eventos de la muestra se medirían en una sesión en la que la noticia todavía no existía. Si falta, `first_tradable_at` es `None`: no se elige una franja por defecto.

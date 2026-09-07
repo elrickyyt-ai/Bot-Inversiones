@@ -126,3 +126,28 @@ python3 engine/contract/cobertura.py --con-history  # incluye history/ (PyArrow)
 **`data/coverage.json` es derivado y gitignored**, como `data/current/`: se recalcula entero en cada `build.py`. No se versiona porque la frescura envejece sola y produciría un commit diario sin ningún cambio real de datos. `qa.py` lo resume en un bloque **informativo que nunca falla**: que el IPC envejezca hasta su cadencia normal es correcto y no debe impedir commitear datos nuevos. Quien decida bloquear con la frescura será el motor de razonamiento, no la ingesta.
 
 **Registrado y no corregido** (`DEFECTO_DE_FECHADO` en `cadencias.py`): `adapt_equity()` escribe `pe_ratio`, `peg_ratio` y las tres `analyst_*` con `fundamental_as_of` (el trimestre) aunque dependen del precio del día. Su cadencia declarada es la correcta —diaria— y por eso salen `STALE`: el dato es de hoy y la fecha es de hace un trimestre.
+
+---
+
+## Integridad temporal (P6.2a, 2026-09-07)
+
+`temporal.py` declara qué reloj lleva de verdad `data_as_of` en cada familia de métrica. Existe porque no llevaba el mismo en todas:
+
+```
+tecnico/precio        2026-09-04   el cierre de esa sesión     → available_at
+fundamental/eps       2026-06-30   el fin del trimestre        → period_end
+macro/cpi_yoy_pct     2026-06-01   el mes que describe         → period_end
+fundamental/pe_ratio  2026-06-30   ...el valor es de HOY       → ninguno
+```
+
+Cuatro relojes en la misma columna: el mismo error de token compartido que ya obligó a separar `source_priority` en P0.
+
+**`available_at` se deriva, no se almacena** (D-17), mismo criterio que D-12 para la materialidad. La invariante que aporta es la que `data_as_of ≤ retrieved_at` no puede expresar:
+
+```
+available_at ≤ analysis_as_of
+```
+
+Cuatro clasificaciones que **no** se convierten unas en otras: `SAFE`, `LOOK_AHEAD`, `STALE` (defecto de signo contrario, D-18) y `AMBIGUOUS`. Y tres estados de derivación: `EXACTO`, `COTA_CONSERVADORA` (sirve para excluir, nunca para afirmar cuándo se supo) y `DESCONOCIDO`, que **nunca es utilizable**.
+
+`qa.py` gana el bloque `INTEGRIDAD TEMPORAL`, que bloquea si una métrica entra sin reloj declarado, si los dos grupos de fundamentales de acciones vuelven a compartir `data_as_of`, o si `cadencias.py` y `temporal.py` divergen.
