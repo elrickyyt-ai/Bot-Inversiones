@@ -1,6 +1,6 @@
 # Auditoría de población del histórico de eventos — ¿hay diversidad transversal suficiente?
 
-**Fecha**: 2026-09-07/08 · **Rama**: `claude/bot-inversiones-audit-peh0x2` · **Base**: `66b1979`
+**Fecha**: 2026-09-07/08 · **Rama**: `claude/bot-inversiones-audit-peh0x2` · **Base**: `66b1979` · **Commit**: `f1b0d38`
 **Alcance**: medir si existe una población con la que arreglar `n_assets = 3`. **No es un backfill**: no se ha cargado ni un solo evento en `data/`.
 
 **Verificación**:
