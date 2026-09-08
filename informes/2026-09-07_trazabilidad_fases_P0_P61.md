@@ -49,7 +49,7 @@ Si los tres pasan, las veintidós fases están sanas. Si falla alguno, la tabla 
 | **Autoridad** | `646c72d` | Qué fuente manda sobre cada componente del evento | `python3 engine/events/autoridad.py` |
 | **Identidad** | `0fa7bc3` | Identidad histórica de instrumento y transformaciones | `python3 engine/events/identidad.py` |
 | **Corporate actions** | `018e520` | Contaminación de ventanas por transformaciones de instrumento | `python3 engine/events/cobertura_acciones.py` |
-| **Readiness** | `PENDIENTE` | ¿Se puede ampliar la población con rigor? | `python3 engine/events/readiness.py` |
+| **Readiness** | `e581e22` | ¿Se puede ampliar la población con rigor? | `python3 engine/events/readiness.py` |
 
 ---
 

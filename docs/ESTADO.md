@@ -99,7 +99,7 @@ CONSUMO (desacoplado, no dicta el motor)   Power BI · Web App
 | D-36/37/38/39 | `646c72d` | Autoridad de dato por componente: SEC manda, Alpha Vantage enriquece, consenso `UNAVAILABLE`, una escisión no es un split |
 | D-40/41/42 | `0fa7bc3` | Identidad histórica de instrumento: el ticker es reasignable, fusión ≠ escisión, cabe en el Knowledge Model |
 | D-43/44/45 | `018e520` | Cobertura de acciones corporativas: identidad durante la ventana, el filing manda, cuatro clases de relación |
-| D-46/47/48/49 | `PENDIENTE` | Backfill readiness: `false`; el cuello es la identidad del instrumento, no la cobertura |
+| D-46/47/48/49 | `e581e22` | Backfill readiness: `false`; el cuello es la identidad del instrumento, no la cobertura |
 
 Detalle por fase, con qué se rompe si cae y cómo recuperarla: `informes/2026-09-07_trazabilidad_fases_P0_P61.md`.
 

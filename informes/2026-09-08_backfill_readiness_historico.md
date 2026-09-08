@@ -1,6 +1,6 @@
 # Backfill readiness del universo histórico — qué componente impide ampliar con rigor
 
-**Fecha**: 2026-09-08 · **Rama**: `claude/bot-inversiones-audit-peh0x2` · **Base**: `f6a76d8`
+**Fecha**: 2026-09-08 · **Rama**: `claude/bot-inversiones-audit-peh0x2` · **Base**: `f6a76d8` · **Commit**: `e581e22`
 **Pregunta**: de las 31 empresas del universo histórico, ¿cuántas podemos reconstruir *point-in-time* como entidades, eventos, precios e instrumentos, y cuál es el componente que impide ampliar con rigor?
 
 **Verificación**:
