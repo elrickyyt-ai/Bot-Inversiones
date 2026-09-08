@@ -1,6 +1,6 @@
 # Auditoría de cobertura de Corporate Actions y continuidad económica
 
-**Fecha**: 2026-09-08 · **Rama**: `claude/bot-inversiones-audit-peh0x2` · **Base**: `1dad962`
+**Fecha**: 2026-09-08 · **Rama**: `claude/bot-inversiones-audit-peh0x2` · **Base**: `1dad962` · **Commit**: `018e520`
 **Pregunta**: ¿cuántos eventos de nuestro universo tienen dentro de sus ventanas una transformación que pueda romper la continuidad económica del instrumento?
 
 **Verificación**:

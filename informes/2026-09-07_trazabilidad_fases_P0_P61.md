@@ -48,7 +48,7 @@ Si los tres pasan, las veintidós fases están sanas. Si falla alguno, la tabla 
 | **Población** | `f1b0d38` | Universo congelado, cobertura de fuente y reproducibilidad histórica | `python3 engine/events/universo.py` |
 | **Autoridad** | `646c72d` | Qué fuente manda sobre cada componente del evento | `python3 engine/events/autoridad.py` |
 | **Identidad** | `0fa7bc3` | Identidad histórica de instrumento y transformaciones | `python3 engine/events/identidad.py` |
-| **Corporate actions** | `PENDIENTE` | Contaminación de ventanas por transformaciones de instrumento | `python3 engine/events/cobertura_acciones.py` |
+| **Corporate actions** | `018e520` | Contaminación de ventanas por transformaciones de instrumento | `python3 engine/events/cobertura_acciones.py` |
 
 ---
 
