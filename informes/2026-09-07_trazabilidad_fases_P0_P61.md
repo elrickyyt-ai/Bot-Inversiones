@@ -11,7 +11,7 @@ No sustituye a los README de cada módulo (que explican *por qué* está hecho a
 ## Verificación completa en tres comandos
 
 ```bash
-python3 -m unittest discover -s tests           # 708 tests, debe dar OK
+python3 -m unittest discover -s tests           # 723 tests, debe dar OK
 python3 engine/contract/qa.py --require-parquet # debe dar STATUS: VERIFIED
 git status --short data/ knowledge/             # debe salir vacío
 ```
@@ -49,6 +49,7 @@ Si los tres pasan, las veintidós fases están sanas. Si falla alguno, la tabla 
 | **Autoridad** | `646c72d` | Qué fuente manda sobre cada componente del evento | `python3 engine/events/autoridad.py` |
 | **Identidad** | `0fa7bc3` | Identidad histórica de instrumento y transformaciones | `python3 engine/events/identidad.py` |
 | **Corporate actions** | `018e520` | Contaminación de ventanas por transformaciones de instrumento | `python3 engine/events/cobertura_acciones.py` |
+| **Readiness** | `PENDIENTE` | ¿Se puede ampliar la población con rigor? | `python3 engine/events/readiness.py` |
 
 ---
 
@@ -282,6 +283,31 @@ Si los tres pasan, las veintidós fases están sanas. Si falla alguno, la tabla 
 **Qué se rompe si cae**: nada aguas abajo — declarativo y sin consumidores. Se pierde la invariante de que una observación exige identidad y continuidad durante su ventana.
 
 **Informe**: `informes/2026-09-08_auditoria_corporate_actions_y_continuidad.md`.
+
+---
+
+### Readiness · Backfill del universo histórico — D-46 · D-47 · D-48 · D-49
+
+**Ficheros**: `engine/events/readiness_universo.json` · `readiness.py` (nuevos) · `tests/test_backfill_readiness.py` (nuevo, 15 tests)
+
+**Qué añade**: mide los **31 activos** en vivo contra la SEC y la fuente de precios. No ingiere nada.
+
+- **`BACKFILL_READY = false`**; universo mínimo efectivo **28 de 31**.
+- **100%** en identidad, evento, resultado, sucesión y benchmark. **0%** en `historical_ticker` y `corporate_actions`.
+- **Las 3 ausencias de precio son exactamente los 3 deslistados** (DWDP, UTX, WBA) — sesgo, no laguna.
+- **WBA** apareció en la medición, no en el diseño: ausente del directorio, CIK recuperado por full-text.
+- **`actual_financials` es 31/31 solo con `NetIncomeLoss`**; con EPS habría sido 29/31.
+- **Lista blanca causal evaluada y no aplicada**: cumple 2 de 3 criterios.
+
+**Tests deliberadamente frágiles**:
+- `test_las_ausencias_de_precio_son_exactamente_los_deslistados` — se rompe cuando se resuelva el precio de los tres, que es cuando el backfill deja de estar sesgado.
+- `test_no_se_decide_con_un_porcentaje_global` — impide sustituir el criterio por un umbral.
+- `test_el_cuello_de_botella_es_la_identidad_del_instrumento` — se rompe cuando el Instrument Master exista.
+- `test_alpha_vantage_no_decide_que_activos_existen` — 22,6% de cobertura y 100% de identidad.
+
+**Qué se rompe si cae**: nada aguas abajo — declarativo y sin consumidores. Se pierde el criterio que impide ampliar sobre una cohorte de supervivientes.
+
+**Informe**: `informes/2026-09-08_backfill_readiness_historico.md`.
 
 ## Dependencias entre fases
 

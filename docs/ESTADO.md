@@ -47,6 +47,8 @@ DATA CONTRACT      data/incoming/*.csv (año en curso)  +  data/history/** (parq
    │           │                                           A→A · A→B · A→B+C   (transformaciones)
    │           │                                      └──► Cobertura de acciones corporativas
    │           │                                            ¿la ventana cruza una transformación?
+   │           │                                       └──► Backfill readiness  (31 activos)
+   │           │                                             BACKFILL_READY = false
    │           │
    │           └──► P5D  Data Requirements  ¿existe el dato que el mecanismo pide?
    │
@@ -97,6 +99,7 @@ CONSUMO (desacoplado, no dicta el motor)   Power BI · Web App
 | D-36/37/38/39 | `646c72d` | Autoridad de dato por componente: SEC manda, Alpha Vantage enriquece, consenso `UNAVAILABLE`, una escisión no es un split |
 | D-40/41/42 | `0fa7bc3` | Identidad histórica de instrumento: el ticker es reasignable, fusión ≠ escisión, cabe en el Knowledge Model |
 | D-43/44/45 | `018e520` | Cobertura de acciones corporativas: identidad durante la ventana, el filing manda, cuatro clases de relación |
+| D-46/47/48/49 | `PENDIENTE` | Backfill readiness: `false`; el cuello es la identidad del instrumento, no la cobertura |
 
 Detalle por fase, con qué se rompe si cae y cómo recuperarla: `informes/2026-09-07_trazabilidad_fases_P0_P61.md`.
 
@@ -107,6 +110,10 @@ Detalle por fase, con qué se rompe si cae y cómo recuperarla: `informes/2026-0
 > **La validez de una observación histórica depende no solo de que el dato exista y sea *point-in-time*, sino de que la entidad, el instrumento y su continuidad económica puedan identificarse durante la ventana analizada.** (D-43)
 >
 > Y su corolario de seguridad, descubierto con el caso `MOB`: **un falso positivo de identidad es más peligroso que un dato ausente.**
+>
+> **Una ausencia con forma de superviviencia no es cobertura parcial** (D-47): un 90% cuyo 10% ausente son exactamente las empresas deslistadas es un sesgo, no una laguna.
+>
+> Y la raíz común de todo lo anterior: **el sistema no debe deducir semántica por ausencia de una excepción.** Un ticker no es una identidad porque no sepamos que sea otro; una relación no es causal porque no esté en una lista negra.
 
 
 Estos invariantes no son preferencias de estilo: cada uno nació de un fallo real, medido. `docs/DECISIONES.md` guarda el historial completo, incluidas las decisiones que fueron revisadas.
@@ -135,7 +142,7 @@ Estos invariantes no son preferencias de estilo: cada uno nació de un fallo rea
 
 ## 5. Estado actual, medido
 
-**Suite**: 708 tests · OK — **QA**: `QA CORE: PASS` · `QA PARQUET: PASS` · `STATUS: VERIFIED` (287 particiones, 0 incidencias) — **Knowledge**: PASS (26 entidades · 51 relaciones · 11 fuentes)
+**Suite**: 723 tests · OK — **QA**: `QA CORE: PASS` · `QA PARQUET: PASS` · `STATUS: VERIFIED` (287 particiones, 0 incidencias) — **Knowledge**: PASS (26 entidades · 51 relaciones · 11 fuentes)
 
 ```bash
 python3 -m unittest discover -s tests
@@ -189,6 +196,9 @@ magnitud      UNKNOWN                      (P6)
 | HBM y sustrato ABF sin fuente | `knowledge/pendiente/nvidia_cadena.json` | Buscados en los dos filings: cero menciones |
 | Samsung / SK Hynix / Micron | `knowledge/pendiente/` | **Ya tienen fuente verificada**; fuera del alcance acordado, promovibles en un paso |
 | `tech:cowos` se evalúa como insumo de coste, no como restricción de capacidad | informe de P6 | P5B enruta por R5; decisión de no tocar P5B |
+| **`historical_ticker` al 0% en los 31** | D-46 · `readiness_universo.json` | Ninguna fuente determinista dice qué ticker designaba a un instrumento en una fecha pasada. **Es el cuello de botella del backfill** |
+| **Precio ausente justo en los 3 deslistados** | D-47 | DWDP, UTX y WBA. La cobertura que falta tiene forma de sesgo de superviviencia, no de laguna aleatoria |
+| **`companyconcept` da falsos negativos** | D-48 | Para KO devuelve 0 donde `companyfacts` da 233. El pipeline futuro debe usar `companyfacts` o comparar ambos |
 | **Acciones corporativas `NOT_MEASURED` en 26 de 31 activos** | D-43 · `acciones_corporativas.json` | La tasa de contaminación del universo es **desconocida**, no baja. Es lo que decide si el Instrument Master es mejora o requisito |
 | **8 de 12 acciones sin verificar contra la SEC** | D-44 | Clasificadas por indicio de ratio. Marcadas como no verificadas, sin ascender |
 | **No hay detector posible de fusiones** | D-44 | No dejan señal en el precio. Un detector sobre la serie encontraría escisiones y perdería fusiones |
@@ -430,15 +440,52 @@ MOB  @ 1995-06-01 -> AMBIGUOUS: ningún intervalo declarado cubre esa fecha
 
 **Hallazgo colateral (D-45)**: el traversal causal usa **lista negra**. De 95 caminos desde NVDA, **7 (7%) no contienen ninguna arista causal** (`LISTED_ON`, `ISSUED_BY → DOMICILED_IN → DOMICILED_IN`). D-23 cerró el benchmark; `ISSUED_BY`, `LISTED_ON`, `DOMICILED_IN` y `CLASSIFIED_AS` siguen recorriéndose. **`SUCCESSOR_OF` se clasifica `STRUCTURAL` antes de existir** para que no entre por defecto. La corrección de fondo —lista blanca— tocaría P5A y **no se ha hecho**.
 
+**Novena pieza: backfill readiness — MEDIDA sobre los 31** (`informes/2026-09-08_backfill_readiness_historico.md`, decisiones **D-46 · D-47 · D-48 · D-49**). Medición en vivo contra la SEC y la fuente de precios, **sin usar Alpha Vantage para decidir qué activos existen**.
+
+> **`BACKFILL_READY = false`.** **28 de 31** empresas se reconstruyen completas como entidad + evento + resultado + precio + benchmark. **El cuello de botella no es la cobertura: es la identidad del instrumento.**
+
+```
+  componente                  AVAIL   UNAV   NOTM   AMBI   coverage
+  historical_identity            31      0      0      0     100.0%
+  SEC_event                      31      0      0      0     100.0%
+  actual_financials              31      0      0      0     100.0%
+  successor_mapping              31      0      0      0     100.0%
+  benchmark                      31      0      0      0     100.0%
+  CIK                            29      0      0      2      93.5%
+  price                          28      3      0      0      90.3%
+  event_study_eligibility        12      3      0     16      38.7%
+  AV_enrichment / expectation     7      2     22      0      22.6%
+  historical_ticker               0      0      0     31       0.0%
+  corporate_actions               0      3      0     28       0.0%
+```
+
+**Escenario C**, con una precisión: la identidad **de entidad** está al 100%; lo que está al 0% es la capa **ticker → instrumento**. **El Instrument Master pasa de mejora futura a requisito previo.**
+
+**El hallazgo que decide (D-47):**
+
+```
+fuera del directorio actual : ['DWDP', 'UTX', 'WBA']
+sin precio                  : ['DWDP', 'UTX', 'WBA']
+¿coinciden?                 : True
+```
+
+> Las ausencias de precio son **exactamente** los activos que el directorio ya no lista. Un 90,3% leído como "casi completo" backfillearía 28 supervivientes y perdería justo los 3 casos que hacen la muestra insesgada. Un test **bloquea el backfill solo por esa coincidencia**.
+
+**Y apareció un tercer caso que no estaba en el diseño**: **WBA** no está en `company_tickers.json`; su CIK `0001618921` se recuperó por EDGAR full-text, con 211 obs. de `NetIncomeLoss` y sus 8-K intactos. Con DWDP (escisión) y UTX (fusión) son **tres formas distintas** de dejar de cotizar, las tres invisibles para el directorio.
+
+**Dos correcciones que obligó la medición (D-48)**: medir `actual_financials` solo como `EarningsPerShareDiluted` habría dado **29/31** — KO tiene 4 observaciones y **Visa ninguna**; con `NetIncomeLoss` la cobertura real es **31/31**. Y los dos endpoints de la SEC **se contradicen para KO** (`companyconcept` 0 vs `companyfacts` 233), verificado que **no es sistemático** (IBM y Apple coinciden).
+
+**Lista blanca causal evaluada y NO aplicada (D-49)**: de tres variantes, la única sana —exigir ≥1 arista causal en el camino emitido— elimina **37 de 356 (10,4%)** y **ninguno con contenido causal**. Cumple dos de los tres criterios; falla **regresión cero** (NVDA prof2 27→23, BTC prof2 33→21, con tests que afirman sobre esos conteos). **P5A no se toca**; queda como `P5A hardening` aparte.
+
 **Lo siguiente**, por orden de lo que desbloquea:
 
-1. **Medir acciones corporativas en los 26 activos restantes** — es lo único que convierte "tasa desconocida" en un número. Decide si el Instrument Master es una mejora o un requisito previo.
-2. **Verificar contra la SEC las 8 acciones clasificadas por indicio.**
-3. **Declarar los 5 casos** como `security` + `organization` con `ISSUED_BY` fechado, y añadir `SUCCESSOR_OF` **no causal** (D-42) con test de regresión.
-4. **Conectar la política a `poblacion()`** y añadir entonces `n_identity_valid` / `n_price_continuous` / `n_corporate_action_clean`.
-5. **Mapa `ticker histórico → CIK`** curado para los 31.
-6. **Solo entonces, ingesta**; y con ella independencia y solape sobre series contiguas.
-7. **`n_effective`** (D-31), más clases de evento, y por último `predictive_status` ≠ `NOT_EVALUATED` (P8).
+1. **Mapa `ticker histórico → CIK` para los 31**, con intervalos y corroboración por `formerNames`. Es el 0% que bloquea, y es **trabajo, no dinero**.
+2. **Clasificar las acciones corporativas de los 31 desde el 8-K** — hoy 5 de 31.
+3. **Resolver el precio de DWDP, UTX y WBA** vía sucesor con mapa explícito. **Sin esto, cualquier ampliación es una cohorte de supervivientes.**
+4. **Declarar los 31 en el Knowledge Model** (`ISSUED_BY` fechado, D-42) y añadir `SUCCESSOR_OF` **no causal**.
+5. **Entonces sí**: ampliar población, y volver a medir independencia y solape sobre series contiguas.
+6. **En paralelo y aparte**: `P5A hardening` con la variante C.
+7. Después: `n_effective` (D-31), más clases de evento, y por último `predictive_status` ≠ `NOT_EVALUATED` (P8).
 
 Roadmap acordado: `P6.2 Quantification unlocks` → `P7 Market Impact` → `P8 Mispricing` → `P9 Thesis` → `P10 Portfolio` → `P11 Outcome/Calibration`. Power BI y Web App consumirán una proyección del motor; no lo dictan.
 

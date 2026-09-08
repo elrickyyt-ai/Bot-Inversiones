@@ -446,3 +446,58 @@ La justificación de `^GSPC` es **ex ante y por lo que cada índice representa**
 - **Mitigación aplicada**: `SUCCESSOR_OF` se clasifica **`STRUCTURAL` antes de existir**, con un test que comprueba a la vez que no está en `PREDICADOS` y que ya tiene clase asignada.
 - **La corrección de fondo NO se ha hecho**: pasar de lista negra a **lista blanca de predicados `CAUSAL`** tocaría P5A, que está cerrada, y excede el alcance de esta auditoría. Queda registrado con su medición para que la decisión se tome con el número delante.
 
+## D-46 · `BACKFILL_READY = false`: el cuello de botella es la identidad del instrumento, no la cobertura
+
+**Vigente** (auditoría de backfill readiness, 2026-09-08). **Escenario C.**
+
+- **Medido sobre los 31 activos** en vivo contra la SEC y la fuente de precios, **sin usar Alpha Vantage para decidir qué activos existen** (D-36):
+
+| componente | cobertura | | componente | cobertura |
+|---|---|---|---|---|
+| `historical_identity` | **100%** | | `historical_ticker` | **0%** |
+| `SEC_event` | **100%** | | `corporate_actions` | **0%** |
+| `actual_financials` | **100%** | | `event_study_eligibility` | 38,7% |
+| `successor_mapping` | **100%** | | `price` | 90,3% |
+| `benchmark` | **100%** | | `CIK` | 93,5% |
+
+- **Decisión vigente**: `BACKFILL_READY = false`. **28 de 31** se reconstruyen completos como entidad + evento + resultado + precio + benchmark. Lo que bloquea **no es la cobertura**: la identidad **de entidad** está al 100% y la capa **ticker → instrumento** al 0%. **El Instrument Master pasa de mejora futura a requisito previo.**
+- **No se decide con un porcentaje global**, y hay un test que lo fija: el universo mínimo efectivo es **28 de 31 (90,3%)** —alto— y aun así no está listo. Con un umbral, saldría que sí.
+- **La expectativa NO es bloqueante** (D-38): `AV_enrichment` al 22,6% y no entra en el cálculo. `event = AVAILABLE` con `expectation = UNAVAILABLE` es el estado real de DWDP y UTX.
+
+## D-47 · Una ausencia con forma de superviviencia no es cobertura parcial
+
+**Vigente** (2026-09-08). **Invariante de seguridad.**
+
+- **Medido**: los activos sin precio son **exactamente** los que el directorio de tickers ya no lista.
+
+```
+fuera del directorio actual : ['DWDP', 'UTX', 'WBA']
+sin precio                  : ['DWDP', 'UTX', 'WBA']
+¿coinciden?                 : True
+```
+
+- **Decisión vigente**: un 90,3% cuyo 9,7% ausente son precisamente los deslistados **no es un 90% de cobertura**: es un sesgo de superviviencia con otro nombre. `ausencias_con_forma_de_superviviencia()` lo comprueba y **bloquea el backfill por sí solo**, aunque todos los umbrales se cumplieran.
+- **Apareció un tercer caso que no estaba en el diseño**: **WBA** (Walgreens Boots Alliance) **no está en `company_tickers.json`**. Su CIK `0001618921` se recuperó por EDGAR full-text (77 de 1123 documentos), con **211 observaciones de `NetIncomeLoss`** y sus 8-K intactos. Lo **encontró el barrido**, no lo elegí yo. Con DWDP (escisión) y UTX (fusión), son **tres formas distintas** de dejar de cotizar, las tres invisibles para el directorio actual.
+- **Se descartó**: dar por buena la cobertura del 90,3% y ampliar sobre los 28 supervivientes.
+
+## D-48 · El resultado real no es un concepto XBRL, y los endpoints de la SEC no siempre coinciden
+
+**Vigente** (2026-09-08). **Corrige la métrica con la que se mide `actual_financials`.**
+
+- **Evidencia**: medir `actual_financials` como `EarningsPerShareDiluted` habría dado **29 de 31**. **KO** tiene solo **4 observaciones** de EPS (2008-2009) y **Visa no tiene ningún concepto EPS estándar** — solo `BusinessAcquisitionProFormaEarningsPerShareDiluted`. Ambas sí tienen **`NetIncomeLoss`** (233 y 227). Con la métrica ampliada, la cobertura real es **31 de 31**.
+- **Segundo hallazgo, sobre la propia fuente autoritativa**: para KO, `companyconcept/NetIncomeLoss` devuelve **`{'USD': 0}`** y `companyfacts` devuelve **233 observaciones** — mismo CIK, concepto y unidad. **Verificado que no es sistemático**: IBM (123) y Apple (338) coinciden exactamente en ambos endpoints.
+- **Decisión vigente**: el resultado real se mide con **una familia de conceptos**, no con uno; y el pipeline futuro debe usar `companyfacts` —o comparar ambos— porque `companyconcept` produce **falsos negativos silenciosos**.
+- **Es el mismo patrón que el proyecto lleva encontrando desde D-36**: la ausencia en un camino de acceso no es ausencia del dato.
+
+## D-49 · La lista blanca causal no se adopta: destruye caminos legítimos
+
+**Vigente** (2026-09-08). **Evaluada y NO aplicada; P5A no se toca.**
+
+- **Tres variantes medidas** sobre caminos reales (`NVDA`, `IBM`, `XOM`, `org:nvidia`, profundidad 3, 356 caminos):
+  - **A — solo aristas `CAUSAL`**: 356 → 102. Sin `ISSUED_BY` no se llega del instrumento a la entidad.
+  - **B — `CAUSAL` + `ISSUED_BY` como puente**: 356 → 118. **Elimina caminos con contenido causal**: `EXPOSED_TO|EXPOSED_TO|LISTED_ON` ×84, `ISSUED_BY|DOMICILED_IN|EXPOSED_TO` ×24, `EXPOSED_TO|DOMICILED_IN|SUPPLIES` ×3.
+  - **C — no restringir el recorrido; exigir ≥1 arista `CAUSAL` en el camino emitido**: 356 → 319, **37 eliminados (10,4%)**, y **ninguno contiene una arista causal** (verificado).
+- **De los tres criterios exigidos, C cumple dos**: equivalencia de caminos legítimos ✅ y eliminación de los puramente estructurales ✅. **El tercero no**: los fixtures sintéticos sobreviven al 100% (`T5_ciclo` 4/4, `T6_contradiccion` 1/1), pero los casos sobre el Knowledge real pierden caminos —NVDA prof2 **27→23**, BTC prof2 **33→21**— y `test_caminos.py` afirma sobre esos conteos.
+- **Decisión vigente**: **no se cambia P5A**. La pérdida de conteos es probablemente correcta —son caminos vacíos— pero eso convierte el cambio en una revisión de los tests de una fase cerrada, no en un no-op, y el criterio pedido era **regresión cero**.
+- **Recomendación registrada**: aplicar la variante C como refactor propio (`P5A hardening`), **fuera del backfill**, porque el riesgo de causalidad y el de identidad son distintos aunque compartan raíz: *el sistema no debe deducir semántica por ausencia de una excepción*.
+
