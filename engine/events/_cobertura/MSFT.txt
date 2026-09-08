@@ -1,0 +1,11 @@
+# MSFT: RESUMEN TRANSCRITO.
+# 122 trimestres contiguos 1996-03-31 .. 2026-06-30 (122 esperados = 122 observados).
+# estimatedEPS y reportedEPS presentes en las 122. reportTime presente en las 122.
+# reportTime MIXTO dentro de la misma compania: 26 "pre-market" + 96 "post-market".
+#   - bloque temprano: 1996-04-18 .. 2001-04-19 (21 trimestres, 1996Q1..2001Q1) todos pre-market
+#   - desde 2001-07-19: post-market, con 5 excepciones pre-market enumeradas abajo
+2023-07-25 pre E
+2022-07-26 pre E
+2021-07-27 pre E
+2009-10-23 pre E
+2009-01-22 pre E

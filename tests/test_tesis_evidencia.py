@@ -209,12 +209,21 @@ class TestSobreLasFixturesReales(unittest.TestCase):
         requeridas = [e for e in r["evidencia"] if e["papel"] == self.t.REQUERIDA]
         self.assertTrue(all(e["frescura"] == "STALE" for e in requeridas))
 
+    # Las fixtures de acciones están congeladas en 2026-09-02, así que la
+    # frescura de su técnico depende de CUÁNDO se ejecute el test. Se fija
+    # `as_of` al día siguiente: lo que este test comprueba es la REGLA (una
+    # métrica PUBLICADA caducada no invalida la tesis), no cuántos días han
+    # pasado desde que se congeló la fixture. Sin fijarlo, el test caducaba
+    # solo al cruzar el umbral de cadencia del técnico — y así ocurrió el
+    # 2026-09-08.
+    AS_OF_FIXTURE_ACCIONES = "2026-09-03"
+
     def test_acciones_con_pe_caducado_pero_tecnico_al_dia_si_publica_confianza(self):
         """El caso que motivó la regla, sobre datos reales: IBM tiene
         pe_ratio, peg_ratio y los dos analyst_* con decenas de sesiones
         de retraso, y aun así la tesis es válida porque ninguna regla
         depende de ellos."""
-        r = self.t.build_thesis_equity("IBM")
+        r = self.t.build_thesis_equity("IBM", as_of=self.AS_OF_FIXTURE_ACCIONES)
         self.assertEqual(r["validez_evidencia"], "VALID")
         self.assertIsNotNone(r["confidence_pct"])
         caducadas = {e["metrica"] for e in r["evidencia"] if e["frescura"] == "STALE"}
@@ -222,13 +231,28 @@ class TestSobreLasFixturesReales(unittest.TestCase):
         self.assertTrue(all(e["papel"] != self.t.REQUERIDA
                             for e in r["evidencia"] if e["frescura"] == "STALE"))
 
+    def test_cuando_caduca_el_tecnico_REQUERIDO_la_tesis_deja_de_ser_valida(self):
+        """La otra cara de la regla anterior, sobre la misma fixture: basta
+        con evaluarla lo bastante tarde para que el técnico -- que sí es
+        REQUERIDO -- se pase de cadencia, y entonces la tesis pasa a
+        INVALID y deja de publicar confianza. Es el comportamiento
+        correcto, y fijarlo aquí impide que se 'arregle' relajando el
+        umbral el día que un test caduque por el calendario."""
+        r = self.t.build_thesis_equity("IBM", as_of="2026-12-01")
+        self.assertEqual(r["validez_evidencia"], "INVALID")
+        self.assertIsNone(r["confidence_pct"])
+        requeridas_caducadas = [e for e in r["evidencia"]
+                                if e["papel"] == self.t.REQUERIDA
+                                and e["frescura"] == "STALE"]
+        self.assertTrue(requeridas_caducadas)
+
     def test_las_cifras_caducadas_aparecen_en_las_advertencias(self):
-        r = self.t.build_thesis_equity("IBM")
+        r = self.t.build_thesis_equity("IBM", as_of=self.AS_OF_FIXTURE_ACCIONES)
         texto = " ".join(r["advertencias"])
         self.assertIn("pe_ratio", texto)
 
     def test_la_tesis_declara_de_que_evidencia_depende(self):
-        r = self.t.build_thesis_equity("IBM")
+        r = self.t.build_thesis_equity("IBM", as_of=self.AS_OF_FIXTURE_ACCIONES)
         self.assertTrue(r["evidencia"])
         for e in r["evidencia"]:
             self.assertIn(e["papel"], {self.t.REQUERIDA, self.t.PUBLICADA, self.t.CONTEXTO})

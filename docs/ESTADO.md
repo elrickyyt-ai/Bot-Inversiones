@@ -39,6 +39,8 @@ DATA CONTRACT      data/incoming/*.csv (año en curso)  +  data/history/** (parq
    │           │             └──► HRP v1  perfil histórico  DESCRIPTIVO, no predictivo
    │           │                    └──► Diagnóstico de cohorte
    │           │                          ¿es INTERPRETABLE?  dependencia · solape
+   │           │                             └──► Universo congelado + cobertura
+   │           │                                   ¿hay POBLACIÓN?  DECLARADO, no medido
    │           │
    │           └──► P5D  Data Requirements  ¿existe el dato que el mecanismo pide?
    │
@@ -85,6 +87,7 @@ CONSUMO (desacoplado, no dicta el motor)   Power BI · Web App
 | `bm:sp500` | `da35869` | Primer benchmark real declarado: nivel publicado de `^GSPC`, 14.291 sesiones desde 1970-01-02 |
 | HRP v1 | `07f867e` | `HistoricalReactionProfile`: descriptivo, 20 perfiles, ninguno desaparece por falta de datos |
 | D-27/29/30/31 | `c44120a` | Ventana de estimación, dependencia y solapamiento: `descriptive` ≠ `predictive`, solape marcado, `n_effective` medido antes de formularse |
+| D-32/33/34/35 | `PENDIENTE` | Auditoría de población: universo congelado, sesgo de superviviencia de la fuente, `2_60d` = contexto, `independence_model`, reproducibilidad histórica |
 
 Detalle por fase, con qué se rompe si cae y cómo recuperarla: `informes/2026-09-07_trazabilidad_fases_P0_P61.md`.
 
@@ -118,7 +121,7 @@ Estos invariantes no son preferencias de estilo: cada uno nació de un fallo rea
 
 ## 5. Estado actual, medido
 
-**Suite**: 601 tests · OK — **QA**: `QA CORE: PASS` · `QA PARQUET: PASS` · `STATUS: VERIFIED` (287 particiones, 0 incidencias) — **Knowledge**: PASS (26 entidades · 51 relaciones · 11 fuentes)
+**Suite**: 627 tests · OK — **QA**: `QA CORE: PASS` · `QA PARQUET: PASS` · `STATUS: VERIFIED` (287 particiones, 0 incidencias) — **Knowledge**: PASS (26 entidades · 51 relaciones · 11 fuentes)
 
 ```bash
 python3 -m unittest discover -s tests
@@ -172,6 +175,12 @@ magnitud      UNKNOWN                      (P6)
 | HBM y sustrato ABF sin fuente | `knowledge/pendiente/nvidia_cadena.json` | Buscados en los dos filings: cero menciones |
 | Samsung / SK Hynix / Micron | `knowledge/pendiente/` | **Ya tienen fuente verificada**; fuera del alcance acordado, promovibles en un paso |
 | `tech:cowos` se evalúa como insumo de coste, no como restricción de capacidad | informe de P6 | P5B enruta por R5; decisión de no tocar P5B |
+| **La ingesta de equity no es automatizable** | D-32 · informe de población §11 | El conector MCP no escribe a disco: cada activo exige transcripción manual. Inviable para 300+. Necesita clave en almacén de secretos — decisión del usuario |
+| **El proveedor solo conoce supervivientes** | D-32 | `EARNINGS` y `SYMBOL_SEARCH` devuelven vacío para DWDP y UTX. Un universo congelado no es reconstruible con Alpha Vantage, y el sesgo no se ve desde dentro de los datos |
+| **22 activos de Universe_v1 `NOT_MEASURED`** | `cobertura_universo_v1.json` | Nunca estimados. Coste de transcripción, no cuota |
+| **Los 123 trimestres de IBM sin cuadrar** | `cobertura_universo_v1.json` | 123 frente a los 122 de una serie contigua 1996Q1–2026Q2, que es lo que dieron los otros cinco con ese rango. Comprobación pendiente, no dato bueno |
+| **Universe_v1 no tiene mid cap** | D-32 · `universo_v1.json` | Sin composición histórica verificable de un índice mid cap a 2019-01-01; construirla de memoria sería inventarla. Condición de Universe_v2 |
+| **Posibles bombas de relojería en tests** | Nota de D-35 | Se arregló la que falló al pasar a 2026-09-08 (fixtures congeladas contra `datetime.now()`); no se han revisado los 627 |
 | **La cohorte de eventos tiene 3 activos** | D-31 · `diagnostico_cohorte.py` | `independence_status = LOW`. 52 observaciones de 3 acciones del mismo mercado no son 52 unidades independientes. Los ~356 eventos existen (`EARNINGS` los devuelve en el plan gratuito); la ingesta es manual y no se ha hecho |
 | **`n_effective` sin fórmula** | D-31 · cabecera de `engine/events/diagnostico_cohorte.py` | Con 3 activos la correlación intra-cluster es inestable. Se publican los conteos y `independence_status`; un test impide introducir la fórmula sin quitarlo |
 | **No existe volatilidad realizada en el contrato** | D-27 revisada · `perfil_reaccion.MEDIDAS_SIN_METODOLOGIA` | La única disponible es una media móvil de 30 sesiones que solapa su propia ventana de estimación. Bloquea 4 perfiles con `INSUFFICIENT_METHODOLOGY` |
@@ -250,14 +259,52 @@ El principio que cristaliza: **`COMPUTABLE` ≠ `INTERPRETABLE` ≠ `PREDICTIVO`
 
 **`n_effective` sigue sin existir, deliberadamente** (D-31): con 3 activos no se puede estimar la correlación intra-cluster. Se publican los conteos y un `independence_status` de tres valores (`HIGH` ≥ 30 activos · `MEDIUM` ≥ 10 · `LOW`) mientras la fórmula no se pueda elegir con evidencia. Un test impide introducirla sin quitarlo.
 
+**Quinta pieza: auditoría de población — HECHA** (`informes/2026-09-07_auditoria_poblacion_historical_events.md`, decisiones **D-32 · D-33 · D-34 · D-35**). Mide si existe una población con la que arreglar `n_assets = 3`. **No es un backfill**: cero eventos cargados en `data/`.
+
+El razonamiento que la motivó: ampliar a ~356 eventos de **los mismos tres activos** daría `n_events = 356` y `n_assets = 3` — más datos y la misma dependencia. **El cuello de botella es transversal, no temporal.**
+
+**Universo congelado** (`engine/events/universo_v1.json`): `universe:v1:djia-2019`, **31 activos · 9 sectores**, `as_of_date = 2019-01-01`. Los 30 del DJIA de esa fecha más NVDA. La regla es ejecutable — un test reconstruye la muestra desde ella. Congelar en el pasado obliga a incluir **DWDP** y **UTX**, que ya no existen, y eso es deliberado.
+
+**El hallazgo que cambia el plan de ampliación:**
+
+> **La fuente solo conoce supervivientes.** `EARNINGS` devuelve `{}` para DWDP y UTX; `SYMBOL_SEARCH` con "DowDuPont" y "United Technologies" devuelve **conjunto vacío**. Un universo congelado en el pasado **no se puede reconstruir** con Alpha Vantage. Los 2 de 31 irrecuperables (**6,5%**) lo son *precisamente porque* tuvieron una acción corporativa — la definición del sesgo de superviviencia. Y no es detectable desde dentro: DWDP no aparece como hueco, aparece como si nunca hubiera existido. **Ampliar a 300 activos pidiéndoselos a este proveedor daría 300 supervivientes.**
+
+**Cobertura medida** (`python3 engine/events/universo.py`), 6 de 31 activos:
+
+| símbolo | trimestres | desde | sin `reportTime` | sin `estimatedEPS` | contigua |
+|---|---|---|---|---|---|
+| AAPL | 122 | 1996-04-17 | 0 | 8 (todos < 2004) | ✅ |
+| CAT | 122 | 1996-04-16 | 0 | 0 | ✅ |
+| VZ | 122 | 1996-04-18 | 0 | 0 | ✅ |
+| MSFT | 122 | 1996-04-18 | 0 | 0 | ✅ |
+| DWDP · UTX | **0** | — | — | — | `TICKER_AUSENTE_DEL_PROVEEDOR` |
+
+**488 trimestres, cero `reportTime` ausentes, las cuatro series trimestralmente contiguas.** La calidad de IBM/NVDA/XOM **es estructural, no accidental** — con la salvedad de que son 4 activos nuevos y no se midió ninguno financiero, de consumo básico ni de salud.
+
+**Segundo hallazgo, operativo**: `reportTime` **no es constante por activo**. MSFT publica post-market como norma y **pre-market en 5 trimestres** repartidos por su serie moderna. Cachear "MSFT = post-market" desplazaría `first_tradable_at` un día en esos cinco y metería la sesión del anuncio dentro de la ventana previa — la misma familia de error que D-27 corrigió para el volumen.
+
+**Reproducibilidad histórica probada** (D-35): `Profile(as_of=T)` sale idéntico aunque el dataset contenga observaciones posteriores a `T` — **cero diferencias sustantivas** en las 20 celdas, en 5 fechas entre 2015 y 2026. Lo único que difiere es la contabilidad de exclusiones, que describe el dataset ofrecido y no el perfil; `CAMPOS_DE_PROCEDENCIA` la nombra y `huella()` hashea el resto.
+
+**Dos campos nuevos por celda, sin recalcular ninguna estadística**: `horizon_class` (`2_60d` → **`LONGER_TERM_CONTEXT`**, D-33 — se sigue publicando, deja de presentarse como reacción) e `independence_model` (`earnings_release` → **`ASSET_CLUSTERED`**, D-34 — declarar la dependencia no es corregirla; `n_effective` sigue sin existir).
+
+**Condición de avance a v2 — NO se cumple, y ese es el resultado correcto:**
+
+```
+n_assets_medidos_con_datos       4        n_assets_requerido    30
+n_assets_suficiente              False    timestamp_suficiente  True
+profundidad_suficiente           True     event_class_coverage  1 (requerido 6)
+avanzar_a_v2                     False
+```
+
 **Lo siguiente**, por orden de lo que desbloquea:
 
-1. **Ampliar la cohorte** a los ~356 eventos reales (ingesta manual de `EARNINGS`) — sube `n_assets`, hace representativa la tasa de solape y vuelve informativa la comparación full vs non-overlapping. **Es el siguiente paso, y no se ha dado.**
-2. **`n_effective`** (D-31), que la ampliación hace estimable por primera vez.
-3. **Volatilidad realizada** sobre la ventana de reacción — métrica nueva del contrato; desbloquea 4 perfiles.
-4. **`ComparisonReference` de sector** declarada *antes* de mirar resultados (D-21); desbloquea `PEER_RELATIVE_RETURN` (4 perfiles).
-5. Después: cripto (`RAW / VOLUME`, sin benchmark formal) y macro (una sorpresa → varios activos), cada uno con estructura propia.
-6. Solo entonces: `predictive_status` distinto de `NOT_EVALUATED` (P8, Backtesting), régimen y `reaction_gap`.
+1. **Decidir cómo se ingiere equity a escala.** El conector MCP **no puede escribir a disco**: cada respuesta de `EARNINGS` (~10k tokens) se transcribe a mano, y ese —no la cuota— fue el motivo de medir 6 de 15. Lo desbloquearía una clave en almacén de secretos (GitHub Actions), **nunca en el repo** — compatible con el protocolo de privacidad. **Decisión del usuario, no tomada.**
+2. **Fuente con tickers retirados** para que el universo congelado sea reconstruible (SEC EDGAR los conserva; no da `reportTime`).
+3. **Ingerir Universe_v1** y volver a medir independencia y solape sobre series contiguas — ahí la tasa de solape a `2_60d` subirá muy por encima del 6,1% actual.
+4. **`n_effective`** (D-31), que solo entonces es estimable.
+5. **Más clases de evento**: `event_class_coverage = 1` de 6 pedidas. Ampliar activos sin ampliar clases da un perfil muy poblado de una sola clase.
+6. **Volatilidad realizada** (4 perfiles) y **`ComparisonReference` de sector** declarada antes de mirar (4 perfiles).
+7. Solo entonces: `predictive_status` ≠ `NOT_EVALUATED` (P8), régimen y `reaction_gap`.
 
 Roadmap acordado: `P6.2 Quantification unlocks` → `P7 Market Impact` → `P8 Mispricing` → `P9 Thesis` → `P10 Portfolio` → `P11 Outcome/Calibration`. Power BI y Web App consumirán una proyección del motor; no lo dictan.
 

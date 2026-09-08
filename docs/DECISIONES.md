@@ -287,3 +287,52 @@ La justificación de `^GSPC` es **ex ante y por lo que cada índice representa**
 - **Se descartó**: `n_effective = n_assets` (tira toda la información temporal); `n / (1 + (m−1)ρ)` con un ρ supuesto (el supuesto sería el resultado); bootstrap por activo (correcto como método, pero 3 clusters no lo hacen fiable).
 - **Barrera**: un test comprueba que el módulo no publica ningún símbolo que contenga `effective`. Introducir la fórmula exige quitar el test, que es donde queda constancia.
 
+## D-32 · El universo se congela en el pasado, y aun así la fuente solo conoce supervivientes
+
+**Vigente** (auditoría de población, 2026-09-08).
+
+- **Problema**: D-31 midió `n_events = 52` con `n_assets = 3`. Ampliar a ~356 eventos de **los mismos tres activos** daría `n_events = 356` y `n_assets = 3`: más datos y la misma dependencia. El cuello de botella es transversal, no temporal.
+- **Decisión vigente**: `universe:v1:djia-2019` — los **30 componentes del DJIA a 2019-01-01** más NVDA (cohorte de HRP v1). **31 activos, 9 sectores**, declarado en `engine/events/universo_v1.json` y curado a mano como `episodios.json` (D-04).
+- **Por qué un índice y no una lista propia**: la pertenencia al índice en una fecha pasada es un hecho público **anterior** a cualquier resultado que el proyecto vaya a medir. Una lista elegida por mí, después de haber visto reaccionar a IBM/NVDA/XOM, sería exactamente el sesgo que la auditoría existe para evitar. La regla es **ejecutable**: un test reconstruye la muestra desde ella y la compara con el fichero.
+- **Por qué congelado y no la composición de hoy**: tomar la de hoy excluiría a las compañías que peor acabaron. Congelar obliga a incluir **DWDP** y **UTX**, que ya no existen — y esa incomodidad es el punto.
+- **Hallazgo que no se buscaba, y que cambia el plan de ampliación**: `EARNINGS` devuelve `{}` para DWDP y UTX, y `SYMBOL_SEARCH` con "DowDuPont" y "United Technologies" devuelve **conjunto vacío**. **La fuente solo conoce supervivientes.** Un universo congelado en el pasado **no se puede reconstruir** con Alpha Vantage: 2 de 31 (**6,5%**) son irrecuperables *precisamente porque* tuvieron una acción corporativa. El sesgo **no es detectable desde dentro de los datos**: DWDP no aparece como hueco, aparece como si nunca hubiera existido.
+- **Consecuencia**: ampliar a 300 activos pidiéndoselos a este proveedor daría **300 supervivientes**. Una población históricamente honesta necesitaría una fuente con tickers retirados (SEC EDGAR los conserva, y ya es fuente aceptada, aunque no da `reportTime`).
+- **Limitación declarada, no resuelta**: Universe_v1 es **solo gran capitalización**. El usuario pidió *mid cap*; no hay composición histórica verificable de un índice mid cap congelada a 2019-01-01 desde una fuente que este proyecto acepte, y construirla de memoria sería inventarla. Condición explícita de Universe_v2.
+- **Se descartó**: usar la composición actual del DJIA (sesgo de superviviencia por diseño); elegir yo 30-50 compañías "representativas" (selección); saltar directamente a 300+ (§11 del informe).
+
+## D-33 · `2_60d` es contexto, no reacción — y se declara en el código
+
+**Vigente** (2026-09-08). **Aplica en código la consecuencia que D-30 midió.**
+
+- **Evidencia** (D-30): intervalo mediano entre resultados consecutivos **63,5 sesiones**; la ventana de `2_60d` cubre el **94,5%** del trimestre.
+- **Decisión vigente**: `HORIZON_CLASS` clasifica los cuatro horizontes — `0_1d` `IMMEDIATE_REACTION`, `2_5d` `SHORT_REACTION`, `2_20d` `INTERMEDIATE_REACTION`, `2_60d` **`LONGER_TERM_CONTEXT`** — y `HORIZONTES_DE_REACCION` da los tres primarios sin que el consumidor tenga que conocer la discusión.
+- **Reclasificar no es eliminar**: `2_60d` sigue publicándose y sigue siendo `VALID`, con un test que lo comprueba. Lo que deja de poder hacerse es presentarlo como horizonte de reacción de `earnings_release`.
+- **Por qué en código y no solo en el informe**: una advertencia en prosa no viaja con el dato. Un consumidor (Power BI, Web App) que lea la rejilla ve ahora la clase en cada celda.
+
+## D-34 · La unidad de dependencia es una propiedad de la clase de evento
+
+**Vigente** (2026-09-08). **Completa D-31 sin violarla.**
+
+- **Evidencia**: D-31 concluyó `cluster_recomendado = "asset"` para `earnings_release`, pero esa conclusión **no es universal**. Tres trimestres de NVDA son tres eventos distintos que comparten empresa, sector, mercado y régimen. Cinco documentos sobre la misma tramitación comparten hilo causal (D-19/D-28). Una publicación de IPC afecta a todos los activos el **mismo día**.
+- **Decisión vigente**: `INDEPENDENCE_MODEL` por clase de evento (`earnings_release → ASSET_CLUSTERED`) y un vocabulario de tres modelos (`ASSET_CLUSTERED`, `EPISODE_CLUSTERED`, `EVENT_DATE_CLUSTERED`). Cada perfil declara el suyo.
+- **Declarar la dependencia no es corregirla.** `n_effective` **sigue sin existir** y el test estructural de D-31 sigue vigente: ningún símbolo del módulo contiene `effective`.
+- **Los dos modelos sin instanciar** (`EPISODE_CLUSTERED`, `EVENT_DATE_CLUSTERED`) están en el vocabulario y **no los usa ninguna clase**: no se ha inventado una clase de evento para poder estrenarlos.
+- **Se descartó**: un único cluster universal por activo. Habría sido correcto para earnings y falso para noticias y macro, y el error solo aparecería cuando esas clases existieran.
+
+## D-35 · Un perfil histórico es reproducible; su contabilidad de exclusiones, no
+
+**Vigente** (2026-09-08).
+
+- **Propiedad exigida**: `Profile(as_of=T)` debe salir **idéntico** aunque el dataset contenga observaciones posteriores a `T`. Filtrar por `available_at` no basta: el **resultado** no puede depender de nada que no fuese conocible en `T`.
+- **Cómo se probó** (test de resultado, no de filtrado): el mismo perfil calculado sobre las 52 observaciones completas y sobre el dataset truncado a lo que existía en `T`, comparando las 20 celdas. En `as_of` 2015-01-01, 2018-06-30, 2020-01-01, 2023-01-01 y 2026-09-08: **cero diferencias sustantivas**.
+- **La excepción legítima, separada en vez de escondida**: `n_excluidas`, `tasa_exclusion` y `exclusiones_por_motivo` **sí** difieren siempre — con 52 observaciones se descartan 34 por PIT, con las 18 de la época no hay nada que descartar. Describen **el dataset que se ofreció**, no el perfil que salió.
+- **Decisión vigente**: `CAMPOS_DE_PROCEDENCIA` los nombra y `huella()` hashea el perfil **sin** ellos. La huella es lo que debe coincidir. Un test comprueba además que la huella **sí cambia** al cambiar el `as_of` — sin él no estaría midiendo nada.
+- **Se descartó**: debilitar el test para que ignorase las diferencias, y esconderlas recalculando esos campos. Ambas cosas habrían tapado la distinción real entre *resultado* y *procedencia*.
+
+### Nota de D-35 — una bomba de relojería descubierta de paso
+
+- Al pasar el reloj a **2026-09-08**, `test_acciones_con_pe_caducado_pero_tecnico_al_dia_si_publica_confianza` empezó a fallar. Las fixtures de acciones están congeladas en **2026-09-02** y el técnico de IBM (`posicion_rango_52s_pct` y `confluencia_sesgo`, ambos **REQUERIDA**) cruzó su umbral de cadencia entre el día 5 y el día 6. **El motor estaba haciendo lo correcto**: el test comparaba una fixture congelada contra `datetime.now()`, así que tenía garantizado romperse en una fecha que nadie había calculado.
+- **Arreglo**: `build_thesis(symbol, tvl_chain, as_of=None)` y `build_thesis_equity(symbol, as_of=None)` exponen el reloj que `_evaluar_evidencia()` **ya aceptaba** y que nadie pasaba. El test fija `as_of` y comprueba **la regla** (una métrica `PUBLICADA` caducada no invalida la tesis), no cuántos días llevan congeladas las fixtures. Parámetro opcional con el comportamiento por defecto intacto.
+- **Se añadió la otra cara**: `test_cuando_caduca_el_tecnico_REQUERIDO_la_tesis_deja_de_ser_valida`, para impedir que algún día se "arregle" un test caducado **relajando el umbral de cadencia**, que es la tentación evidente y sería exactamente el error contrario.
+- **Deuda**: no se ha revisado sistemáticamente si quedan más tests comparando fixtures congeladas contra el reloj.
+

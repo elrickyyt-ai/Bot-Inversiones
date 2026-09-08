@@ -1,0 +1,2 @@
+# UTX: RESPUESTA VACIA. EARNINGS devolvio {} -- cero trimestres.
+# SYMBOL_SEARCH "United Technologies" devuelve un conjunto de resultados VACIO.

@@ -26,6 +26,8 @@ para versiones posteriores, con estructura distinta -- probar tres
 regimenes metodologicos a la vez contaminaria la primera implementacion.
 """
 import datetime
+import hashlib
+import json
 import os
 import sys
 
@@ -47,6 +49,48 @@ METHODOLOGY_VERSION = "historical_reaction_profile/v1"
 CLASES_DE_EVENTO = {
     "earnings_release": "publicacion de resultados trimestrales",
 }
+
+# --- Modelo de independencia por clase de evento (D-31) --------------------
+# La unidad de dependencia NO es universal: depende de la clase de evento.
+# Tres trimestres de NVDA son tres eventos distintos, pero comparten
+# empresa, sector, mercado y regimen -> el cluster natural es el ACTIVO.
+# Cinco documentos sobre la misma tramitacion legislativa comparten el hilo
+# causal -> el cluster natural es el EPISODIO (D-28 explica por que ese
+# concepto no aplica a un evento programado). Una publicacion de IPC afecta
+# a todos los activos el MISMO dia -> el cluster natural es la FECHA.
+#
+# Esto NO es `n_effective`: el perfil declara que dependencia RECONOCE,
+# no la corrige. La formula sigue sin existir a proposito (D-31).
+INDEPENDENCE_MODEL = {
+    "earnings_release": "ASSET_CLUSTERED",
+}
+MODELOS_DE_INDEPENDENCIA = {
+    "ASSET_CLUSTERED":      "los eventos del mismo activo no son independientes entre si",
+    "EPISODE_CLUSTERED":    "los eventos del mismo episodio no son independientes entre si",
+    "EVENT_DATE_CLUSTERED": "los eventos de la misma fecha no son independientes entre activos",
+}
+
+# --- Clase de horizonte (2_60d no es un horizonte de reaccion) -------------
+# El intervalo mediano entre resultados consecutivos es de 63,5 sesiones
+# (D-30), asi que una ventana de 60 cubre el 94,5% del trimestre: lo que
+# mide ya no es "reaccion al evento" sino "lo que paso hasta el evento
+# siguiente". Sigue siendo computable y se sigue publicando -- con el
+# nombre que le corresponde.
+HORIZON_CLASS = {
+    "0_1d":  "IMMEDIATE_REACTION",
+    "2_5d":  "SHORT_REACTION",
+    "2_20d": "INTERMEDIATE_REACTION",
+    "2_60d": "LONGER_TERM_CONTEXT",
+}
+CLASES_DE_HORIZONTE = {
+    "IMMEDIATE_REACTION":    "la sesion del evento; reaccion en sentido estricto",
+    "SHORT_REACTION":        "deriva inmediata posterior",
+    "INTERMEDIATE_REACTION": "deriva; cubre ~1/3 del intervalo entre eventos",
+    "LONGER_TERM_CONTEXT":   "CONTEXTO, no reaccion: cubre casi todo el intervalo "
+                             "entre un evento y el siguiente de la misma clase",
+}
+HORIZONTES_DE_REACCION = tuple(h for h, c in HORIZON_CLASS.items()
+                               if c != "LONGER_TERM_CONTEXT")
 
 # --- Semantica de las medidas (D-27) ---------------------------------------
 # "change" era demasiado ambiguo: volume(evento)/volume(-1) y
@@ -320,6 +364,8 @@ def perfil(observaciones, event_class, measure_type, horizonte, as_of,
             "predictive_status": "NOT_EVALUATED",
             "semantica": SEMANTICA_DE_MEDIDA[measure_type],
             "estimation_window": None, "reaction_window": horizonte,
+            "horizon_class": HORIZON_CLASS[horizonte],
+            "independence_model": INDEPENDENCE_MODEL[event_class],
             "politica_solape": politica_solape,
             "overlap_event_count": 0, "overlap_rate": None,
             "statistics_non_overlapping": None,
@@ -342,6 +388,8 @@ def perfil(observaciones, event_class, measure_type, horizonte, as_of,
         "estimation_window": f"[-{er.LARGO_VENTANA_ESTIMACION},-1]" if
                              SEMANTICA_DE_MEDIDA[measure_type] == "RELATIVE_TO_PRE_EVENT" else None,
         "reaction_window": horizonte,
+        "horizon_class": HORIZON_CLASS[horizonte],
+        "independence_model": INDEPENDENCE_MODEL[event_class],
         "politica_solape": politica_solape,
         "overlap_event_count": len(solapadas),
         "overlap_rate": round(len(solapadas) / len(incluidas), 3) if incluidas else None,
@@ -436,6 +484,34 @@ def rejilla(observaciones, as_of, clases=None, medidas=MEDIDAS, horizontes=HORIZ
 
 
 # --- Ejecucion -------------------------------------------------------------
+
+# --- Reproducibilidad historica (profile leakage) --------------------------
+# Un perfil fechado en T tiene que salir IDENTICO se ejecute cuando se
+# ejecute, aunque el dataset ya contenga observaciones posteriores a T. No
+# basta con filtrar por available_at: el RESULTADO no puede depender de
+# nada que no fuese conocible en T.
+#
+# Hay una excepcion legitima, y conviene separarla en vez de esconderla:
+# los campos que cuentan QUE SE DESCARTO describen el dataset que se
+# ofrecio, no el perfil que salio. Con 52 observaciones se descartan 34 por
+# PIT; con las 18 de la epoca no hay nada que descartar. Ambas cosas son
+# correctas y dan el mismo perfil.
+#
+# Medido sobre la cohorte real en as_of 2015 / 2018-06 / 2020 / 2023 /
+# 2026-09: 0 diferencias sustantivas en las 20 celdas; las unicas
+# diferencias caen siempre dentro de este conjunto.
+CAMPOS_DE_PROCEDENCIA = ("n_excluidas", "tasa_exclusion", "exclusiones_por_motivo")
+
+
+def huella(perfil):
+    """Hash del perfil SIN los campos de procedencia.
+
+    Es lo que tiene que coincidir entre dos ejecuciones fechadas igual y
+    alimentadas con datasets distintos."""
+    reproducible = {k: v for k, v in perfil.items() if k not in CAMPOS_DE_PROCEDENCIA}
+    canonico = json.dumps(reproducible, sort_keys=True, default=str, ensure_ascii=False)
+    return hashlib.sha256(canonico.encode("utf-8")).hexdigest()
+
 
 SIMBOLOS_V1 = ("IBM", "NVDA", "XOM")
 FIXTURES = os.path.join(RAIZ, "tests", "fixtures", "eventos_resultados")

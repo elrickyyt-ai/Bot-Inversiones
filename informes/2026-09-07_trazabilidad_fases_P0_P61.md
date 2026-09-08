@@ -11,7 +11,7 @@ No sustituye a los README de cada módulo (que explican *por qué* está hecho a
 ## Verificación completa en tres comandos
 
 ```bash
-python3 -m unittest discover -s tests           # 601 tests, debe dar OK
+python3 -m unittest discover -s tests           # 627 tests, debe dar OK
 python3 engine/contract/qa.py --require-parquet # debe dar STATUS: VERIFIED
 git status --short data/ knowledge/             # debe salir vacío
 ```
@@ -45,6 +45,7 @@ Si los tres pasan, las veintidós fases están sanas. Si falla alguno, la tabla 
 | **D-21 (datos)** | `22ef8aa` | `bm:sp500` declarado y consumido por el event study | `python3 -m unittest tests.test_benchmark_sp500` |
 | **HRP v1** | `f4156fe` | Perfiles históricos descriptivos, 20 celdas con estado | `python3 engine/events/perfil_reaccion.py` |
 | **HRP v1.1** | `c44120a` | Ventana de estimación, dependencia y solapamiento: `descriptive` ≠ `predictive` | `python3 engine/events/diagnostico_cohorte.py` |
+| **Población** | `PENDIENTE` | Universo congelado, cobertura de fuente y reproducibilidad histórica | `python3 engine/events/universo.py` |
 
 ---
 
@@ -176,6 +177,32 @@ Si los tres pasan, las veintidós fases están sanas. Si falla alguno, la tabla 
 **Qué se rompe si cae**: nada aguas abajo — ningún consumidor lee el perfil, por diseño. Lo que se pierde es la capacidad de decir **por qué** un perfil no es interpretable, y con ella la barrera contra usarlo como señal.
 
 **Informe**: `informes/2026-09-07_d27_dependencia_y_solapamiento.md`.
+
+---
+
+### Población · Universo congelado y cobertura — D-32 · D-33 · D-34 · D-35
+
+**Ficheros**: `engine/events/universo_v1.json` · `cobertura_universo_v1.json` · `_cobertura/*.txt` · `universo.py` (todos nuevos) · `perfil_reaccion.py` · `tests/test_poblacion_universo.py` (nuevo, 25 tests)
+
+**Qué añade**: no ingiere nada. Mide si existe población para arreglar `n_assets = 3`.
+
+- `universe:v1:djia-2019`, **31 activos · 9 sectores**, congelado a 2019-01-01, con 6 exclusiones motivadas.
+- Cobertura de 6 activos: **488 trimestres**, 4 series contiguas de 122, **0 `reportTime` ausentes**, 8 `estimatedEPS` ausentes (AAPL, pre-2004).
+- **Hallazgo**: la fuente **solo conoce supervivientes** — DWDP y UTX devuelven vacío y no están en el directorio de símbolos.
+- **Hallazgo operativo**: `reportTime` **no es constante por activo** (MSFT mezcla pre y post).
+- `horizon_class` (`2_60d` = `LONGER_TERM_CONTEXT`) e `independence_model` (`ASSET_CLUSTERED`) en cada celda, **sin recalcular ninguna estadística**.
+- **Reproducibilidad histórica**: 0 diferencias sustantivas en 20 celdas × 5 fechas; `CAMPOS_DE_PROCEDENCIA` + `huella()`.
+
+**Tests deliberadamente frágiles**:
+- `test_la_condicion_de_avance_no_se_cumple_todavia` — se rompe cuando la población sea suficiente, que es cuando hay que releer esta auditoría.
+- `test_el_reportTime_no_es_constante_por_activo` — se rompe si alguien "limpia" el registro de MSFT.
+- `test_cuando_caduca_el_tecnico_REQUERIDO_la_tesis_deja_de_ser_valida` — impide "arreglar" un test caducado relajando el umbral de cadencia.
+
+**Bomba de relojería encontrada y desactivada**: `test_acciones_con_pe_caducado…` comparaba fixtures congeladas en 2026-09-02 contra `datetime.now()` y falló al pasar a 2026-09-08. `build_thesis`/`build_thesis_equity` aceptan ahora `as_of` opcional (el reloj que `_evaluar_evidencia` ya recibía). **No revisado si quedan más.**
+
+**Qué se rompe si cae**: nada aguas abajo — el universo no alimenta ningún motor todavía. Se pierde la trazabilidad de por qué la cohorte es la que es.
+
+**Informe**: `informes/2026-09-07_auditoria_poblacion_historical_events.md`.
 
 ## Dependencias entre fases
 

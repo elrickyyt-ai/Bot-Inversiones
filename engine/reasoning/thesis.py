@@ -123,6 +123,8 @@ def _evaluar_evidencia(entradas, relojes, symbol, asset_type, hoy=None):
     """
     cadencias = _load_module("contract", "cadencias")
     hoy = hoy or datetime.datetime.now(datetime.timezone.utc).date()
+    if isinstance(hoy, str):
+        hoy = datetime.date.fromisoformat(hoy[:10])
     tc = cadencias._trading_calendar()
 
     evaluadas = []
@@ -217,7 +219,7 @@ def _tecnico_direccion(tecnico):
     return "mixto"
 
 
-def build_thesis(symbol, tvl_chain):
+def build_thesis(symbol, tvl_chain, as_of=None):
     crypto_mod = _load_module("crypto", "score")
     technical_mod = _load_module("technical", "score")
     macro_mod = _load_module("macro", "score")
@@ -289,7 +291,7 @@ def build_thesis(symbol, tvl_chain):
          "technical": {"_default": tech.get("fecha_dato")},
          "macro_us": macro_us.get("fechas_dato", {}),
          "macro_ea": macro_ea.get("fechas_dato", {})},
-        symbol, "crypto")
+        symbol, "crypto", hoy=as_of)
     advertencias += _advertencias_de_frescura(evidencia)
     cubiertos, total_dominios = _cobertura_real(evidencia, news.get("disponible", False))
 
@@ -335,7 +337,7 @@ def build_thesis(symbol, tvl_chain):
     }
 
 
-def build_thesis_equity(symbol):
+def build_thesis_equity(symbol, as_of=None):
     """Version del motor de razonamiento para acciones (Fase 2, Bloque B).
 
     A diferencia de las criptomonedas, aqui NO hay un motor tecnico
@@ -395,7 +397,7 @@ def build_thesis_equity(symbol):
         {"equity": fund.get("fechas_dato", {}),
          "macro_us": macro_us.get("fechas_dato", {}),
          "macro_ea": macro_ea.get("fechas_dato", {})},
-        symbol, "equity")
+        symbol, "equity", hoy=as_of)
     advertencias += _advertencias_de_frescura(evidencia)
     cubiertos, total_dominios = _cobertura_real(evidencia, False)
 
