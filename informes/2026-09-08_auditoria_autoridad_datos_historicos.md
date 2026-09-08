@@ -1,6 +1,6 @@
 # Auditoría de autoridad de datos históricos — qué fuente manda sobre cada componente
 
-**Fecha**: 2026-09-08 · **Rama**: `claude/bot-inversiones-audit-peh0x2` · **Base**: `5702c9b`
+**Fecha**: 2026-09-08 · **Rama**: `claude/bot-inversiones-audit-peh0x2` · **Base**: `5702c9b` · **Commit**: `646c72d`
 **Alcance**: determinar la fuente autoritativa de cada componente de un *historical earnings event*. **No se implementa ningún pipeline nuevo**, no se ingiere ni un evento, no se amplía de 6/31.
 
 **Verificación**:
