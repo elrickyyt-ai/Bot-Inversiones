@@ -1,6 +1,6 @@
 # Auditoría del Historical Instrument Master — quién era la entidad y qué instrumento cotizaba
 
-**Fecha**: 2026-09-08 · **Rama**: `claude/bot-inversiones-audit-peh0x2` · **Base**: `12683b3`
+**Fecha**: 2026-09-08 · **Rama**: `claude/bot-inversiones-audit-peh0x2` · **Base**: `12683b3` · **Commit**: `0fa7bc3`
 **Alcance**: auditar y **diseñar** el mínimo necesario para estudiar empresas que cambiaron de ticker, de nombre, se fusionaron, se escindieron o dejaron de cotizar. **No se implementa el pipeline**, no se ingiere nada, no se amplía la cohorte.
 
 **Verificación**:

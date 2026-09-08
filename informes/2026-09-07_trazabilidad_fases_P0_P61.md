@@ -47,7 +47,7 @@ Si los tres pasan, las veintidós fases están sanas. Si falla alguno, la tabla 
 | **HRP v1.1** | `c44120a` | Ventana de estimación, dependencia y solapamiento: `descriptive` ≠ `predictive` | `python3 engine/events/diagnostico_cohorte.py` |
 | **Población** | `f1b0d38` | Universo congelado, cobertura de fuente y reproducibilidad histórica | `python3 engine/events/universo.py` |
 | **Autoridad** | `646c72d` | Qué fuente manda sobre cada componente del evento | `python3 engine/events/autoridad.py` |
-| **Identidad** | `PENDIENTE` | Identidad histórica de instrumento y transformaciones | `python3 engine/events/identidad.py` |
+| **Identidad** | `0fa7bc3` | Identidad histórica de instrumento y transformaciones | `python3 engine/events/identidad.py` |
 
 ---
 
