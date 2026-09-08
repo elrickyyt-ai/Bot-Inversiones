@@ -377,3 +377,38 @@ La justificación de `^GSPC` es **ex ante y por lo que cada índice representa**
 - **No se ha tocado `data/`**: la corrección afecta a ingestas futuras de compañías con escisiones, no a las series ya cargadas de IBM/NVDA/XOM, que no las tuvieron en la ventana. **No cuantificado** en cuántos activos del universo ocurre.
 - **Camino recomendado**: **A**, con esa condición. No se justifica pagar un proveedor; sí se justifica un mapa **ticker histórico → CIK** curado a mano para 31 activos.
 
+## D-40 · El ticker no es identidad histórica: es reasignable
+
+**Vigente** (auditoría del Historical Instrument Master, 2026-09-08). **Refuerza D-36 con el caso peor.**
+
+- **Evidencia medida en vivo**: `XON`, `DWDP`, `UTX` y `RTN` devuelven **404** en el proveedor de precios. Pero **`MOB` devuelve 1011 sesiones desde 2022-08-25**, y su metadatos dice `longName: Mobilicom Limited` (NASDAQ) — **no** Mobil Corporation, absorbida en 1999. El ticker fue **reasignado a otra empresa**.
+- **Decisión vigente**: el `TICKER` es una **etiqueta fechada de un instrumento**, nunca un identificador histórico. `TICKER → MARKET_INSTRUMENT` es **N:1 y no inyectiva en el tiempo**.
+- **Por qué es peor que un 404**: un 404 falla ruidosamente; `MOB` **devuelve datos de otra compañía sin error**. Un resolutor automático de tickers históricos produciría un histórico aparentemente completo y silenciosamente equivocado.
+- **Cuatro capas separadas**: `LEGAL_ENTITY` · `SEC_CIK` · `MARKET_INSTRUMENT` · `TICKER`. El event study observa un **`MARKET_INSTRUMENT`**, no una entidad legal — y un CIK puede tener varios a la vez: la portada del 10-Q de RTX de 2020 declara `TradingSymbol` **`RTX`** (acciones) y **`RTX 30`** (notas al 2,150%).
+- **El CIK tampoco es eterno**: una reorganización en holding crea uno nuevo. **Medido, y es actual**: CIK `0002115436` "ExxonMobil Holdings Corp" tiene **29 filings desde 2026-07-01**, incluido un **`8-K12B`** (emisor sucesor), y `company_tickers.json` mapea `XOM` a **ese** CIK; el histórico `0000034088` se quedó con **`tickers: []`**. Le está pasando **ahora** a un activo de la cohorte.
+- **Se descartó**: EDGAR full-text como autoridad (encuentra el CIK correcto en 44 de 76 documentos, pero "el más frecuente" no es criterio de identidad) y deducir el ticker del nombre del documento — **medido obsoleto**: `utx-20200930.htm` declara `TradingSymbol = RTX`.
+- **`HISTORICAL_INSTRUMENT_MAPPING = INCOMPLETE`**: `companyfacts` solo expone conceptos `dei` **numéricos**; `TradingSymbol` es texto y **no está en la API**. La portada inline-XBRL sí lo lleva, pero **solo desde ~2020** — las de UTX de 2019-04 y 2019-07 no la tienen.
+
+## D-41 · Una fusión y una escisión no son la misma transformación
+
+**Vigente** (2026-09-08). **Completa D-39, que solo había visto la escisión.**
+
+- **Evidencia**: historia completa de "splits" declarados. Ratios limpios (2:1, 4:1, 3:2, 10:1) son splits reales; ratios extraños son **escisiones disfrazadas**: `DD` `1487:1000` (Dow) y `4725:10000` (Corteva); `RTX` `15890:10000` (Otis y Carrier); **`IBM` `1046:1000` el 2021-11-04 — la escisión de Kyndryl**.
+- **La asimetría que importa**: la **escisión** se declara *mal clasificada*; la **fusión no se declara en absoluto**. `XOM` tiene cinco splits y **ninguno en 1999**, el año de la fusión con Mobil, y su serie arranca en 1962 bajo un símbolo que no existía hasta 1999.
+- **Decisión vigente**: tres tipos de continuidad, **independientes y decrecientes** — `PRICE_LEVEL_CONTINUITY`, `RETURN_CONTINUITY`, `ECONOMIC_INSTRUMENT_CONTINUITY`. En `MERGER` y `SPINOFF` el **retorno sobrevive y la economía no**: el ajuste multiplicativo restaura la aritmética del cociente, y el cociente sigue comparando **dos empresas distintas**. Por eso "un ajuste multiplicativo basta" es falso.
+- **Regla de elegibilidad**, ejecutable: no es *"excluir si hay acción corporativa"* —eso tiraría observaciones válidas— sino **si cambia el instrumento económico**. Un split dentro de la ventana **no invalida**; una escisión sí. Cuatro casos: `FUERA_DE_VENTANA`, `AJUSTABLE_EN_VENTANA`, `CAMBIA_INSTRUMENTO_EN_VENTANA`, `CASO_AMBIGUO`.
+- **La clasificación no puede venir del proveedor de precios**: da una *señal detectable* (un ratio raro), no una *clasificación*. La autoridad es el 8-K de la operación.
+- **Impacto sobre la cohorte actual, no cuantificado**: **IBM** tiene una escisión el 2021-11-04 y es **un tercio** de una cohorte de 3 activos. Las ventanas que crucen esa fecha comparan IBM-con-Kyndryl contra IBM-sin-Kyndryl. **De los cinco casos auditados solo NVDA está limpio.**
+
+## D-42 · La identidad histórica cabe en el Knowledge Model, no en DimAsset
+
+**Vigente** (2026-09-08). **Decisión de diseño; nada implementado.**
+
+- **Evidencia medida**: el modelo **ya tiene** las piezas — tipos `security`, `organization` y `venue`; predicados `ISSUED_BY` (security → organization) y `LISTED_ON` (security → venue); y `valid_from`/`valid_to` en `CAMPOS_RELACION`. Uso real: **51 relaciones, las 51 con intervalo de validez**.
+- **Decisión vigente**: `LEGAL_ENTITY` → `organization`; `MARKET_INSTRUMENT` → `security`; `SEC_CIK` → identificador de la organización; **`TICKER` → atributo fechado del `security`, nunca su identidad**; `CIK ↔ instrumento` → `ISSUED_BY` fechado, que **ya existe y ya se usa**.
+- **La única extensión mínima**: un predicado de **sucesión** `security → security` con la transformación en `nature`. Es lo único que hoy no se puede expresar.
+- **Debe nacer NO CAUSAL**, con `PREDICADOS_NO_CAUSALES` y test de regresión sobre `caminos.indice()`. Una sucesión de instrumento **no es un mecanismo económico**: que DowDuPont se convirtiera en DuPont no conecta causalmente a DuPont con los clientes de Dow. Sin esa marca, el motor causal recorrería la arista y produciría caminos inexistentes — el fallo exacto que **D-23** corrigió para benchmark.
+- **D-21 preservada**: `benchmark` sigue siendo un tipo de entidad aparte y `ROLES_NO_ACTIVOS` intacto. Nada de esto convierte un índice en instrumento analizado.
+- **Se descartó**: una tabla `HistoricalTicker` (modelaría etiquetas, no transformaciones de instrumento — que es el problema real) y tocar `DimAsset` ahora.
+- **Lo que NO debe automatizarse todavía**: resolver ticker → CIK (`MOB` devuelve Mobilicom), clasificar la acción por el ratio, sustituir predecesor por sucesor, y deducir el ticker del nombre del fichero.
+

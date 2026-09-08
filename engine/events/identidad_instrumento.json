@@ -1,0 +1,373 @@
+{
+  "_nota": "Modelo de identidad historica de instrumento. Declarativo y curado a mano (D-04). NO es un pipeline ni una tabla de tickers: modela TRANSFORMACIONES DE INSTRUMENTO. Ningun motor lo escribe ni lo consume todavia.",
+  "_version": "auditoria Historical Instrument Master v1 (2026-09-08)",
+  "principio": "Un proveedor que no conoce un instrumento no puede convertirlo en inexistente; y un ticker sucesor no puede convertirse silenciosamente en el instrumento predecesor.",
+  "capas_de_identidad": {
+    "LEGAL_ENTITY": {
+      "que_es": "la persona juridica. Puede cambiar de nombre sin dejar de ser la misma.",
+      "identificador": "ninguno propio en este sistema; se ancla al SEC_CIK",
+      "ejemplo": "'EXXON CORP' y 'EXXON MOBIL CORP' son la misma LEGAL_ENTITY con nombres distintos en periodos distintos."
+    },
+    "SEC_CIK": {
+      "que_es": "identificador permanente que la SEC asigna a un FILER. Es lo mas estable que se ha medido.",
+      "estabilidad": "sobrevive a renombramientos y fusiones",
+      "no_es": "no es uno por empresa para siempre: una reorganizacion en holding crea un CIK NUEVO. Medido en XOM (ver casos)."
+    },
+    "MARKET_INSTRUMENT": {
+      "que_es": "el valor concreto que cotiza: una clase de accion, una emision de deuda.",
+      "cardinalidad": "un CIK puede tener VARIOS instrumentos a la vez. Medido: la portada del 10-Q de 2020 de RTX declara TradingSymbol 'RTX' (Common Stock) y 'RTX 30' (2.150% Notes due 2030).",
+      "es_lo_que_se_analiza": "el event study observa un MARKET_INSTRUMENT, no una LEGAL_ENTITY."
+    },
+    "TICKER": {
+      "que_es": "etiqueta de un instrumento en un mercado, en un momento.",
+      "NO_es_identidad": "no es identificador historico. Es reutilizable, reasignable y ambiguo.",
+      "prueba": "'MOB' devuelve hoy 1011 sesiones desde 2022-08-25 y es Mobilicom Limited (NASDAQ), no Mobil Corporation, absorbida en 1999. Resolver un ticker historico contra el proveedor actual no falla: devuelve OTRA EMPRESA."
+    }
+  },
+  "relaciones": {
+    "LEGAL_ENTITY -> SEC_CIK": "1:N a lo largo del tiempo (una reorganizacion crea CIK nuevo)",
+    "SEC_CIK -> MARKET_INSTRUMENT": "1:N simultaneo (acciones y varias emisiones de deuda)",
+    "MARKET_INSTRUMENT -> TICKER": "1:N a lo largo del tiempo, con intervalo de validez",
+    "TICKER -> MARKET_INSTRUMENT": "N:1 y NO INYECTIVA en el tiempo: el mismo ticker puede designar instrumentos distintos en epocas distintas"
+  },
+  "transformaciones": {
+    "SPLIT": {
+      "forma": "A -> A",
+      "exposicion": "sin cambio",
+      "ajuste_multiplicativo_basta": true,
+      "nota": "artefacto mecanico: cambia el numero de acciones, no lo que representan en conjunto"
+    },
+    "TICKER_CHANGE": {
+      "forma": "A -> A",
+      "exposicion": "sin cambio",
+      "ajuste_multiplicativo_basta": true,
+      "nota": "solo cambia la etiqueta"
+    },
+    "MERGER": {
+      "forma": "A -> B",
+      "exposicion": "CAMBIA por combinacion",
+      "ajuste_multiplicativo_basta": false,
+      "nota": "el accionista pasa a poseer una empresa distinta y mayor. Puede haber continuidad de serie sin continuidad economica"
+    },
+    "SPINOFF": {
+      "forma": "A -> B + C",
+      "exposicion": "CAMBIA por reparto",
+      "ajuste_multiplicativo_basta": false,
+      "nota": "la empresa entrega parte de si misma. 'precio historico del sucesor' deja de ser trivial: B ya no es A"
+    },
+    "HOLDCO_REORG": {
+      "forma": "A -> A' (CIK nuevo)",
+      "exposicion": "sin cambio economico",
+      "ajuste_multiplicativo_basta": true,
+      "nota": "la identidad legal cambia y la economica no. Rompe el mapa ticker->CIK sin tocar el precio"
+    },
+    "DELISTING": {
+      "forma": "A -> (nada)",
+      "exposicion": "fin",
+      "ajuste_multiplicativo_basta": false,
+      "nota": "no confundir con ausencia en un proveedor"
+    },
+    "TICKER_REUSE": {
+      "forma": "(otra empresa) -> A",
+      "exposicion": "NO RELACIONADA",
+      "ajuste_multiplicativo_basta": false,
+      "nota": "el caso peligroso: no falla, devuelve datos de otra empresa"
+    }
+  },
+  "tipos_de_continuidad": {
+    "PRICE_LEVEL_CONTINUITY": "el NIVEL de precio es comparable entre dos fechas",
+    "RETURN_CONTINUITY": "el COCIENTE entre dos precios es un retorno economicamente valido",
+    "ECONOMIC_INSTRUMENT_CONTINUITY": "el instrumento representa la MISMA exposicion economica en ambas fechas"
+  },
+  "_regla_de_continuidad": "Son independientes y decrecientes en fuerza. Un ajuste multiplicativo puede restaurar RETURN_CONTINUITY sin restaurar ECONOMIC_INSTRUMENT_CONTINUITY: tras una escision el cociente es aritmeticamente correcto y compara dos empresas distintas.",
+  "clasificacion_de_continuidad": {
+    "CONTINUOUS": "sin accion corporativa en el intervalo",
+    "CORPORATE_ACTION_ADJUSTED": "solo acciones ajustables (split, cambio de ticker, holdco): el ajuste multiplicativo basta",
+    "SUCCESSOR_MAPPING": "la serie procede de un instrumento sucesor declarado; utilizable con el mapa explicito",
+    "AMBIGUOUS": "hay accion corporativa que cambia la exposicion, o el mapa de identidad no es determinista",
+    "DISCONTINUOUS": "no hay serie, o la que hay pertenece a otra empresa (reutilizacion de ticker)"
+  },
+  "casos": [
+    {
+      "caso": "DWDP",
+      "cik": "0001666700",
+      "ticker_historico": "DWDP",
+      "legal_entity": "DowDuPont Inc. (2016-03-01 -> 2019-05-31) -> DuPont de Nemours, Inc.",
+      "ticker_actual_del_cik": "DD",
+      "transformaciones": [
+        {
+          "fecha": "2019-04-02",
+          "tipo": "SPINOFF",
+          "detalle": "escision de Dow; Yahoo la declara como split 1487:1000"
+        },
+        {
+          "fecha": "2019-06-03",
+          "tipo": "SPINOFF",
+          "detalle": "escision de Corteva mas contrasplit; Yahoo la declara como split 4725:10000"
+        }
+      ],
+      "precio_bajo_ticker_historico": "UNAVAILABLE (Yahoo 404)",
+      "precio_bajo_sucesor": "AMBIGUOUS -- DD cubre la ventana pero rebaseada; close 103.61 el 2019-04-18 frente a los ~53 a los que cotizaba DowDuPont",
+      "continuidad": "AMBIGUOUS",
+      "instrumento_negociado_demostrable": "NO -- las portadas de 2019 no llevan dei:TradingSymbol"
+    },
+    {
+      "caso": "UTX",
+      "cik": "0000101829",
+      "ticker_historico": "UTX",
+      "legal_entity": "UNITED TECHNOLOGIES CORP /DE/ (1994-01-24 -> 2020-04-06) -> RAYTHEON TECHNOLOGIES CORP (2020-04-07 -> 2023-06-29) -> RTX Corp",
+      "ticker_actual_del_cik": "RTX",
+      "transformaciones": [
+        {
+          "fecha": "2020-04-03",
+          "tipo": "SPINOFF",
+          "detalle": "escisiones de Otis y Carrier; Yahoo las declara como un unico split 15890:10000"
+        },
+        {
+          "fecha": "2020-04-03",
+          "tipo": "MERGER",
+          "detalle": "fusion con Raytheon; Yahoo NO declara ningun evento por la fusion"
+        }
+      ],
+      "precio_bajo_ticker_historico": "UNAVAILABLE (Yahoo 404)",
+      "precio_bajo_sucesor": "AMBIGUOUS -- RTX cubre la ventana, rebaseada",
+      "continuidad": "AMBIGUOUS",
+      "instrumento_negociado_demostrable": "SI, pero solo desde 2020 -- la portada del 10-Q de 2020-10-27 declara dei:TradingSymbol 'RTX' y 'RTX 30'. Las de 2019 no llevan la etiqueta."
+    },
+    {
+      "caso": "IBM",
+      "cik": "0000051143",
+      "ticker_historico": "IBM",
+      "legal_entity": "INTERNATIONAL BUSINESS MACHINES CORP (sin formerNames)",
+      "ticker_actual_del_cik": "IBM",
+      "transformaciones": [
+        {
+          "fecha": "1973-05-29",
+          "tipo": "SPLIT",
+          "detalle": "5:4"
+        },
+        {
+          "fecha": "1979-06-01",
+          "tipo": "SPLIT",
+          "detalle": "4:1"
+        },
+        {
+          "fecha": "1997-05-28",
+          "tipo": "SPLIT",
+          "detalle": "2:1"
+        },
+        {
+          "fecha": "1999-05-27",
+          "tipo": "SPLIT",
+          "detalle": "2:1"
+        },
+        {
+          "fecha": "2021-11-04",
+          "tipo": "SPINOFF",
+          "detalle": "escision de Kyndryl; Yahoo la declara como split 1046:1000. AFECTA A UN ACTIVO YA EN LA COHORTE"
+        }
+      ],
+      "precio_bajo_ticker_historico": "AVAILABLE",
+      "continuidad": "AMBIGUOUS a partir de 2021-11-04; CORPORATE_ACTION_ADJUSTED antes",
+      "instrumento_negociado_demostrable": "SI para el presente"
+    },
+    {
+      "caso": "NVDA",
+      "cik": "0001045810",
+      "ticker_historico": "NVDA",
+      "legal_entity": "NVIDIA CORP/CA (1998-05-07 -> 2002-06-04) -> NVIDIA CORP (renombramiento cosmetico)",
+      "ticker_actual_del_cik": "NVDA",
+      "transformaciones": [
+        {
+          "fecha": "2000-06-27",
+          "tipo": "SPLIT",
+          "detalle": "2:1"
+        },
+        {
+          "fecha": "2001-09-12",
+          "tipo": "SPLIT",
+          "detalle": "2:1"
+        },
+        {
+          "fecha": "2006-04-07",
+          "tipo": "SPLIT",
+          "detalle": "2:1"
+        },
+        {
+          "fecha": "2007-09-11",
+          "tipo": "SPLIT",
+          "detalle": "3:2"
+        },
+        {
+          "fecha": "2021-07-20",
+          "tipo": "SPLIT",
+          "detalle": "4:1"
+        },
+        {
+          "fecha": "2024-06-10",
+          "tipo": "SPLIT",
+          "detalle": "10:1"
+        }
+      ],
+      "precio_bajo_ticker_historico": "AVAILABLE",
+      "continuidad": "CORPORATE_ACTION_ADJUSTED -- el unico de los cinco sin escision ni fusion",
+      "instrumento_negociado_demostrable": "SI para el presente"
+    },
+    {
+      "caso": "XOM",
+      "cik_historico": "0000034088",
+      "cik_actual_del_ticker": "0002115436",
+      "ticker_historico": "XON (hasta 1999) -> XOM",
+      "legal_entity": "EXXON CORP (1994-05-11 -> 1999-11-30) -> EXXON MOBIL CORP; y desde 2026 'ExxonMobil Holdings Corp' con CIK NUEVO",
+      "transformaciones": [
+        {
+          "fecha": "1999-11-30",
+          "tipo": "MERGER",
+          "detalle": "fusion con Mobil. Yahoo NO declara ningun evento y la serie de XOM arranca en 1962: el cambio XON->XOM es INVISIBLE en el precio"
+        },
+        {
+          "fecha": "1976-07-26",
+          "tipo": "SPLIT",
+          "detalle": "2:1"
+        },
+        {
+          "fecha": "1981-06-12",
+          "tipo": "SPLIT",
+          "detalle": "2:1"
+        },
+        {
+          "fecha": "1987-09-15",
+          "tipo": "SPLIT",
+          "detalle": "2:1"
+        },
+        {
+          "fecha": "1997-04-14",
+          "tipo": "SPLIT",
+          "detalle": "2:1"
+        },
+        {
+          "fecha": "2001-07-19",
+          "tipo": "SPLIT",
+          "detalle": "2:1"
+        },
+        {
+          "fecha": "2026-07",
+          "tipo": "HOLDCO_REORG",
+          "detalle": "CIK 0002115436 'ExxonMobil Holdings Corp' con 29 filings desde 2026-07-01, incluido un 8-K12B (emisor sucesor). company_tickers.json mapea XOM a ESE CIK; el CIK historico 0000034088 queda con tickers []"
+        }
+      ],
+      "precio_bajo_ticker_historico": "AVAILABLE bajo XOM; XON devuelve 404",
+      "continuidad": "AMBIGUOUS -- fusion de 1999 invisible y reorganizacion de 2026 que parte el mapa ticker->CIK",
+      "instrumento_negociado_demostrable": "NO desde la API: el CIK historico declara tickers []"
+    }
+  ],
+  "fuentes_evaluadas": {
+    "CIK <-> historical company": {
+      "fuente": "SEC submissions (formerNames con intervalo)",
+      "estado": "AVAILABLE"
+    },
+    "CIK <-> ticker": {
+      "fuente": "ninguna determinista para el pasado",
+      "estado": "AMBIGUOUS",
+      "medido": "companyfacts solo sirve dei NUMERICOS (EntityCommonStockSharesOutstanding, EntityPublicFloat): TradingSymbol es texto y NO esta en la API. La portada inline-XBRL SI lo lleva, pero solo desde ~2019-2020: las portadas de UTX de 2019-04 y 2019-07 no tienen la etiqueta. company_tickers.json es solo supervivientes y ademas apunta al CIK ACTUAL del ticker, que puede no ser el historico (XOM)."
+    },
+    "ticker <-> instrument": {
+      "fuente": "portada inline-XBRL (dei:TradingSymbol + Security12bTitle + SecurityExchangeName)",
+      "estado": "AVAILABLE desde ~2020 · UNAVAILABLE antes"
+    },
+    "instrument <-> successor": {
+      "fuente": "8-K12B / 8-K Item 2.01 / formerNames",
+      "estado": "AMBIGUOUS -- recuperable leyendo filings, sin campo estructurado"
+    },
+    "instrument <-> corporate action": {
+      "fuente": "Yahoo declara splits; NO distingue split de escision y NO declara fusiones",
+      "estado": "AMBIGUOUS"
+    }
+  },
+  "HISTORICAL_INSTRUMENT_MAPPING": "INCOMPLETE",
+  "_hueco_exacto": "No existe fuente gratuita determinista que devuelva, para un ticker y una fecha pasada, que instrumento designaba. Lo recuperable: (a) identidad legal por CIK, completa; (b) ticker del instrumento desde ~2020 leyendo la portada inline-XBRL; (c) para antes de 2020, solo heuristicas -- busqueda de texto con ruido, o el nombre del fichero principal, que se midio STALE: el 10-Q de 2020-10-27 se llama 'utx-20200930.htm' y su portada declara TradingSymbol 'RTX'.",
+  "matriz_casos": {
+    "_nota": "Extension de la matriz de autoridad a los casos minimos. Solo celdas MEDIDAS; NOT_MEASURED nunca se rellena ni se convierte en UNAVAILABLE.",
+    "_columnas": [
+      "cik",
+      "historical_ticker",
+      "event",
+      "actual",
+      "expectation",
+      "price",
+      "corporate_actions",
+      "successor_mapping",
+      "benchmark",
+      "event_study_eligible"
+    ],
+    "_semantica_de_columna": {
+      "cik": "¿se identifica de forma estable la entidad que presento el historico?",
+      "historical_ticker": "¿se puede determinar QUE ticker designaba al instrumento en una fecha pasada, de forma determinista?",
+      "corporate_actions": "¿declara la fuente de precios las acciones corporativas Y permite clasificarlas?",
+      "successor_mapping": "¿se puede determinar el sucesor, o demostrar que no lo hay?",
+      "event_study_eligible": "a nivel de ACTIVO: AVAILABLE solo si ninguna accion corporativa cambia el instrumento economico. Para una observacion concreta depende de sus ventanas."
+    },
+    "celdas": {
+      "DWDP": {
+        "cik": "AVAILABLE",
+        "historical_ticker": "AMBIGUOUS",
+        "event": "AVAILABLE",
+        "actual": "AVAILABLE",
+        "expectation": "UNAVAILABLE",
+        "price": "AMBIGUOUS",
+        "corporate_actions": "AMBIGUOUS",
+        "successor_mapping": "AVAILABLE",
+        "benchmark": "AVAILABLE",
+        "event_study_eligible": "AMBIGUOUS"
+      },
+      "UTX": {
+        "cik": "AVAILABLE",
+        "historical_ticker": "AMBIGUOUS",
+        "event": "AVAILABLE",
+        "actual": "AVAILABLE",
+        "expectation": "UNAVAILABLE",
+        "price": "AMBIGUOUS",
+        "corporate_actions": "AMBIGUOUS",
+        "successor_mapping": "AVAILABLE",
+        "benchmark": "AVAILABLE",
+        "event_study_eligible": "AMBIGUOUS"
+      },
+      "IBM": {
+        "cik": "AVAILABLE",
+        "historical_ticker": "AVAILABLE",
+        "event": "NOT_MEASURED",
+        "actual": "NOT_MEASURED",
+        "expectation": "AVAILABLE",
+        "price": "AVAILABLE",
+        "corporate_actions": "AMBIGUOUS",
+        "successor_mapping": "AVAILABLE",
+        "benchmark": "AVAILABLE",
+        "event_study_eligible": "AMBIGUOUS"
+      },
+      "NVDA": {
+        "cik": "AVAILABLE",
+        "historical_ticker": "AVAILABLE",
+        "event": "NOT_MEASURED",
+        "actual": "NOT_MEASURED",
+        "expectation": "AVAILABLE",
+        "price": "AVAILABLE",
+        "corporate_actions": "AVAILABLE",
+        "successor_mapping": "AVAILABLE",
+        "benchmark": "AVAILABLE",
+        "event_study_eligible": "AVAILABLE"
+      },
+      "XOM": {
+        "cik": "AMBIGUOUS",
+        "historical_ticker": "AMBIGUOUS",
+        "event": "NOT_MEASURED",
+        "actual": "NOT_MEASURED",
+        "expectation": "AVAILABLE",
+        "price": "AVAILABLE",
+        "corporate_actions": "AMBIGUOUS",
+        "successor_mapping": "AMBIGUOUS",
+        "benchmark": "AVAILABLE",
+        "event_study_eligible": "AMBIGUOUS"
+      }
+    }
+  }
+}

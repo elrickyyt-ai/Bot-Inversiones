@@ -11,7 +11,7 @@ No sustituye a los README de cada módulo (que explican *por qué* está hecho a
 ## Verificación completa en tres comandos
 
 ```bash
-python3 -m unittest discover -s tests           # 654 tests, debe dar OK
+python3 -m unittest discover -s tests           # 684 tests, debe dar OK
 python3 engine/contract/qa.py --require-parquet # debe dar STATUS: VERIFIED
 git status --short data/ knowledge/             # debe salir vacío
 ```
@@ -47,6 +47,7 @@ Si los tres pasan, las veintidós fases están sanas. Si falla alguno, la tabla 
 | **HRP v1.1** | `c44120a` | Ventana de estimación, dependencia y solapamiento: `descriptive` ≠ `predictive` | `python3 engine/events/diagnostico_cohorte.py` |
 | **Población** | `f1b0d38` | Universo congelado, cobertura de fuente y reproducibilidad histórica | `python3 engine/events/universo.py` |
 | **Autoridad** | `646c72d` | Qué fuente manda sobre cada componente del evento | `python3 engine/events/autoridad.py` |
+| **Identidad** | `PENDIENTE` | Identidad histórica de instrumento y transformaciones | `python3 engine/events/identidad.py` |
 
 ---
 
@@ -229,6 +230,31 @@ Si los tres pasan, las veintidós fases están sanas. Si falla alguno, la tabla 
 **Qué se rompe si cae**: nada aguas abajo — es declarativo y ningún motor lo consume todavía. Se pierde la regla que impide que un proveedor decida quién existió en nuestro pasado.
 
 **Informe**: `informes/2026-09-08_auditoria_autoridad_datos_historicos.md`.
+
+---
+
+### Identidad · Historical Instrument Master — D-40 · D-41 · D-42
+
+**Ficheros**: `engine/events/identidad_instrumento.json` · `identidad.py` (nuevos) · `tests/test_identidad_instrumento.py` (nuevo, 30 tests)
+
+**Qué añade**: no ingiere nada y no toca `DimAsset`. Modela **transformaciones de instrumento**, que es lo que una tabla de tickers no puede representar.
+
+- **4 capas**: `LEGAL_ENTITY` · `SEC_CIK` · `MARKET_INSTRUMENT` · `TICKER`. El ticker no es identidad.
+- **El caso peor no es un 404**: `MOB` devuelve 1011 sesiones de **Mobilicom Limited**, no de Mobil.
+- **El CIK no es eterno**: XOM tiene dos (`0000034088` histórico con `tickers: []`, `0002115436` desde 2026-07 con `8-K12B`).
+- **3 tipos de continuidad**: en `MERGER` y `SPINOFF` el retorno sobrevive y la economía no.
+- **`IBM 2021-11-04 1046:1000`** es la escisión de Kyndryl, en un activo de la cohorte.
+- **Regla de elegibilidad**: no "hay acción corporativa" sino "cambia el instrumento económico".
+
+**Tests deliberadamente frágiles**:
+- `test_solo_nvda_es_elegible_a_nivel_de_activo` — se rompe cuando se marquen las acciones corporativas, que es cuando hay que releer D-41.
+- `test_el_precio_del_sucesor_no_se_declara_disponible_para_el_predecesor` — impide que `AMBIGUOUS` se ascienda a `AVAILABLE`.
+- `test_un_split_en_ventana_NO_invalida_la_observacion` — impide la sobrecorrección de excluir toda acción corporativa.
+- `test_el_mapeo_historico_esta_declarado_incompleto` — se rompe el día que exista fuente determinista.
+
+**Qué se rompe si cae**: nada aguas abajo — declarativo, sin consumidores. Se pierde la invariante que impide confundir un sucesor con el instrumento original.
+
+**Informe**: `informes/2026-09-08_auditoria_historical_instrument_master.md`.
 
 ## Dependencias entre fases
 
