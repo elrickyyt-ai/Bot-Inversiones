@@ -8,12 +8,12 @@
   "nature": "STRUCTURAL",
   "status": "VERIFIED",
   "support_level": "ALTO",
-  "source_id": "src:dimasset-equity",
-  "statement": "data/assets/IBM.json declara name='International Business Machines' para el ticker IBM.",
-  "valid_from": "2026-09-03",
+  "source_id": "src:sec-submissions",
+  "statement": "data/assets/IBM.json declara name='International Business Machines' para el ticker IBM. Vigencia anclada en 1994-03-10, primer filing del CIK 0000051143 en EDGAR: es la fecha desde la que hay evidencia directa, no una afirmacion de que antes no existiera.",
+  "valid_from": "1994-03-10",
   "valid_to": null,
-  "last_verified": "2026-09-06",
-  "verification_method": "lectura directa del fichero citado"
+  "last_verified": "2026-09-08",
+  "verification_method": "data.sec.gov/submissions, incluidos los ficheros historicos"
  },
  {
   "relationship_id": "rel:0002",
@@ -24,12 +24,12 @@
   "nature": "STRUCTURAL",
   "status": "VERIFIED",
   "support_level": "ALTO",
-  "source_id": "src:dimasset-equity",
-  "statement": "data/assets/IBM.json declara exchange='NYSE'.",
-  "valid_from": "2026-09-03",
+  "source_id": "src:sec-submissions",
+  "statement": "data/assets/IBM.json declara exchange='NYSE'. Vigencia anclada en 1994-03-10, primer filing del CIK 0000051143 en EDGAR: es la fecha desde la que hay evidencia directa, no una afirmacion de que antes no existiera.",
+  "valid_from": "1994-03-10",
   "valid_to": null,
-  "last_verified": "2026-09-06",
-  "verification_method": "lectura directa del fichero citado"
+  "last_verified": "2026-09-08",
+  "verification_method": "data.sec.gov/submissions, incluidos los ficheros historicos"
  },
  {
   "relationship_id": "rel:0003",
@@ -72,12 +72,12 @@
   "nature": "STRUCTURAL",
   "status": "VERIFIED",
   "support_level": "ALTO",
-  "source_id": "src:dimasset-equity",
-  "statement": "data/assets/NVDA.json declara name='NVIDIA Corporation' para el ticker NVDA.",
-  "valid_from": "2026-09-03",
+  "source_id": "src:sec-submissions",
+  "statement": "data/assets/NVDA.json declara name='NVIDIA Corporation' para el ticker NVDA. Vigencia anclada en 1998-03-06, primer filing del CIK 0001045810 en EDGAR: es la fecha desde la que hay evidencia directa, no una afirmacion de que antes no existiera.",
+  "valid_from": "1998-03-06",
   "valid_to": null,
-  "last_verified": "2026-09-06",
-  "verification_method": "lectura directa del fichero citado"
+  "last_verified": "2026-09-08",
+  "verification_method": "data.sec.gov/submissions, incluidos los ficheros historicos"
  },
  {
   "relationship_id": "rel:0006",
@@ -88,12 +88,12 @@
   "nature": "STRUCTURAL",
   "status": "VERIFIED",
   "support_level": "ALTO",
-  "source_id": "src:dimasset-equity",
-  "statement": "data/assets/NVDA.json declara exchange='NASDAQ'.",
-  "valid_from": "2026-09-03",
+  "source_id": "src:sec-submissions",
+  "statement": "data/assets/NVDA.json declara exchange='NASDAQ'. Vigencia anclada en 1998-03-06, primer filing del CIK 0001045810 en EDGAR: es la fecha desde la que hay evidencia directa, no una afirmacion de que antes no existiera.",
+  "valid_from": "1998-03-06",
   "valid_to": null,
-  "last_verified": "2026-09-06",
-  "verification_method": "lectura directa del fichero citado"
+  "last_verified": "2026-09-08",
+  "verification_method": "data.sec.gov/submissions, incluidos los ficheros historicos"
  },
  {
   "relationship_id": "rel:0007",
@@ -136,12 +136,12 @@
   "nature": "STRUCTURAL",
   "status": "VERIFIED",
   "support_level": "ALTO",
-  "source_id": "src:dimasset-equity",
-  "statement": "data/assets/XOM.json declara name='Exxon Mobil Corp' para el ticker XOM.",
-  "valid_from": "2026-09-03",
-  "valid_to": null,
-  "last_verified": "2026-09-06",
-  "verification_method": "lectura directa del fichero citado"
+  "source_id": "src:sec-submissions",
+  "statement": "EDGAR CIK 0000034088 emite la accion ordinaria desde su primer filing (1994-03-04). El formerName 'EXXON CORP' termina el 1999-11-30 y pasa a 'EXXON MOBIL CORP': cambia el NOMBRE, no la entidad. La vigencia se cierra el 2026-06-30 porque el 8-K12B del 2026-07-01 traslada el ticker XOM al CIK 0002115436.",
+  "valid_from": "1994-03-04",
+  "valid_to": "2026-06-30",
+  "last_verified": "2026-09-08",
+  "verification_method": "data.sec.gov/submissions, medido en vivo"
  },
  {
   "relationship_id": "rel:0010",
@@ -152,12 +152,12 @@
   "nature": "STRUCTURAL",
   "status": "VERIFIED",
   "support_level": "ALTO",
-  "source_id": "src:dimasset-equity",
-  "statement": "data/assets/XOM.json declara exchange='NYSE'.",
-  "valid_from": "2026-09-03",
+  "source_id": "src:sec-submissions",
+  "statement": "data/assets/XOM.json declara exchange='NYSE'. Vigencia anclada en 1994-03-04, primer filing del CIK 0000034088 en EDGAR: es la fecha desde la que hay evidencia directa, no una afirmacion de que antes no existiera.",
+  "valid_from": "1994-03-04",
   "valid_to": null,
-  "last_verified": "2026-09-06",
-  "verification_method": "lectura directa del fichero citado"
+  "last_verified": "2026-09-08",
+  "verification_method": "data.sec.gov/submissions, incluidos los ficheros historicos"
  },
  {
   "relationship_id": "rel:0011",

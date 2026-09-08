@@ -11,7 +11,7 @@ No sustituye a los README de cada módulo (que explican *por qué* está hecho a
 ## Verificación completa en tres comandos
 
 ```bash
-python3 -m unittest discover -s tests           # 723 tests, debe dar OK
+python3 -m unittest discover -s tests           # 750 tests, debe dar OK
 python3 engine/contract/qa.py --require-parquet # debe dar STATUS: VERIFIED
 git status --short data/ knowledge/             # debe salir vacío
 ```
@@ -50,6 +50,7 @@ Si los tres pasan, las veintidós fases están sanas. Si falla alguno, la tabla 
 | **Identidad** | `0fa7bc3` | Identidad histórica de instrumento y transformaciones | `python3 engine/events/identidad.py` |
 | **Corporate actions** | `018e520` | Contaminación de ventanas por transformaciones de instrumento | `python3 engine/events/cobertura_acciones.py` |
 | **Readiness** | `e581e22` | ¿Se puede ampliar la población con rigor? | `python3 engine/events/readiness.py` |
+| **Instrument Master** | `PENDIENTE` | Identidad de instrumento resuelta por fecha | `python3 engine/knowledge/instrumentos.py` |
 
 ---
 
@@ -308,6 +309,30 @@ Si los tres pasan, las veintidós fases están sanas. Si falla alguno, la tabla 
 **Qué se rompe si cae**: nada aguas abajo — declarativo y sin consumidores. Se pierde el criterio que impide ampliar sobre una cohorte de supervivientes.
 
 **Informe**: `informes/2026-09-08_backfill_readiness_historico.md`.
+
+---
+
+### Instrument Master v1 · Identidad de instrumento por fecha — D-50 · D-51 · D-52
+
+**Ficheros**: `engine/knowledge/instrumentos.py` (nuevo) · `modelo.py` · `knowledge/entities/{organizations,securities}.json` · `knowledge/relationships/{instrumentos,identidad}.json` · `knowledge/sources/sources.json` · `tests/test_instrument_master.py` (nuevo, 26 tests) · `tests/test_caminos.py`
+
+**Primera iteración que escribe en `knowledge/`**: 26/51/11 → 39 entidades · 66 relaciones · 14 fuentes.
+
+- `resolve_instrument(identifier, as_of)` — **exige `as_of`**; estados `VALID` / `AMBIGUOUS` / `UNRESOLVED`, siempre con motivo.
+- **Sin estructura paralela**: `LISTING` = alias `ticker` + `venue` + vigencia, que `aliases` ya soportaba. Un solo predicado nuevo, `SUCCEEDED_BY`, **no causal**.
+- **El validador incrustaba "ticker = identidad"**: la ambigüedad de alias pasa a ser temporal.
+- **6 vigencias corregidas** de fecha de declaración a fecha económica.
+- **Efecto colateral**: 4 caminos causales espurios NVDA↔Mobilicom/Walgreens.
+
+**Tests deliberadamente frágiles**:
+- `test_MOB_historico_no_devuelve_Mobilicom` — la prueba de seguridad permanente.
+- `test_el_precio_no_basta_para_dar_identidad` — se rompe si alguien acepta identidad por tener serie.
+- `test_declarar_identidad_conecta_empresas_que_solo_comparten_mercado` (en `test_caminos.py`) — evidencia viva de D-49; **se romperá cuando se aplique la variante C**, que es lo que se quiere.
+- `test_la_sucesion_no_entra_al_grafo_causal` — se rompe si `SUCCEEDED_BY` sale de `PREDICADOS_NO_CAUSALES`.
+
+**Qué se rompe si cae**: la identidad histórica deja de ser resoluble por fecha y el punto de control `precio + identidad` no puede aplicarse. P5A y el contrato no dependen de él todavía.
+
+**Informe**: `informes/2026-09-08_implementacion_historical_instrument_master_v1.md`.
 
 ## Dependencias entre fases
 

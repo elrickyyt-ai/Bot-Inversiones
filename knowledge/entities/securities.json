@@ -295,17 +295,9 @@
     "scheme": "ticker",
     "value": "IBM",
     "venue": "ven:NYSE",
-    "valid_from": null,
+    "valid_from": "1994-03-10",
     "valid_to": null,
-    "source_id": "src:dimasset-equity"
-   },
-   {
-    "scheme": "alphavantage_symbol",
-    "value": "IBM",
-    "venue": null,
-    "valid_from": null,
-    "valid_to": null,
-    "source_id": "src:dimasset-equity"
+    "source_id": "src:sec-submissions"
    },
    {
     "scheme": "yahoo_symbol",
@@ -329,17 +321,9 @@
     "scheme": "ticker",
     "value": "NVDA",
     "venue": "ven:NASDAQ",
-    "valid_from": null,
+    "valid_from": "1998-03-06",
     "valid_to": null,
-    "source_id": "src:dimasset-equity"
-   },
-   {
-    "scheme": "alphavantage_symbol",
-    "value": "NVDA",
-    "venue": null,
-    "valid_from": null,
-    "valid_to": null,
-    "source_id": "src:dimasset-equity"
+    "source_id": "src:sec-submissions"
    },
    {
     "scheme": "yahoo_symbol",
@@ -361,19 +345,19 @@
   "aliases": [
    {
     "scheme": "ticker",
-    "value": "XOM",
+    "value": "XON",
     "venue": "ven:NYSE",
-    "valid_from": null,
-    "valid_to": null,
-    "source_id": "src:dimasset-equity"
+    "valid_from": "1994-03-04",
+    "valid_to": "1999-11-29",
+    "source_id": "src:sec-submissions"
    },
    {
-    "scheme": "alphavantage_symbol",
+    "scheme": "ticker",
     "value": "XOM",
-    "venue": null,
-    "valid_from": null,
+    "venue": "ven:NYSE",
+    "valid_from": "1999-11-30",
     "valid_to": null,
-    "source_id": "src:dimasset-equity"
+    "source_id": "src:sec-submissions"
    },
    {
     "scheme": "yahoo_symbol",
@@ -384,6 +368,115 @@
     "source_id": "src:dimasset-equity"
    }
   ],
-  "source_id": "src:dimasset-equity"
+  "source_id": "src:dimasset-equity",
+  "nota": "El ticker XON quedo retirado en 1999 y la fuente de precios devuelve 404. La serie completa vive bajo XOM, reetiquetada retroactivamente."
+ },
+ {
+  "entity_id": "sec:DWDP.NYSE",
+  "type": "security",
+  "nombre": "DowDuPont Inc. (acciones ordinarias)",
+  "status": "HISTORICAL",
+  "source_id": "src:sec-submissions",
+  "aliases": [
+   {
+    "scheme": "ticker",
+    "value": "DWDP",
+    "venue": "ven:NYSE",
+    "valid_from": "2017-09-01",
+    "valid_to": "2019-05-31",
+    "source_id": "src:sec-submissions"
+   }
+  ],
+  "nota": "Instrumento de la era DowDuPont. La fuente de precios devuelve 404 para DWDP; DD cubre la ventana REBASEADA por dos escisiones, asi que no es sustituible sin mapa explicito."
+ },
+ {
+  "entity_id": "sec:DD.NYSE",
+  "type": "security",
+  "nombre": "DuPont de Nemours, Inc. (acciones ordinarias)",
+  "status": "ACTIVE",
+  "source_id": "src:sec-submissions",
+  "aliases": [
+   {
+    "scheme": "ticker",
+    "value": "DD",
+    "venue": "ven:NYSE",
+    "valid_from": "2019-06-01",
+    "valid_to": null,
+    "source_id": "src:sec-submissions"
+   }
+  ],
+  "nota": "Sucesor de sec:DWDP.NYSE tras las escisiones de Dow (2019-04-02) y Corteva (2019-06-03)."
+ },
+ {
+  "entity_id": "sec:UTX.NYSE",
+  "type": "security",
+  "nombre": "United Technologies Corp (acciones ordinarias)",
+  "status": "HISTORICAL",
+  "source_id": "src:sec-submissions",
+  "aliases": [
+   {
+    "scheme": "ticker",
+    "value": "UTX",
+    "venue": "ven:NYSE",
+    "valid_from": "1994-01-24",
+    "valid_to": "2020-04-06",
+    "source_id": "src:sec-submissions"
+   }
+  ],
+  "nota": "La fuente de precios devuelve 404 para UTX."
+ },
+ {
+  "entity_id": "sec:RTX.NYSE",
+  "type": "security",
+  "nombre": "RTX Corp (acciones ordinarias)",
+  "status": "ACTIVE",
+  "source_id": "src:sec-submissions",
+  "aliases": [
+   {
+    "scheme": "ticker",
+    "value": "RTX",
+    "venue": "ven:NYSE",
+    "valid_from": "2020-04-07",
+    "valid_to": null,
+    "source_id": "src:sec-submissions"
+   }
+  ],
+  "nota": "Sucesor de sec:UTX.NYSE. El 2020-04-03 concurren las escisiones de Otis y Carrier y la fusion con Raytheon."
+ },
+ {
+  "entity_id": "sec:WBA.NASDAQ",
+  "type": "security",
+  "nombre": "Walgreens Boots Alliance, Inc. (acciones ordinarias)",
+  "status": "INACTIVE",
+  "source_id": "src:sec-submissions",
+  "aliases": [
+   {
+    "scheme": "ticker",
+    "value": "WBA",
+    "venue": "ven:NASDAQ",
+    "valid_from": "2014-12-31",
+    "valid_to": null,
+    "source_id": "src:sec-submissions"
+   }
+  ],
+  "nota": "Dejo de cotizar. Ausente de company_tickers.json y sin serie en la fuente de precios. Sin sucesor declarado: no se ha verificado."
+ },
+ {
+  "entity_id": "sec:MOB.NASDAQ",
+  "type": "security",
+  "nombre": "Mobilicom Limited (acciones ordinarias)",
+  "status": "ACTIVE",
+  "source_id": "src:yahoo-meta-mob",
+  "aliases": [
+   {
+    "scheme": "ticker",
+    "value": "MOB",
+    "venue": "ven:NASDAQ",
+    "valid_from": "2022-08-25",
+    "valid_to": null,
+    "source_id": "src:yahoo-meta-mob"
+   }
+  ],
+  "nota": "PRUEBA DE SEGURIDAD. El ticker MOB fue de Mobil Corporation, absorbida en 1999. Este security NO es su sucesor y no existe relacion SUCCEEDED_BY que los una. Resolver MOB en una fecha anterior a 2022-08-25 debe dar UNRESOLVED, nunca esta entidad."
  }
 ]

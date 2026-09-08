@@ -96,6 +96,11 @@ PREDICADOS = {
     # validador no las normaliza.
     "BENCHMARKED_BY": ({"security"}, {"benchmark"}),
     "COMPARED_TO":    ({"security"}, {"security", "benchmark"}),
+    # Instrument Master v1 (2026-09-08). Un instrumento sucede a otro tras
+    # una transformacion societaria. NO es un mecanismo economico: que
+    # DowDuPont pasara a DuPont no conecta a DuPont con los clientes de Dow,
+    # asi que queda fuera del recorrido causal (D-23).
+    "SUCCEEDED_BY":   ({"security"}, {"security"}),
 }
 
 POLARIDADES = {
@@ -188,7 +193,7 @@ PREDICADOS_CON_ROL = {"BENCHMARKED_BY", "COMPARED_TO"}
 # -- que recorre TODA relacion vigente, sin mirar el predicado -- las
 # seguiria en cuanto se declarase la primera, y produciria caminos que no
 # existen.
-PREDICADOS_NO_CAUSALES = frozenset(PREDICADOS_CON_ROL)
+PREDICADOS_NO_CAUSALES = frozenset(PREDICADOS_CON_ROL | {"SUCCEEDED_BY"})
 
 
 CAMPOS_RELACION = {
@@ -347,15 +352,26 @@ def validar(k):
             _fecha(al.get("valid_from"), donde, "alias.valid_from", e)
             _fecha(al.get("valid_to"), donde, "alias.valid_to", e)
 
-    # un mismo (scheme, value) no puede apuntar a dos entidades
+    # Un mismo (scheme, value) no puede apuntar a dos entidades A LA VEZ.
+    #
+    # Instrument Master v1 (2026-09-08): antes la comprobacion era global y
+    # eso daba por supuesto que un ticker identifica a una sola entidad en
+    # toda la historia -- justo el supuesto que MOB desmiente (el simbolo de
+    # Mobil Corporation designa hoy a Mobilicom Limited). Un ticker
+    # REUTILIZADO es legitimo mientras las vigencias no se solapen; lo que
+    # sigue prohibido es que dos entidades lo reclamen en la misma fecha.
     por_alias = {}
     for ent in k["entities"]:
         for al in ent.get("aliases") or []:
             clave = (al.get("scheme"), al.get("value"))
-            por_alias.setdefault(clave, set()).add(ent.get("entity_id"))
+            por_alias.setdefault(clave, []).append((ent.get("entity_id"), al))
     for clave, quienes in sorted(por_alias.items()):
-        if len(quienes) > 1:
-            e.append(f"alias ambiguo {clave}: apunta a {sorted(quienes)}")
+        for i in range(len(quienes)):
+            for j in range(i + 1, len(quienes)):
+                (id_a, al_a), (id_b, al_b) = quienes[i], quienes[j]
+                if id_a != id_b and _solapan(al_a, al_b):
+                    e.append(f"alias ambiguo {clave}: {id_a} y {id_b} lo reclaman "
+                             f"en vigencias que se solapan")
 
     # --- fuentes ---
     for src in k["sources"]:

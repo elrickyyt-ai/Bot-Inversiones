@@ -501,3 +501,42 @@ sin precio                  : ['DWDP', 'UTX', 'WBA']
 - **Decisión vigente**: **no se cambia P5A**. La pérdida de conteos es probablemente correcta —son caminos vacíos— pero eso convierte el cambio en una revisión de los tests de una fase cerrada, no en un no-op, y el criterio pedido era **regresión cero**.
 - **Recomendación registrada**: aplicar la variante C como refactor propio (`P5A hardening`), **fuera del backfill**, porque el riesgo de causalidad y el de identidad son distintos aunque compartan raíz: *el sistema no debe deducir semántica por ausencia de una excepción*.
 
+## D-50 · La identidad histórica de instrumento cabe en el modelo existente: aliases fechados y un predicado
+
+**Vigente** (Historical Instrument Master v1, 2026-09-08). **Implementa D-42.**
+
+- **Decisión vigente**: `LEGAL_ENTITY` → `organization`; `SEC_CIK` → **alias fechado** de la organización; `SECURITY` → `security`; **`LISTING` → alias `ticker` con `venue` + `valid_from`/`valid_to`** sobre el security; `TICKER` → el `value` de ese alias, **nunca la identidad**.
+- **No se introdujo la entidad `Listing`** (evaluado como pedía el encargo): el array `aliases` ya llevaba `scheme`, `value`, `venue`, `valid_from`, `valid_to` y `source_id` — eso **es** `Ticker + Exchange + validity`. Un test comprueba que `listing` no está en `TIPOS_ENTIDAD`.
+- **Un solo predicado nuevo**: `SUCCEEDED_BY: ({security}, {security})`, **`STRUCTURAL` y NO CAUSAL** — añadido a `PREDICADOS_NO_CAUSALES` con un test que recorre el índice causal y comprueba que ninguna arista lo es (D-23). Dice **que** hubo sucesión, no **de qué tipo**: el clasificador de acciones corporativas queda fuera a propósito.
+- **`resolve_instrument(identifier, as_of)` exige `as_of`** y lanza `ValueError` sin él: para historia no existe la versión sin fecha. Estados `VALID` / `AMBIGUOUS` / `UNRESOLVED`, y **todo estado distinto de `VALID` lleva motivo** — un `UNRESOLVED` sin razón es indistinguible de un fallo del resolutor.
+- **Punto de control**: `price_available AND instrument_identity_valid`. Medido: **`MOB @ 1995-06-01` con precio disponible y sin identidad NO es elegible**; `DWDP @ 2018-11-01` tiene identidad `VALID` **sin precio** y tampoco lo es. `AMBIGUOUS` no se convierte en `UNAVAILABLE`.
+- **D-21 intacta**, con test: `benchmark` sigue siendo su propio tipo y `BENCHMARKED_BY` sigue fuera del recorrido causal.
+
+## D-51 · El validador daba por supuesto que un ticker identifica a una sola entidad en toda la historia
+
+**Vigente** (2026-09-08). **Corrección del propio validador.**
+
+- **Evidencia**: la comprobación de alias era **global** — *"un mismo (scheme, value) no puede apuntar a dos entidades"*—, de modo que declarar `sec:MOB.NASDAQ` (Mobilicom, desde 2022-08-25) junto a cualquier instrumento histórico con ese símbolo habría sido **rechazado por el validador**. El supuesto *"ticker = identidad"* estaba incrustado en la validación, no solo en el pipeline.
+- **Decisión vigente**: la ambigüedad de alias pasa a ser **temporal**, reutilizando `_solapan()` de D-21. Un ticker **reutilizado es legítimo** mientras las vigencias no se solapen; sigue prohibido que dos entidades lo reclamen **en la misma fecha**. Un test por cada mitad.
+- **Dos correcciones de vigencia en datos ya declarados**, ambas medidas contra EDGAR:
+  - **`rel:0009`** (XOM `ISSUED_BY`) decía `valid_from: 2026-09-03` — la fecha de declaración, no la económica. Y era **directamente incorrecta**: para esa fecha el ticker ya había migrado al holdco. Corregida a **1994-03-04 → 2026-06-30**, con `rel:0052` desde 2026-07-01.
+  - **`rel:0001/0002` (IBM) y `rel:0005/0006` (NVDA)**: mismo defecto, re-ancladas al **primer filing del CIK en EDGAR** (IBM 1994-03-10, NVDA 1998-03-06, XOM 1994-03-04), midiendo también los ficheros históricos de `submissions`.
+- **El `statement` declara qué significa el ancla**: *"la fecha desde la que hay evidencia directa, no una afirmación de que antes no existiera"*. `valid_from` pasa a significar vigencia **económica**, no fecha de declaración.
+
+## D-52 · Declarar identidad correcta empeoró el grafo causal: el coste de la lista negra deja de ser teórico
+
+**Vigente** (2026-09-08). **Refuerza D-49 con evidencia nueva; P5A sigue sin tocarse.**
+
+- **Evidencia medida** tras declarar los instrumentos de WBA y Mobilicom:
+
+```
+sec:NVDA.NASDAQ -> ven:NASDAQ -> sec:MOB.NASDAQ -> org:mobilicom
+sec:NVDA.NASDAQ -> ven:NASDAQ -> sec:WBA.NASDAQ -> org:walgreens
+```
+
+**Cuatro caminos nuevos** que conectan NVDA con Mobilicom y con Walgreens **por el solo hecho de cotizar en el mismo mercado**, y **ninguno contiene una arista causal**. Antes `ven:NASDAQ` era un callejón sin salida porque NVDA era el único security declarado allí.
+
+- **Decisión vigente**: no se cambia P5A —D-49 demostró que la lista blanca falla el criterio de regresión cero— pero se deja **un test frágil a propósito** que documenta estos caminos y **se romperá el día que se aplique la variante C**. El coste de la lista negra queda medido, no argumentado.
+- **Un test caducó y se reescribió** (§3 del protocolo): `test_el_limite_de_profundidad_se_distingue_de_la_falta_de_conocimiento` exigía que a profundidad 3 apareciese `NO_FURTHER_KNOWLEDGE`, apoyándose en que NASDAQ fuese un callejón sin salida. **Se apoyaba en una ausencia de conocimiento, no en una propiedad del motor.** Reescrito a lo que sigue siendo cierto: los motivos no se confunden y ampliar la profundidad nunca convierte un `COMPLETE` en incompleto.
+- **Lección general**, y es la que conviene retener: **declarar más conocimiento verdadero no solo puede mejorar el grafo**. Con una regla de recorrido por lista negra, cada entidad nueva amplía la superficie de caminos espurios.
+

@@ -286,12 +286,48 @@ class TestSieteProfundidad(unittest.TestCase):
         self.assertTrue(d1 <= d3)
 
     def test_el_limite_de_profundidad_se_distingue_de_la_falta_de_conocimiento(self):
+        """CADUCADO Y REESCRITO (2026-09-08, Instrument Master v1).
+
+        Antes exigia que a profundidad 3 apareciese NO_FURTHER_KNOWLEDGE: se
+        apoyaba en que `ven:NASDAQ` fuese un callejon sin salida, porque el
+        unico security declarado en ese mercado era NVDA. Al declarar
+        sec:WBA.NASDAQ y sec:MOB.NASDAQ el mercado dejo de serlo, y el motivo
+        pasa a DEPTH_LIMIT. El grafo crecio: el test se apoyaba en una
+        ausencia de conocimiento, no en una propiedad del motor.
+
+        Lo que sigue siendo cierto -- y es lo que el test comprueba ahora --
+        es que los dos motivos NO se confunden: a profundidad 1 todo lo que
+        no alcanza objetivo es DEPTH_LIMIT, y ampliar la profundidad solo
+        puede convertir DEPTH_LIMIT en COMPLETE o en NO_FURTHER_KNOWLEDGE,
+        nunca al reves."""
         cs = caminos.descubrir("ev4:t7", "sec:NVDA.NASDAQ", self.k, HOY, max_depth=1,
                                tipos_objetivo={"product", "technology", "material"})
         self.assertEqual({c["incomplete_reason"] for c in cs}, {"DEPTH_LIMIT"})
         hondo = caminos.descubrir("ev4:t7", "sec:NVDA.NASDAQ", self.k, HOY, max_depth=3,
                                   tipos_objetivo={"product", "technology", "material"})
-        self.assertIn("NO_FURTHER_KNOWLEDGE", {c["incomplete_reason"] for c in hondo})
+        motivos = {c["incomplete_reason"] for c in hondo}
+        self.assertTrue(motivos <= {"DEPTH_LIMIT", "NO_FURTHER_KNOWLEDGE", None}, motivos)
+        # A mayor profundidad hay caminos que SI llegan a objetivo.
+        self.assertIn(None, motivos)
+
+    def test_declarar_identidad_conecta_empresas_que_solo_comparten_mercado(self):
+        """FRAGIL A PROPOSITO -- evidencia viva para D-49.
+
+        Declarar los instrumentos de WBA y Mobilicom (identidad legitima y
+        verificada) hace que el recorrido conecte NVDA con ellos por el solo
+        hecho de cotizar en el mismo mercado. Ninguno de esos caminos
+        contiene una arista causal: son exactamente la clase que la variante
+        C de D-49 eliminaria. Este test documenta el coste actual de la
+        lista negra y se rompera el dia que se aplique la lista blanca."""
+        cs = caminos.descubrir("ev4:t7", "sec:NVDA.NASDAQ", self.k, HOY, max_depth=3)
+        cruzados = [c for c in cs
+                    if any(x in n["entity_id"] for n in c["nodes"]
+                           for x in ("MOB", "mobilicom", "WBA", "walgreens"))]
+        self.assertTrue(cruzados, "la evidencia de D-49 dejo de reproducirse")
+        causales = {"SUPPLIES", "USES", "DEPENDS_ON", "SUBSTITUTES", "EXPOSED_TO"}
+        for c in cruzados:
+            self.assertFalse({e["predicate"] for e in c["edges"]} & causales,
+                             "un camino a otra empresa del mismo mercado no puede ser causal")
 
 
 class TestInvariancia(unittest.TestCase):

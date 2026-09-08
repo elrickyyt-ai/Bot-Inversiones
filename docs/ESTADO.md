@@ -49,6 +49,9 @@ DATA CONTRACT      data/incoming/*.csv (año en curso)  +  data/history/** (parq
    │           │                                            ¿la ventana cruza una transformación?
    │           │                                       └──► Backfill readiness  (31 activos)
    │           │                                             BACKFILL_READY = false
+   │                                                          │
+   └──► P2 KNOWLEDGE ◄── Historical Instrument Master v1
+          resolve_instrument(identifier, as_of)  ·  ticker ≠ identidad
    │           │
    │           └──► P5D  Data Requirements  ¿existe el dato que el mecanismo pide?
    │
@@ -100,6 +103,7 @@ CONSUMO (desacoplado, no dicta el motor)   Power BI · Web App
 | D-40/41/42 | `0fa7bc3` | Identidad histórica de instrumento: el ticker es reasignable, fusión ≠ escisión, cabe en el Knowledge Model |
 | D-43/44/45 | `018e520` | Cobertura de acciones corporativas: identidad durante la ventana, el filing manda, cuatro clases de relación |
 | D-46/47/48/49 | `e581e22` | Backfill readiness: `false`; el cuello es la identidad del instrumento, no la cobertura |
+| D-50/51/52 | `PENDIENTE` | Historical Instrument Master v1: aliases fechados, `SUCCEEDED_BY` no causal, validador temporal |
 
 Detalle por fase, con qué se rompe si cae y cómo recuperarla: `informes/2026-09-07_trazabilidad_fases_P0_P61.md`.
 
@@ -142,7 +146,7 @@ Estos invariantes no son preferencias de estilo: cada uno nació de un fallo rea
 
 ## 5. Estado actual, medido
 
-**Suite**: 723 tests · OK — **QA**: `QA CORE: PASS` · `QA PARQUET: PASS` · `STATUS: VERIFIED` (287 particiones, 0 incidencias) — **Knowledge**: PASS (26 entidades · 51 relaciones · 11 fuentes)
+**Suite**: 750 tests · OK — **QA**: `QA CORE: PASS` · `QA PARQUET: PASS` · `STATUS: VERIFIED` (287 particiones, 0 incidencias) — **Knowledge**: PASS (39 entidades · 66 relaciones · 14 fuentes)
 
 ```bash
 python3 -m unittest discover -s tests
@@ -196,6 +200,8 @@ magnitud      UNKNOWN                      (P6)
 | HBM y sustrato ABF sin fuente | `knowledge/pendiente/nvidia_cadena.json` | Buscados en los dos filings: cero menciones |
 | Samsung / SK Hynix / Micron | `knowledge/pendiente/` | **Ya tienen fuente verificada**; fuera del alcance acordado, promovibles en un paso |
 | `tech:cowos` se evalúa como insumo de coste, no como restricción de capacidad | informe de P6 | P5B enruta por R5; decisión de no tocar P5B |
+| **Solo 8 securities con identidad histórica declarada** | D-50 · `knowledge/entities/securities.json` | Los otros 25 del universo siguen sin mapa. Es curación, no diseño |
+| **El grafo causal conecta empresas del mismo mercado** | D-52 | 4 caminos NVDA↔Mobilicom/Walgreens sin arista causal. Aparecieron al declarar identidad correcta |
 | **`historical_ticker` al 0% en los 31** | D-46 · `readiness_universo.json` | Ninguna fuente determinista dice qué ticker designaba a un instrumento en una fecha pasada. **Es el cuello de botella del backfill** |
 | **Precio ausente justo en los 3 deslistados** | D-47 | DWDP, UTX y WBA. La cobertura que falta tiene forma de sesgo de superviviencia, no de laguna aleatoria |
 | **`companyconcept` da falsos negativos** | D-48 | Para KO devuelve 0 donde `companyfacts` da 233. El pipeline futuro debe usar `companyfacts` o comparar ambos |
@@ -477,15 +483,57 @@ sin precio                  : ['DWDP', 'UTX', 'WBA']
 
 **Lista blanca causal evaluada y NO aplicada (D-49)**: de tres variantes, la única sana —exigir ≥1 arista causal en el camino emitido— elimina **37 de 356 (10,4%)** y **ninguno con contenido causal**. Cumple dos de los tres criterios; falla **regresión cero** (NVDA prof2 27→23, BTC prof2 33→21, con tests que afirman sobre esos conteos). **P5A no se toca**; queda como `P5A hardening` aparte.
 
+**Décima pieza: Historical Instrument Master v1 — IMPLEMENTADO** (`informes/2026-09-08_implementacion_historical_instrument_master_v1.md`, decisiones **D-50 · D-51 · D-52**). Primera iteración que **escribe en `knowledge/`**: 26/51/11 → **39 entidades · 66 relaciones · 14 fuentes**. `data/` intacto.
+
+**El criterio de salida, demostrado:**
+
+```
+  ident  as_of        status      security         issuer
+  XOM    2019-04-26   VALID       sec:XOM.NYSE     org:exxonmobil
+  XOM    2026-08-15   VALID       sec:XOM.NYSE     org:exxonmobil-holdings
+  XON    1998-01-01   VALID       sec:XOM.NYSE     org:exxonmobil
+  MOB    1995-06-01   UNRESOLVED  -                -
+  MOB    2024-01-05   VALID       sec:MOB.NASDAQ   org:mobilicom
+  DWDP   2018-11-01   VALID       sec:DWDP.NYSE    org:dupont
+  DWDP   2024-01-01   UNRESOLVED  -                -
+  UTX    2019-01-23   VALID       sec:UTX.NYSE     org:rtx
+  WBA    2019-06-01   VALID       sec:WBA.NASDAQ   org:walgreens
+```
+
+Y el punto de control `price_available AND instrument_identity_valid`:
+
+```
+  MOB   @ 1995-06-01  precio=True  identidad=UNRESOLVED  elegible=False
+  DWDP  @ 2018-11-01  precio=False identidad=VALID       elegible=False
+```
+
+> **`MOB` con precio disponible y sin identidad no es elegible.** Es lo que separa esto de un mapa de tickers.
+
+**Sin estructura paralela (D-50)**: `LISTING` se representa con el alias `ticker` + `venue` + vigencia que `aliases` **ya tenía**; `SEC_CIK` es un alias fechado de la organización. **Un solo predicado nuevo**, `SUCCEEDED_BY`, **`STRUCTURAL` y fuera del recorrido causal** (D-23). D-21 intacta, con test.
+
+**Hubo que corregir el propio validador (D-51)**: la comprobación de alias era **global**, así que declarar Mobilicom con el ticker `MOB` habría sido **rechazado** — el supuesto *"ticker = identidad"* estaba incrustado en la validación. Ahora la ambigüedad es **temporal**: un ticker reutilizado es legítimo si las vigencias no se solapan. Y se corrigieron **6 vigencias** que llevaban la fecha de *declaración* en vez de la económica — `rel:0009` (XOM) era directamente incorrecta.
+
+**Efecto colateral medido, y no es menor (D-52):**
+
+```
+sec:NVDA.NASDAQ -> ven:NASDAQ -> sec:MOB.NASDAQ -> org:mobilicom
+sec:NVDA.NASDAQ -> ven:NASDAQ -> sec:WBA.NASDAQ -> org:walgreens
+```
+
+**Declarar identidad correcta creó cuatro caminos causales espurios** entre empresas que solo comparten mercado, **ninguno con arista causal**. Antes NASDAQ era un callejón sin salida. **El coste de la lista negra deja de ser teórico**; queda un test frágil que se romperá cuando se aplique la variante C de D-49. Un test de P5A caducó por esto y se reescribió (§3 del protocolo).
+
+> **Declarar más conocimiento verdadero no solo puede mejorar el grafo.** Con recorrido por lista negra, cada entidad nueva amplía la superficie de caminos espurios.
+
 **Lo siguiente**, por orden de lo que desbloquea:
 
-1. **Mapa `ticker histórico → CIK` para los 31**, con intervalos y corroboración por `formerNames`. Es el 0% que bloquea, y es **trabajo, no dinero**.
-2. **Clasificar las acciones corporativas de los 31 desde el 8-K** — hoy 5 de 31.
-3. **Resolver el precio de DWDP, UTX y WBA** vía sucesor con mapa explícito. **Sin esto, cualquier ampliación es una cohorte de supervivientes.**
-4. **Declarar los 31 en el Knowledge Model** (`ISSUED_BY` fechado, D-42) y añadir `SUCCESSOR_OF` **no causal**.
-5. **Entonces sí**: ampliar población, y volver a medir independencia y solape sobre series contiguas.
-6. **En paralelo y aparte**: `P5A hardening` con la variante C.
-7. Después: `n_effective` (D-31), más clases de evento, y por último `predictive_status` ≠ `NOT_EVALUATED` (P8).
+1. **Decidir el precio histórico de DWDP, UTX y WBA** — es la decisión A/B/C: (A) la fuente existente lo recupera → backfill; (B) existe pero la continuidad económica es ambigua → flag/exclude por horizonte; (C) no recuperable → **solo entonces** tiene sentido estudiar un proveedor de pago.
+2. **Mapa de identidad para los 25 activos restantes** del universo — trabajo de curación, no de diseño.
+3. **`P5A hardening`** (variante C de D-49), ahora con coste medido.
+4. **Clasificar las acciones corporativas de los 31 desde el 8-K** — hoy 5 de 31.
+5. **Conectar el punto de control a `poblacion()`**.
+6. **Entonces sí**: ampliar población y volver a medir independencia y solape.
+7. **Architecture Consolidation** — revisión de P0-P6.1 buscando las invariantes realmente comunes entre PIT, Event, Knowledge, Benchmark, Instrument y Eligibility. Solo ahí tendrá sentido evaluar si `Evidence Eligibility` es una abstracción legítima. **Antes no.**
+8. Después: `n_effective` (D-31), más clases de evento, y por último `predictive_status` ≠ `NOT_EVALUATED` (P8).
 
 Roadmap acordado: `P6.2 Quantification unlocks` → `P7 Market Impact` → `P8 Mispricing` → `P9 Thesis` → `P10 Portfolio` → `P11 Outcome/Calibration`. Power BI y Web App consumirán una proyección del motor; no lo dictan.
 

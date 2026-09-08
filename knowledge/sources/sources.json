@@ -119,5 +119,38 @@
   "fecha_consulta": "2026-09-07",
   "accesible": true,
   "nota": "Se cita la SERIE, no la metodologia del indice. La documentacion metodologica de S&P Dow Jones Indices NO se ha podido citar: spglobal.com responde 403 desde este entorno, la misma situacion que D-07 resolvio prefiriendo un localizador reabrible. Verificado en vivo el 2026-09-07 sobre esta URL: 14.291 sesiones desde 1970-01-02, cero eventos de split o dividendo, y close == adjclose en las 2.299 sesiones comparadas -- un nivel de indice no tiene acciones corporativas que ajustar, asi que la eleccion de 'close' no es una eleccion. Deuda registrada: point_in_time_capable se afirma sobre esta comprobacion, no sobre una declaracion del proveedor."
+ },
+ {
+  "source_id": "src:sec-submissions",
+  "tipo": "FILING",
+  "publisher": "org:sec",
+  "titulo": "EDGAR submissions API (formerNames, filings, acceptanceDateTime)",
+  "localizador": "https://data.sec.gov/submissions/CIK{cik}.json",
+  "fecha_publicacion": "2026-09-08",
+  "fecha_consulta": "2026-09-08",
+  "accesible": true,
+  "nota": "Identidad legal por CIK con intervalos de validez. El CIK es permanente frente a renombramientos y fusiones, pero una reorganizacion en holding crea un CIK NUEVO (medido en XOM)."
+ },
+ {
+  "source_id": "src:sec-8k12b-xom-2026",
+  "tipo": "FILING",
+  "publisher": "org:sec",
+  "titulo": "ExxonMobil Holdings Corp, Form 8-K12B (registro de emisor sucesor)",
+  "localizador": "CIK 0002115436, acceptance 2026-07-01T16:36:49Z, items 1.01,2.01,2.03,3.03,5.02,5.03,9.01",
+  "fecha_publicacion": "2026-07-01",
+  "fecha_consulta": "2026-09-08",
+  "accesible": true,
+  "nota": "Reorganizacion en holding. Un 25-NSE del 2026-07-02 bajo el CIK historico 0000034088 completa el par."
+ },
+ {
+  "source_id": "src:yahoo-meta-mob",
+  "tipo": "DATA_PROVIDER",
+  "publisher": "org:yahoo-finance",
+  "titulo": "Metadatos del simbolo MOB",
+  "localizador": "chart/MOB -> meta.longName='Mobilicom Limited', firstTradeDate=1661434200 (2022-08-25), exchangeName=NCM",
+  "fecha_publicacion": "2026-09-08",
+  "fecha_consulta": "2026-09-08",
+  "accesible": true,
+  "nota": "Prueba de reutilizacion de ticker: el simbolo de Mobil Corporation, absorbida en 1999, designa hoy a otra empresa."
  }
 ]
