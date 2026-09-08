@@ -41,6 +41,8 @@ DATA CONTRACT      data/incoming/*.csv (año en curso)  +  data/history/** (parq
    │           │                          ¿es INTERPRETABLE?  dependencia · solape
    │           │                             └──► Universo congelado + cobertura
    │           │                                   ¿hay POBLACIÓN?  DECLARADO, no medido
+   │           │                                    └──► Autoridad de dato por componente
+   │           │                                          SEC manda · AV enriquece · CIK ≠ ticker
    │           │
    │           └──► P5D  Data Requirements  ¿existe el dato que el mecanismo pide?
    │
@@ -88,6 +90,7 @@ CONSUMO (desacoplado, no dicta el motor)   Power BI · Web App
 | HRP v1 | `07f867e` | `HistoricalReactionProfile`: descriptivo, 20 perfiles, ninguno desaparece por falta de datos |
 | D-27/29/30/31 | `c44120a` | Ventana de estimación, dependencia y solapamiento: `descriptive` ≠ `predictive`, solape marcado, `n_effective` medido antes de formularse |
 | D-32/33/34/35 | `f1b0d38` | Auditoría de población: universo congelado, sesgo de superviviencia de la fuente, `2_60d` = contexto, `independence_model`, reproducibilidad histórica |
+| D-36/37/38/39 | `PENDIENTE` | Autoridad de dato por componente: SEC manda, Alpha Vantage enriquece, consenso `UNAVAILABLE`, una escisión no es un split |
 
 Detalle por fase, con qué se rompe si cae y cómo recuperarla: `informes/2026-09-07_trazabilidad_fases_P0_P61.md`.
 
@@ -121,7 +124,7 @@ Estos invariantes no son preferencias de estilo: cada uno nació de un fallo rea
 
 ## 5. Estado actual, medido
 
-**Suite**: 627 tests · OK — **QA**: `QA CORE: PASS` · `QA PARQUET: PASS` · `STATUS: VERIFIED` (287 particiones, 0 incidencias) — **Knowledge**: PASS (26 entidades · 51 relaciones · 11 fuentes)
+**Suite**: 654 tests · OK — **QA**: `QA CORE: PASS` · `QA PARQUET: PASS` · `STATUS: VERIFIED` (287 particiones, 0 incidencias) — **Knowledge**: PASS (26 entidades · 51 relaciones · 11 fuentes)
 
 ```bash
 python3 -m unittest discover -s tests
@@ -175,6 +178,11 @@ magnitud      UNKNOWN                      (P6)
 | HBM y sustrato ABF sin fuente | `knowledge/pendiente/nvidia_cadena.json` | Buscados en los dos filings: cero menciones |
 | Samsung / SK Hynix / Micron | `knowledge/pendiente/` | **Ya tienen fuente verificada**; fuera del alcance acordado, promovibles en un paso |
 | `tech:cowos` se evalúa como insumo de coste, no como restricción de capacidad | informe de P6 | P5B enruta por R5; decisión de no tocar P5B |
+| **Sin puente autoritativo ticker histórico → CIK** | D-36 · `autoridad_datos.json` | `company_tickers.json` es de supervivientes; EDGAR full-text lo recupera con ruido real (44/76 y 68/100). Es el hueco de un Historical Instrument Master |
+| **XBRL no llega a los años noventa** | D-37 | UTX desde 2007-12-31, DWDP desde 2015-12-31, mientras el precio llega a 1970 |
+| **Rebaseo por escisiones no cuantificado** | D-39 | Medido en un caso (DD). No se sabe en cuántos activos del universo ocurre |
+| **Consenso PIT sin fuente** | D-38 | Ninguna fuente gratuita publica el consenso con su fecha de vigencia. `UNAVAILABLE` declarado, nunca inventado |
+| **`autoridad.py` fuera de `qa.py`** | D-24 (mismo patrón) | Tiene 26 tests propios; no condiciona el `STATUS: VERIFIED` global |
 | **La ingesta de equity no es automatizable** | D-32 · informe de población §11 | El conector MCP no escribe a disco: cada activo exige transcripción manual. Inviable para 300+. Necesita clave en almacén de secretos — decisión del usuario |
 | **El proveedor solo conoce supervivientes** | D-32 | `EARNINGS` y `SYMBOL_SEARCH` devuelven vacío para DWDP y UTX. Un universo congelado no es reconstruible con Alpha Vantage, y el sesgo no se ve desde dentro de los datos |
 | **22 activos de Universe_v1 `NOT_MEASURED`** | `cobertura_universo_v1.json` | Nunca estimados. Coste de transcripción, no cuota |
@@ -296,14 +304,51 @@ profundidad_suficiente           True     event_class_coverage  1 (requerido 6)
 avanzar_a_v2                     False
 ```
 
+**Sexta pieza: autoridad de datos históricos — HECHA** (`informes/2026-09-08_auditoria_autoridad_datos_historicos.md`, decisiones **D-36 · D-37 · D-38 · D-39**). Mediciones **en vivo** contra SEC EDGAR, `data.sec.gov` y Yahoo. Cero eventos ingeridos.
+
+**La regla que sobrevive a este backfill (D-36):**
+
+> **La cobertura de un proveedor NO define quién existió en nuestro pasado.** Que una empresa falte en un proveedor es un hecho sobre el **proveedor**, nunca sobre la **empresa**.
+
+Demostrado: los dos activos que Alpha Vantage no conoce están **enteros** en EDGAR — CIK `0001666700` con `DowDuPont Inc.` (2016-03-01 → 2019-05-31), 1009 filings, 131 obs. XBRL; CIK `0000101829` con `UNITED TECHNOLOGIES CORP /DE/` (1994-01-24 → 2020-04-06), 1002 filings, 324 obs. XBRL.
+
+**El sesgo está en tres capas, y no son la misma**: el directorio de Alpha Vantage (sesgado), **`company_tickers.json` de la SEC — también sesgado**, 10.415 empresas sin DWDP ni UTX — y **EDGAR por CIK, no sesgado**. Solo el CIK es inmune.
+
+**Autoridad por componente (D-37):**
+
+| componente | autoridad | estado |
+|---|---|---|
+| existencia de empresa | SEC — CIK + `formerNames` fechados | `AVAILABLE` |
+| **ticker histórico → CIK** | **ninguna autoritativa** | **`AMBIGUOUS`** |
+| ocurrencia del evento | SEC — 8-K Item 2.02 | `AVAILABLE` |
+| `available_at` | SEC — `acceptanceDateTime` | `AVAILABLE` |
+| resultado real | SEC XBRL | `AVAILABLE` |
+| expectativa | Alpha Vantage (**ENRICHMENT**) | `AVAILABLE` supervivientes · `UNAVAILABLE` deslistados |
+| consenso PIT | ninguna | `UNAVAILABLE` |
+| precio | mercado | **`UNAVAILABLE` símbolo histórico · `AMBIGUOUS` sucesor** |
+| benchmark | `bm:sp500` | `AVAILABLE` |
+
+**Dos hallazgos que cambian cómo se fecha y se lee un evento:**
+
+1. **`acceptanceDateTime` es un instante, `reportTime` una etiqueta binaria.** Presente en el 100% de los filings, al segundo y en UTC. De un instante se **deriva** pre/intra/post; al revés no. Contraejemplo que la etiqueta no puede representar: el 8-K Item 2.02 de DWDP del **2019-04-18** se aceptó a las `19:38:27Z` = **15:38 ET, intradía**, 22 min antes del cierre.
+2. **XBRL es nativamente *vintage*** (`filed` + `accn` en el 100%). El EPS de UTX para `end=2019-12-31` vale **1,32** presentado en 2020 y **6,41** presentado en 2022. Tomar el último valor para un evento de 2019 es **look-ahead puro** — y Alpha Vantage, sin campo de vintage, no permite ni detectarlo.
+
+**Revisión de un supuesto del bloque 4 (D-39)**: Yahoo **codifica las escisiones como splits**. `DD` declara `1487:1000` (Dow) y `4725:10000` (Corteva) en 2019, y reporta `close` **103,61** el 2019-04-18 cuando DowDuPont cotizaba **~53**. Una escisión **no** es un artefacto mecánico. Los **niveles** de la era deslistada no son recuperables; los **retornos** sí, mientras la ventana no cruce la acción corporativa — y Yahoo la declara, así que es detectable. `data/` **no se ha tocado**: afecta a ingestas futuras, no a IBM/NVDA/XOM, que no tuvieron escisiones.
+
+**Un evento se construye sin Alpha Vantage (D-38)**: `filing + available_at + resultado real` son **suficientes** — verificado sobre DWDP y UTX. La falta de consenso da `expectation_status`/`surprise_status` `UNAVAILABLE` y **no borra el evento**; hoy ninguna de las cinco medidas del motor depende de la expectativa.
+
+**Matriz de cobertura** (`python3 engine/events/autoridad.py`): **163 de 248 celdas siguen `NOT_MEASURED`**, ninguna rellenada. `AVAILABLE` 50 · `UNAVAILABLE` 33 · `AMBIGUOUS` 2.
+
+**Decisión recomendada: Camino A, con una condición** — tratar las acciones corporativas como huecos y excluir toda ventana que las cruce. **No se justifica pagar un proveedor**; sí un mapa ticker→CIK curado a mano para 31 activos.
+
 **Lo siguiente**, por orden de lo que desbloquea:
 
-1. **Decidir cómo se ingiere equity a escala.** El conector MCP **no puede escribir a disco**: cada respuesta de `EARNINGS` (~10k tokens) se transcribe a mano, y ese —no la cuota— fue el motivo de medir 6 de 15. Lo desbloquearía una clave en almacén de secretos (GitHub Actions), **nunca en el repo** — compatible con el protocolo de privacidad. **Decisión del usuario, no tomada.**
-2. **Fuente con tickers retirados** para que el universo congelado sea reconstruible (SEC EDGAR los conserva; no da `reportTime`).
-3. **Ingerir Universe_v1** y volver a medir independencia y solape sobre series contiguas — ahí la tasa de solape a `2_60d` subirá muy por encima del 6,1% actual.
-4. **`n_effective`** (D-31), que solo entonces es estimable.
-5. **Más clases de evento**: `event_class_coverage = 1` de 6 pedidas. Ampliar activos sin ampliar clases da un perfil muy poblado de una sola clase.
-6. **Volatilidad realizada** (4 perfiles) y **`ComparisonReference` de sector** declarada antes de mirar (4 perfiles).
+1. **Mapa `ticker histórico → CIK`** para los 31, corroborado con `formerNames`. Es el único componente `AMBIGUOUS` estructural y se resuelve con trabajo, no con dinero.
+2. **Medir profundidad XBRL y 8-K Item 2.02 en los 31** — hoy medido en 2.
+3. **Detector de acciones corporativas** sobre las series de precio, extendiendo `_split_contiguous()`.
+4. **Solo entonces, ingesta** — y con ella, independencia y solape sobre series contiguas.
+5. **`n_effective`** (D-31), estimable solo después.
+6. **Más clases de evento** (`event_class_coverage` = 1 de 6).
 7. Solo entonces: `predictive_status` ≠ `NOT_EVALUATED` (P8), régimen y `reaction_gap`.
 
 Roadmap acordado: `P6.2 Quantification unlocks` → `P7 Market Impact` → `P8 Mispricing` → `P9 Thesis` → `P10 Portfolio` → `P11 Outcome/Calibration`. Power BI y Web App consumirán una proyección del motor; no lo dictan.

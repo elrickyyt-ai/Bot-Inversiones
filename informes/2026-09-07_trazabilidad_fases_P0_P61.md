@@ -11,7 +11,7 @@ No sustituye a los README de cada módulo (que explican *por qué* está hecho a
 ## Verificación completa en tres comandos
 
 ```bash
-python3 -m unittest discover -s tests           # 627 tests, debe dar OK
+python3 -m unittest discover -s tests           # 654 tests, debe dar OK
 python3 engine/contract/qa.py --require-parquet # debe dar STATUS: VERIFIED
 git status --short data/ knowledge/             # debe salir vacío
 ```
@@ -46,6 +46,7 @@ Si los tres pasan, las veintidós fases están sanas. Si falla alguno, la tabla 
 | **HRP v1** | `f4156fe` | Perfiles históricos descriptivos, 20 celdas con estado | `python3 engine/events/perfil_reaccion.py` |
 | **HRP v1.1** | `c44120a` | Ventana de estimación, dependencia y solapamiento: `descriptive` ≠ `predictive` | `python3 engine/events/diagnostico_cohorte.py` |
 | **Población** | `f1b0d38` | Universo congelado, cobertura de fuente y reproducibilidad histórica | `python3 engine/events/universo.py` |
+| **Autoridad** | `PENDIENTE` | Qué fuente manda sobre cada componente del evento | `python3 engine/events/autoridad.py` |
 
 ---
 
@@ -203,6 +204,31 @@ Si los tres pasan, las veintidós fases están sanas. Si falla alguno, la tabla 
 **Qué se rompe si cae**: nada aguas abajo — el universo no alimenta ningún motor todavía. Se pierde la trazabilidad de por qué la cohorte es la que es.
 
 **Informe**: `informes/2026-09-07_auditoria_poblacion_historical_events.md`.
+
+---
+
+### Autoridad · Qué fuente manda sobre cada componente — D-36 · D-37 · D-38 · D-39
+
+**Ficheros**: `engine/events/autoridad_datos.json` · `autoridad.py` (nuevos) · `tests/test_autoridad_datos.py` (nuevo, 26 tests) · `universo_v1.json` (bloque `semantica`)
+
+**Qué añade**: no ingiere nada. Determina la autoridad de cada componente de un earnings event, medido **en vivo** contra SEC EDGAR y Yahoo.
+
+- **Regla fundacional (D-36)**: la cobertura de un proveedor no define quién existió. DWDP y UTX, ausentes en Alpha Vantage, están enteros en EDGAR (1009 y 1002 filings; 131 y 324 obs. XBRL).
+- **El sesgo está en tres capas**: directorio de AV, `company_tickers.json` de la SEC (**también sesgado**) y EDGAR por CIK (**inmune**).
+- **`acceptanceDateTime`** en el 100% de los filings: un instante, no una etiqueta. Contraejemplo intradía: DWDP 2019-04-18, 15:38 ET.
+- **XBRL nativamente vintage**: UTX EPS 2019 = 1,32 (filed 2020) vs 6,41 (filed 2022).
+- **Yahoo codifica escisiones como splits** (D-39): revisa un supuesto del bloque 4.
+- **Matriz de cobertura**: 163 de 248 celdas `NOT_MEASURED`, ninguna rellenada.
+
+**Tests deliberadamente frágiles**:
+- `test_alpha_vantage_no_es_autoridad_del_universo` — se rompe si alguien promueve AV a `AUTHORITATIVE_SOURCE`.
+- `test_lo_no_medido_es_not_measured_y_no_unavailable` — impide el colapso de estados que la matriz existe para evitar.
+- `test_ninguna_medida_actual_depende_de_la_sorpresa` — se rompe el día que se añada un perfil condicionado por sorpresa, que es cuando hay que releer D-38.
+- `test_el_universo_lista_empresas_a_auditar_no_activos_consultables` — impide que la cobertura vuelva a decidir la pertenencia.
+
+**Qué se rompe si cae**: nada aguas abajo — es declarativo y ningún motor lo consume todavía. Se pierde la regla que impide que un proveedor decida quién existió en nuestro pasado.
+
+**Informe**: `informes/2026-09-08_auditoria_autoridad_datos_historicos.md`.
 
 ## Dependencias entre fases
 

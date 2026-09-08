@@ -44,6 +44,15 @@ class TestUniversoCongelado(unittest.TestCase):
         for a in con_accion:
             self.assertTrue(a["accion_corporativa_posterior"].strip())
 
+    def test_el_universo_lista_empresas_a_auditar_no_activos_consultables(self):
+        """Si el universo fuese "lo consultable", el proveedor decidiria quien
+        existio en nuestro pasado -- y DWDP/UTX habrian sido bajas."""
+        sem = uni.universo()["semantica"]
+        self.assertIn("AUDITARSE", sem["significado"].upper())
+        self.assertTrue(sem["por_que_cambio"].strip())
+        # Los dos casos que la regla protege siguen en el universo.
+        self.assertTrue({"DWDP", "UTX"} <= set(uni.simbolos()))
+
     def test_cada_exclusion_lleva_su_motivo(self):
         for a in uni.universo()["excluded_assets"]:
             self.assertTrue(a["exclusion_reason"].strip(), a["symbol"])

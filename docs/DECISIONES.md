@@ -336,3 +336,44 @@ La justificación de `^GSPC` es **ex ante y por lo que cada índice representa**
 - **Se añadió la otra cara**: `test_cuando_caduca_el_tecnico_REQUERIDO_la_tesis_deja_de_ser_valida`, para impedir que algún día se "arregle" un test caducado **relajando el umbral de cadencia**, que es la tentación evidente y sería exactamente el error contrario.
 - **Deuda**: no se ha revisado sistemáticamente si quedan más tests comparando fixtures congeladas contra el reloj.
 
+## D-36 · La cobertura de un proveedor no define quién existió en nuestro pasado
+
+**Vigente** (auditoría de autoridad de datos, 2026-09-08). **Regla fundacional: sobrevive a este backfill.**
+
+- **Evidencia**: D-32 midió que Alpha Vantage devuelve `{}` para DWDP y UTX y no los tiene en su directorio. La lectura tentadora —"esas empresas no están en nuestro pasado"— es falsa. Medido hoy en vivo contra EDGAR: **CIK 0001666700** conserva `DowDuPont Inc.` (2016-03-01 → 2019-05-31) con **1009 filings** y **131 observaciones XBRL**; **CIK 0000101829** conserva `UNITED TECHNOLOGIES CORP /DE/` (1994-01-24 → 2020-04-06) y `RAYTHEON TECHNOLOGIES CORP` (2020-04-07 → 2023-06-29), con **1002 filings** y **324 observaciones XBRL**.
+- **Decisión vigente**: que una empresa falte en un proveedor es un hecho **sobre el proveedor**, nunca sobre la empresa. `existencia_de_evento()` lo hace ejecutable: un `ENRICHMENT_SOURCE` no vota sobre la existencia.
+- **El sesgo está en tres capas y no son la misma**: directorio de Alpha Vantage (sesgado), **`company_tickers.json` de la SEC (también sesgado — 10.415 empresas, DWDP y UTX ausentes)**, y EDGAR por CIK (**no sesgado**). Solo el CIK es inmune.
+- **Corolario que faltaba en la propuesta**: entre "ticker histórico" y CIK **no hay puente autoritativo**. EDGAR full-text lo recupera (DWDP → `0001666700` en 44 de 76 documentos; UTX → `0000101829` en 68 de 100) pero es búsqueda de texto con ruido real. Queda **`AMBIGUOUS`** — es el hueco exacto de un *Historical Instrument Master*.
+- **`universe:v1:djia-2019` cambia de semántica**: de "activos consultables" a **"empresas que deben auditarse"**. Bajo la anterior, DWDP y UTX habrían sido bajas del universo — el proveedor habría decidido quién existió.
+- **Se descartó**: dar de baja del universo lo no consultable, y tratar `UNAVAILABLE` como `NOT_MEASURED`.
+
+## D-37 · SEC EDGAR es la autoridad del evento; Alpha Vantage es enriquecimiento
+
+**Vigente** (2026-09-08).
+
+- **Decisión vigente**, por componente: existencia → **CIK + `formerNames` fechados**; ocurrencia → **8-K Item 2.02**; `available_at` → **`acceptanceDateTime`**; resultado real → **XBRL**; expectativa → Alpha Vantage como **`ENRICHMENT_SOURCE`**; consenso PIT → **`UNAVAILABLE`**; benchmark → `bm:sp500` (D-25).
+- **`acceptanceDateTime` es estrictamente superior a `reportTime`**: presente en el **100%** de los filings de ambos CIKs, al segundo y en UTC. Es un **instante**, del que se *deriva* pre/intra/post; de una etiqueta binaria no se recupera una hora. Contraejemplo medido que la etiqueta **no puede representar**: el 8-K Item 2.02 de DWDP del **2019-04-18** se aceptó a las `19:38:27Z` = **15:38 ET, intradía**, 22 minutos antes del cierre.
+- **XBRL es nativamente *vintage*** — `filed` y `accn` en el 100% de las observaciones, así que "lo conocido en T" se reconstruye con `filed <= T`. **Medido**: el EPS diluido de UTX para `end=2019-12-31` vale **1,32** presentado el 2020-02-06 y **6,41** presentado el 2022-02-11. Tomar el último valor para un evento de 2019 es **look-ahead puro**. Alpha Vantage devuelve **un valor por trimestre sin campo de vintage**, así que no permite ni detectar el problema.
+- **Limitaciones registradas**: XBRL **no llega a los noventa** (UTX desde 2007-12-31, DWDP desde 2015-12-31) mientras el precio llega a 1970; medido solo en **2 de 31** activos; rate limiting real desde esta IP. **Un `User-Agent` descriptivo basta — no hace falta enviar ningún dato personal**, y no se envió.
+- **Se descartó**: usar el 10-Q como evento (el anuncio es el 8-K, que lo precede) y confiar en `reportTime` como si fuese constante por activo (D-32 ya lo desmintió con MSFT).
+
+## D-38 · La ausencia de consenso no elimina el evento
+
+**Vigente** (2026-09-08).
+
+- **Evidencia**: ninguna fuente gratuita medida publica el consenso **con la fecha en que estaba vigente**. El `estimatedEPS` de Alpha Vantage no declara de qué momento es la expectativa. Misma familia que D-11 con ALFRED: el dato existe, su *vintage* no.
+- **Decisión vigente**: `consensus_point_in_time = UNAVAILABLE`. Un evento con **filing + `available_at` + resultado real** está **completo** — verificado precisamente sobre DWDP y UTX, las dos que Alpha Vantage no conoce. La falta de expectativa produce `expectation_status = UNAVAILABLE` y `surprise_status = UNAVAILABLE`, y **no borra el hecho**.
+- **Alcance del bloqueo**: solo los perfiles condicionados por sorpresa. `RAW_RETURN`, `ABNORMAL_RETURN`, volumen y volatilidad se construyen igual. Hoy **ninguna de las cinco medidas del motor depende de la expectativa**, y hay un test que lo comprueba: la rejilla actual sobrevive entera a `consensus = UNAVAILABLE`.
+- **Cuatro estados que no se intercambian**: `AVAILABLE`, `UNAVAILABLE` ("lo miramos y no está"), `NOT_MEASURED` ("no lo hemos mirado"), `AMBIGUOUS` ("recuperable por un mecanismo no autoritativo"). Un test fija que `AXP.sec` es `NOT_MEASURED` y **no** `UNAVAILABLE`.
+
+## D-39 · Una escisión no es un artefacto mecánico — revisión del bloque 4
+
+**Vigente** (2026-09-08). **Revisa un supuesto documentado del backfill de acciones.**
+
+- **Decisión original** (bloque 4, 2026-09-04): usar `close` de Yahoo "porque ya viene ajustado por **todos** los splits", con el argumento de que un split es un artefacto mecánico mientras que una caída por dividendo es una variación real de mercado. Correcta para lo que se midió.
+- **Evidencia nueva**: se validó sobre IBM/NVDA/XOM, **ninguno con escisiones en la ventana**. Medido hoy: Yahoo devuelve **404** para `DWDP` y `UTX`, y la serie del **sucesor** (`DD`, `RTX`) cubre la ventana 2017-2020 completa (930 sesiones) pero **rebaseada**. Yahoo **codifica las escisiones como splits**: `DD` declara `1487:1000` el 2019-04-02 (escisión de Dow) y `4725:10000` el 2019-06-03 (Corteva más contrasplit), y reporta un `close` de **103,61** el 2019-04-18 cuando **DowDuPont cotizaba en torno a 53**.
+- **Decisión vigente**: una **escisión no es un artefacto mecánico** — la empresa entrega parte de sí misma y la acción pasa a representar otra cosa. El precio de la era deslistada queda **`AMBIGUOUS`**: los **niveles** no son recuperables tal cual, los **retornos** sí, mientras la ventana **no atraviese** la acción corporativa (un rebaseo multiplicativo uniforme se cancela en un cociente). Yahoo **declara** los eventos, así que las ventanas contaminadas son **detectables** — el mismo tratamiento que `_split_contiguous()` da a los huecos de calendario.
+- **Verificado**: el retorno `DD` 2019-04-17 → 2019-04-18 (−0,51%) **es válido**; una ventana de estimación de 20 sesiones terminada el 2019-04-17 **cruzaría** la escisión del 2019-04-02 y no lo sería.
+- **No se ha tocado `data/`**: la corrección afecta a ingestas futuras de compañías con escisiones, no a las series ya cargadas de IBM/NVDA/XOM, que no las tuvieron en la ventana. **No cuantificado** en cuántos activos del universo ocurre.
+- **Camino recomendado**: **A**, con esa condición. No se justifica pagar un proveedor; sí se justifica un mapa **ticker histórico → CIK** curado a mano para 31 activos.
+
