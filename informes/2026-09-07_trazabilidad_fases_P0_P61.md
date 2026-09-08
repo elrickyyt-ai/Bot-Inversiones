@@ -50,7 +50,7 @@ Si los tres pasan, las veintidós fases están sanas. Si falla alguno, la tabla 
 | **Identidad** | `0fa7bc3` | Identidad histórica de instrumento y transformaciones | `python3 engine/events/identidad.py` |
 | **Corporate actions** | `018e520` | Contaminación de ventanas por transformaciones de instrumento | `python3 engine/events/cobertura_acciones.py` |
 | **Readiness** | `e581e22` | ¿Se puede ampliar la población con rigor? | `python3 engine/events/readiness.py` |
-| **Instrument Master** | `PENDIENTE` | Identidad de instrumento resuelta por fecha | `python3 engine/knowledge/instrumentos.py` |
+| **Instrument Master** | `86068de` | Identidad de instrumento resuelta por fecha | `python3 engine/knowledge/instrumentos.py` |
 
 ---
 

@@ -1,6 +1,6 @@
 # Historical Instrument Master v1 — implementación
 
-**Fecha**: 2026-09-08 · **Rama**: `claude/bot-inversiones-audit-peh0x2` · **Base**: `46d3065`
+**Fecha**: 2026-09-08 · **Rama**: `claude/bot-inversiones-audit-peh0x2` · **Base**: `46d3065` · **Commit**: `86068de`
 **Alcance**: el mínimo necesario para que un ticker no sea identidad. No amplía el universo, no reconstruye precios de deslistados, no construye un clasificador de acciones corporativas.
 
 **Verificación**:
