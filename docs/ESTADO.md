@@ -45,6 +45,8 @@ DATA CONTRACT      data/incoming/*.csv (año en curso)  +  data/history/** (parq
    │           │                                          SEC manda · AV enriquece · CIK ≠ ticker
    │           │                                     └──► Identidad de instrumento
    │           │                                           A→A · A→B · A→B+C   (transformaciones)
+   │           │                                      └──► Cobertura de acciones corporativas
+   │           │                                            ¿la ventana cruza una transformación?
    │           │
    │           └──► P5D  Data Requirements  ¿existe el dato que el mecanismo pide?
    │
@@ -94,12 +96,18 @@ CONSUMO (desacoplado, no dicta el motor)   Power BI · Web App
 | D-32/33/34/35 | `f1b0d38` | Auditoría de población: universo congelado, sesgo de superviviencia de la fuente, `2_60d` = contexto, `independence_model`, reproducibilidad histórica |
 | D-36/37/38/39 | `646c72d` | Autoridad de dato por componente: SEC manda, Alpha Vantage enriquece, consenso `UNAVAILABLE`, una escisión no es un split |
 | D-40/41/42 | `0fa7bc3` | Identidad histórica de instrumento: el ticker es reasignable, fusión ≠ escisión, cabe en el Knowledge Model |
+| D-43/44/45 | `PENDIENTE` | Cobertura de acciones corporativas: identidad durante la ventana, el filing manda, cuatro clases de relación |
 
 Detalle por fase, con qué se rompe si cae y cómo recuperarla: `informes/2026-09-07_trazabilidad_fases_P0_P61.md`.
 
 ---
 
 ## 4. Por qué se diseñaron así — la evidencia detrás de las decisiones
+
+> **La validez de una observación histórica depende no solo de que el dato exista y sea *point-in-time*, sino de que la entidad, el instrumento y su continuidad económica puedan identificarse durante la ventana analizada.** (D-43)
+>
+> Y su corolario de seguridad, descubierto con el caso `MOB`: **un falso positivo de identidad es más peligroso que un dato ausente.**
+
 
 Estos invariantes no son preferencias de estilo: cada uno nació de un fallo real, medido. `docs/DECISIONES.md` guarda el historial completo, incluidas las decisiones que fueron revisadas.
 
@@ -127,7 +135,7 @@ Estos invariantes no son preferencias de estilo: cada uno nació de un fallo rea
 
 ## 5. Estado actual, medido
 
-**Suite**: 684 tests · OK — **QA**: `QA CORE: PASS` · `QA PARQUET: PASS` · `STATUS: VERIFIED` (287 particiones, 0 incidencias) — **Knowledge**: PASS (26 entidades · 51 relaciones · 11 fuentes)
+**Suite**: 708 tests · OK — **QA**: `QA CORE: PASS` · `QA PARQUET: PASS` · `STATUS: VERIFIED` (287 particiones, 0 incidencias) — **Knowledge**: PASS (26 entidades · 51 relaciones · 11 fuentes)
 
 ```bash
 python3 -m unittest discover -s tests
@@ -181,6 +189,10 @@ magnitud      UNKNOWN                      (P6)
 | HBM y sustrato ABF sin fuente | `knowledge/pendiente/nvidia_cadena.json` | Buscados en los dos filings: cero menciones |
 | Samsung / SK Hynix / Micron | `knowledge/pendiente/` | **Ya tienen fuente verificada**; fuera del alcance acordado, promovibles en un paso |
 | `tech:cowos` se evalúa como insumo de coste, no como restricción de capacidad | informe de P6 | P5B enruta por R5; decisión de no tocar P5B |
+| **Acciones corporativas `NOT_MEASURED` en 26 de 31 activos** | D-43 · `acciones_corporativas.json` | La tasa de contaminación del universo es **desconocida**, no baja. Es lo que decide si el Instrument Master es mejora o requisito |
+| **8 de 12 acciones sin verificar contra la SEC** | D-44 | Clasificadas por indicio de ratio. Marcadas como no verificadas, sin ascender |
+| **No hay detector posible de fusiones** | D-44 | No dejan señal en el precio. Un detector sobre la serie encontraría escisiones y perdería fusiones |
+| **El traversal causal usa lista negra** | D-45 | 7 de 95 caminos sin arista causal. Pasar a lista blanca tocaría P5A, cerrada |
 | **La escisión de Kyndryl no está marcada en IBM** | D-41 · `identidad_instrumento.json` | Serie cargada desde 1970 con un `1046:1000` el 2021-11-04 que es una escisión. IBM es 1/3 de la cohorte; impacto sobre los perfiles **no cuantificado** |
 | **XOM tiene dos CIK** | D-40 | El histórico (`0000034088`, `tickers: []`) y el del holding (`0002115436`, desde 2026-07). El pipeline actual no lo sabe |
 | **Las fusiones no las declara el proveedor de precios** | D-41 | XOM no marca nada en 1999. Peor que declararlas mal: no hay señal que detectar |
@@ -386,15 +398,47 @@ En fusión y escisión **el retorno sobrevive y la economía no**: el ajuste mul
 
 **`HISTORICAL_INSTRUMENT_MAPPING = INCOMPLETE`**: `companyfacts` solo sirve `dei` numéricos; `TradingSymbol` es texto y solo está en la portada inline-XBRL **desde ~2020**.
 
+**Octava pieza: cobertura de acciones corporativas — MEDIDA** (`informes/2026-09-08_auditoria_corporate_actions_y_continuidad.md`, decisiones **D-43 · D-44 · D-45**). Ni un perfil recalculado, ni una fila de `data/` tocada.
+
+**La medición sobre los 52 eventos:**
+
+```
+  horiz    n_events     clean  con_accion   ambiguous
+  0_1d           52        52           0           0
+  2_5d           52        52           0           0
+  2_20d          52        52           0           0
+  2_60d          52        50           2           0
+```
+
+> **Cero ambiguos — y ese número no puede leerse solo.** La escisión de Kyndryl (2021-11-04) cae en un **hueco de muestreo** de IBM: sus eventos saltan de 2021-01-22 a 2022-01-25, y el evento real del Q3 2021 (8-K Item 2.02 del 2021-10-20) **no está en la cohorte**. El 0% mide la dispersión del muestreo, no la limpieza de los datos. Un test lo fija para impedir la lectura ingenua.
+
+**Proyección sobre serie contigua**: `2_60d` **1,6% contaminado, 0,5% ambiguo** sobre ~560 eventos teóricos. **Bajo para estos tres activos y no extrapolable** — IBM tuvo 1 escisión en 27 años, DWDP 2 en 3 años y UTX 2 el mismo día. Las acciones de **26 de los 31 activos son `NOT_MEASURED`**: la tasa del universo **no es baja, es desconocida**.
+
+**La clasificación exige el filing (D-44)**: verificada la escisión de Kyndryl con el **8-K del 2021-11-04, `items=2.01`** ("Completion of Acquisition or Disposition of Assets"), en la misma fecha que el factor `1046:1000`. **4 de 12 acciones verificadas contra la SEC**; las otras 8 marcadas como no verificadas.
+
+> **Las fusiones no tienen señal de precio.** XOM declara cinco splits y ninguno en 1999. Es peor que una clasificación errónea: un detector basado en la serie encontrará las escisiones y **se perderá todas las fusiones**.
+
+**Resolución temporal de identidad, verificada (D-43)**:
+
+```
+XOM  @ 2019-04-26 -> 0000034088  EXXON MOBIL CORP
+XOM  @ 2026-08-15 -> 0002115436  ExxonMobil Holdings Corp
+MOB  @ 1995-06-01 -> AMBIGUOUS: ningún intervalo declarado cubre esa fecha
+```
+
+**Política propuesta, no implantada**: `FLAG` para lo ajustable, **`EXCLUDE` para `MERGER` y `SPINOFF`**, `AMBIGUOUS` para `UNKNOWN`. `TRUNCATE` evaluado y descartado. Con la cohorte actual **ningún perfil cambiaría de valor** si se implantara hoy.
+
+**Hallazgo colateral (D-45)**: el traversal causal usa **lista negra**. De 95 caminos desde NVDA, **7 (7%) no contienen ninguna arista causal** (`LISTED_ON`, `ISSUED_BY → DOMICILED_IN → DOMICILED_IN`). D-23 cerró el benchmark; `ISSUED_BY`, `LISTED_ON`, `DOMICILED_IN` y `CLASSIFIED_AS` siguen recorriéndose. **`SUCCESSOR_OF` se clasifica `STRUCTURAL` antes de existir** para que no entre por defecto. La corrección de fondo —lista blanca— tocaría P5A y **no se ha hecho**.
+
 **Lo siguiente**, por orden de lo que desbloquea:
 
-1. **Declarar los 5 casos** como `security` + `organization` con `ISSUED_BY` fechado, y añadir el predicado de sucesión **no causal** con test de regresión sobre `caminos.indice()`.
-2. **Cuantificar el impacto de Kyndryl** sobre los perfiles de IBM ya construidos — hoy desconocido.
-3. **Detector de acciones corporativas** sobre las series (señal), con clasificación **declarada a mano** desde el 8-K (autoridad).
-4. **Conectar `elegibilidad_event_study()`** a `poblacion()`.
-5. **Mapa `ticker histórico → CIK`** curado a mano para los 31, corroborado con `formerNames`.
+1. **Medir acciones corporativas en los 26 activos restantes** — es lo único que convierte "tasa desconocida" en un número. Decide si el Instrument Master es una mejora o un requisito previo.
+2. **Verificar contra la SEC las 8 acciones clasificadas por indicio.**
+3. **Declarar los 5 casos** como `security` + `organization` con `ISSUED_BY` fechado, y añadir `SUCCESSOR_OF` **no causal** (D-42) con test de regresión.
+4. **Conectar la política a `poblacion()`** y añadir entonces `n_identity_valid` / `n_price_continuous` / `n_corporate_action_clean`.
+5. **Mapa `ticker histórico → CIK`** curado para los 31.
 6. **Solo entonces, ingesta**; y con ella independencia y solape sobre series contiguas.
-7. **`n_effective`** (D-31), estimable solo después. Luego más clases de evento, y por último `predictive_status` ≠ `NOT_EVALUATED` (P8).
+7. **`n_effective`** (D-31), más clases de evento, y por último `predictive_status` ≠ `NOT_EVALUATED` (P8).
 
 Roadmap acordado: `P6.2 Quantification unlocks` → `P7 Market Impact` → `P8 Mispricing` → `P9 Thesis` → `P10 Portfolio` → `P11 Outcome/Calibration`. Power BI y Web App consumirán una proyección del motor; no lo dictan.
 

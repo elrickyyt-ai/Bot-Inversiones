@@ -369,5 +369,85 @@
         "event_study_eligible": "AMBIGUOUS"
       }
     }
+  },
+  "resolucion_temporal": {
+    "_nota": "Un ticker SOLO se resuelve con una fecha. Sin intervalo no hay identidad: es la leccion de MOB y de la reorganizacion de XOM.",
+    "_regla": "Un falso positivo de identidad es mas peligroso que un dato ausente. Ante ambiguedad se devuelve AMBIGUOUS, nunca el candidato mas probable.",
+    "intervalos": {
+      "XOM": [
+        {
+          "desde": "1999-11-30",
+          "hasta": "2026-06-30",
+          "cik": "0000034088",
+          "entidad": "EXXON MOBIL CORP",
+          "base": "formerNames: EXXON CORP termina el 1999-11-30; el CIK conserva 1000 filings hasta 2026-08-07"
+        },
+        {
+          "desde": "2026-07-01",
+          "hasta": null,
+          "cik": "0002115436",
+          "entidad": "ExxonMobil Holdings Corp",
+          "base": "8-K12B del 2026-07-01 (acceptance 16:36:49Z) y 25-NSE del 2026-07-02 bajo el CIK antiguo"
+        }
+      ],
+      "XON": [
+        {
+          "desde": null,
+          "hasta": "1999-11-29",
+          "cik": "0000034088",
+          "entidad": "EXXON CORP",
+          "base": "formerNames. El proveedor de precios devuelve 404 para XON"
+        }
+      ],
+      "MOB": [
+        {
+          "desde": "2022-08-25",
+          "hasta": null,
+          "cik": null,
+          "entidad": "Mobilicom Limited",
+          "base": "metadatos del proveedor: longName 'Mobilicom Limited', firstTradeDate 2022-08-25",
+          "aviso": "NO es Mobil Corporation. Para cualquier fecha anterior a 2022-08-25 este ticker NO designa a esta entidad, y no hay intervalo declarado que lo cubra."
+        }
+      ]
+    }
+  },
+  "semantica_de_relacion": {
+    "_nota": "Clasificacion de los predicados por lo que SIGNIFICAN, no por si el traversal los recorre. Medido: hoy caminos.py usa una LISTA NEGRA (recorre todo menos BENCHMARKED_BY y COMPARED_TO, D-23), asi que un predicado nuevo entra al traversal por defecto.",
+    "clases": {
+      "CAUSAL": "transmite un efecto economico; es lo unico que deberia recorrer el motor causal",
+      "STRUCTURAL": "PUENTE de identidad entre capas (instrumento -> entidad). No transmite efecto, pero es necesario para llegar a las aristas causales",
+      "MEASUREMENT": "relacion de medida o comparacion. No es un mecanismo (D-23)",
+      "REFERENCE": "atributo de clasificacion o localizacion. No transmite nada"
+    },
+    "predicados": {
+      "SUPPLIES": "CAUSAL",
+      "USES": "CAUSAL",
+      "DEPENDS_ON": "CAUSAL",
+      "SUBSTITUTES": "CAUSAL",
+      "EXPOSED_TO": "CAUSAL",
+      "ISSUED_BY": "STRUCTURAL",
+      "LISTED_ON": "REFERENCE",
+      "DOMICILED_IN": "REFERENCE",
+      "CLASSIFIED_AS": "REFERENCE",
+      "BENCHMARKED_BY": "MEASUREMENT",
+      "COMPARED_TO": "MEASUREMENT",
+      "SUCCESSOR_OF": "STRUCTURAL"
+    },
+    "_SUCCESSOR_OF": "NO EXISTE todavia. Se clasifica por anticipado para que, el dia que se anada (D-42), no entre al traversal causal por defecto -- que es lo que ocurriria hoy con la lista negra.",
+    "medicion": {
+      "origen": "sec:NVDA.NASDAQ, profundidad 3, a fecha 2026-09-08",
+      "caminos_totales": 95,
+      "con_al_menos_una_arista_causal": 88,
+      "sin_ninguna_arista_causal": 7,
+      "cadenas_vacias_observadas": [
+        "LISTED_ON",
+        "ISSUED_BY",
+        "ISSUED_BY -> DOMICILED_IN",
+        "ISSUED_BY -> DOMICILED_IN -> DOMICILED_IN",
+        "ISSUED_BY -> CLASSIFIED_AS",
+        "ISSUED_BY -> CLASSIFIED_AS -> CLASSIFIED_AS"
+      ],
+      "lectura": "7 de 95 caminos (7%) no contienen ninguna arista causal: son cadenas de identidad o referencia sin contenido economico. ISSUED_BY como PUENTE es legitimo (ISSUED_BY -> SUPPLIES si transmite); lo que no aporta nada es terminar en la entidad, el pais o el sector."
+    }
   }
 }

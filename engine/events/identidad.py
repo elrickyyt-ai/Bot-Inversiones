@@ -131,6 +131,30 @@ def matriz_casos():
                   for c in casos()}
 
 
+AMBIGUO_SIN_INTERVALO = "AMBIGUOUS: ningun intervalo declarado cubre esa fecha"
+AMBIGUO_VARIOS = "AMBIGUOUS: mas de un intervalo cubre esa fecha"
+
+
+def resolver_identidad(ticker, fecha):
+    """Resuelve un ticker A UNA FECHA. Sin fecha no hay identidad.
+
+    Devuelve (cik, entidad) o (None, motivo). NUNCA devuelve el candidato
+    mas probable: un falso positivo de identidad es mas peligroso que un
+    dato ausente -- es la leccion de MOB, cuyo ticker devuelve hoy una
+    empresa que no existia cuando Mobil cotizaba."""
+    intervalos = declaracion()["resolucion_temporal"]["intervalos"].get(ticker)
+    if not intervalos:
+        return None, AMBIGUO_SIN_INTERVALO
+    cubren = [i for i in intervalos
+              if (i["desde"] is None or i["desde"] <= fecha)
+              and (i["hasta"] is None or fecha <= i["hasta"])]
+    if not cubren:
+        return None, AMBIGUO_SIN_INTERVALO
+    if len(cubren) > 1:
+        return None, AMBIGUO_VARIOS
+    return cubren[0]["cik"], cubren[0]["entidad"]
+
+
 def incoherencias():
     d = declaracion()
     fallos = []
@@ -184,6 +208,12 @@ if __name__ == "__main__":
         print("  %-5s " % c + " ".join("%-13s" % mat[c][k] for k in cols))
 
     print("\nHISTORICAL_INSTRUMENT_MAPPING:", mapping_status())
+    print("\n=== RESOLUCION TEMPORAL ===")
+    for tk, f in (("XOM", "2019-04-26"), ("XOM", "2026-08-15"), ("XON", "1998-01-01"),
+                  ("MOB", "1995-06-01"), ("MOB", "2024-01-05"), ("IBM", "2020-01-01")):
+        cik, ent = resolver_identidad(tk, f)
+        print("  %-4s @ %s -> %s" % (tk, f, (cik or "") + " " + str(ent)))
+
     print("\n=== INCOHERENCIAS ===")
     f = incoherencias()
     print("  ninguna" if not f else "\n".join("  " + x for x in f))

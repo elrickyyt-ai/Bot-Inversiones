@@ -11,7 +11,7 @@ No sustituye a los README de cada módulo (que explican *por qué* está hecho a
 ## Verificación completa en tres comandos
 
 ```bash
-python3 -m unittest discover -s tests           # 684 tests, debe dar OK
+python3 -m unittest discover -s tests           # 708 tests, debe dar OK
 python3 engine/contract/qa.py --require-parquet # debe dar STATUS: VERIFIED
 git status --short data/ knowledge/             # debe salir vacío
 ```
@@ -48,6 +48,7 @@ Si los tres pasan, las veintidós fases están sanas. Si falla alguno, la tabla 
 | **Población** | `f1b0d38` | Universo congelado, cobertura de fuente y reproducibilidad histórica | `python3 engine/events/universo.py` |
 | **Autoridad** | `646c72d` | Qué fuente manda sobre cada componente del evento | `python3 engine/events/autoridad.py` |
 | **Identidad** | `0fa7bc3` | Identidad histórica de instrumento y transformaciones | `python3 engine/events/identidad.py` |
+| **Corporate actions** | `PENDIENTE` | Contaminación de ventanas por transformaciones de instrumento | `python3 engine/events/cobertura_acciones.py` |
 
 ---
 
@@ -255,6 +256,32 @@ Si los tres pasan, las veintidós fases están sanas. Si falla alguno, la tabla 
 **Qué se rompe si cae**: nada aguas abajo — declarativo, sin consumidores. Se pierde la invariante que impide confundir un sucesor con el instrumento original.
 
 **Informe**: `informes/2026-09-08_auditoria_historical_instrument_master.md`.
+
+---
+
+### Corporate actions · Cobertura y continuidad — D-43 · D-44 · D-45
+
+**Ficheros**: `engine/events/acciones_corporativas.json` · `cobertura_acciones.py` (nuevos) · `identidad_instrumento.json` · `identidad.py` · `tests/test_corporate_actions.py` (nuevo, 24 tests)
+
+**Qué añade**: mide, no corrige. Cuántos eventos llevan en sus ventanas una transformación que rompa la continuidad económica.
+
+- **52 eventos**: `2_60d` da **2 marcadas, 0 ambiguas**; los otros tres horizontes, limpios.
+- **El 0% es del muestreo**: Kyndryl (2021-11-04) cae en el hueco de IBM (2021-01-22 → 2022-01-25).
+- **Proyección contigua**: 1,6% contaminado y 0,5% ambiguo a `2_60d`. No extrapolable: 26 de 31 activos `NOT_MEASURED`.
+- **Kyndryl verificada** contra el 8-K `items=2.01` del 2021-11-04.
+- **Las fusiones no tienen señal de precio** (XOM 1999).
+- **Resolución temporal**: `XOM` da CIK distinto según la fecha; `MOB @ 1995` da `AMBIGUOUS`.
+- **7 de 95 caminos causales sin arista causal** (D-45).
+
+**Tests deliberadamente frágiles**:
+- `test_ningun_evento_actual_es_ambiguo_y_eso_es_del_MUESTREO` — impide leer el 0% como "cohorte limpia"; se rompe cuando la cohorte se haga contigua, que es cuando hay que releer D-43.
+- `test_un_ticker_actual_no_demuestra_identidad_historica` — el caso `MOB`, permanente.
+- `test_successor_of_se_clasifica_antes_de_existir` — se rompe el día que se añada al modelo sin declararlo no causal.
+- `test_la_contaminacion_crece_con_el_horizonte` — si se invierte, hay un error de ventanas.
+
+**Qué se rompe si cae**: nada aguas abajo — declarativo y sin consumidores. Se pierde la invariante de que una observación exige identidad y continuidad durante su ventana.
+
+**Informe**: `informes/2026-09-08_auditoria_corporate_actions_y_continuidad.md`.
 
 ## Dependencias entre fases
 

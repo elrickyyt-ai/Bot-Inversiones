@@ -412,3 +412,37 @@ La justificación de `^GSPC` es **ex ante y por lo que cada índice representa**
 - **Se descartó**: una tabla `HistoricalTicker` (modelaría etiquetas, no transformaciones de instrumento — que es el problema real) y tocar `DimAsset` ahora.
 - **Lo que NO debe automatizarse todavía**: resolver ticker → CIK (`MOB` devuelve Mobilicom), clasificar la acción por el ratio, sustituir predecesor por sucesor, y deducir el ticker del nombre del fichero.
 
+## D-43 · Una observación histórica es válida solo si la identidad y la continuidad económica del instrumento se sostienen durante su ventana
+
+**Vigente** (auditoría de corporate actions, 2026-09-08). **Invariante de seguridad del sistema.**
+
+- **Formulación**: *la validez de una observación histórica depende no solo de que el dato exista y sea point-in-time, sino de que la **entidad**, el **instrumento** y su **continuidad económica** puedan identificarse durante la ventana analizada.* Extiende D-26 (validez de la ventana) a la dimensión de identidad.
+- **Y la regla de seguridad que la acompaña, más fuerte todavía**: **un falso positivo de identidad es más peligroso que un dato ausente.** `resolver_identidad(ticker, fecha)` devuelve `AMBIGUOUS` —nunca el candidato más probable— cuando ningún intervalo declarado cubre la fecha. Medido: `MOB @ 1995-06-01 → AMBIGUOUS`, aunque el ticker exista hoy con serie completa.
+- **Resolución por intervalo, verificada**: `XOM @ 2019-04-26 → 0000034088` (EXXON MOBIL CORP) y `XOM @ 2026-08-15 → 0002115436` (ExxonMobil Holdings Corp). Sin fecha no hay identidad. Base: `8-K12B` del 2026-07-01 y `25-NSE` del 2026-07-02; **ambos CIK siguen activos** (el histórico presentó un 10-Q el 2026-08-03).
+- **Medición sobre los 52 eventos**: `0_1d` 0 · `2_5d` 0 · `2_20d` 0 · `2_60d` **2 marcadas, 0 ambiguas**. Los dos casos son ajustables (un `SPLIT` de IBM en 1999 y la `REORGANIZATION` de XOM en 2026).
+- **El 0% NO significa que la cohorte esté limpia**: la escisión de Kyndryl (2021-11-04) cae en un **hueco de muestreo** de IBM, cuyos eventos saltan de 2021-01-22 a 2022-01-25. El evento real del Q3 2021 (8-K Item 2.02 del 2021-10-20) **no está en la cohorte**. El número mide la dispersión del muestreo. Un test lo fija para impedir la lectura ingenua.
+- **Proyección sobre serie contigua** (franja `20+W+1` alrededor de cada acción, eventos cada ~63,5 sesiones): `2_60d` **1,6% contaminado y 0,5% ambiguo** sobre ~560 eventos teóricos. **Bajo para estos tres activos, y no extrapolable**: IBM tuvo 1 escisión en 27 años, DWDP 2 en 3 años y UTX 2 el mismo día. Las acciones de **26 de los 31 activos son `NOT_MEASURED`**: la tasa del universo **no es baja, es desconocida**.
+
+## D-44 · La clasificación de una acción corporativa exige el filing; el factor de precio es solo una señal
+
+**Vigente** (2026-09-08). **Cierra la política que D-41 dejó propuesta.**
+
+- **Verificación de la escisión que afecta a la cohorte**: 8-K de IBM del **2021-11-04** con `items=2.01,7.01,9.01` (acc `0001558370-21-014643`). El **Item 2.01** es *"Completion of Acquisition or Disposition of Assets"* y su fecha coincide **exactamente** con el factor `1046:1000` de Yahoo. La clasificación de IBM/Kyndryl deja de ser un indicio de ratio.
+- **Las fusiones no tienen señal de precio**: XOM declara cinco splits y **ninguno en 1999**. La única evidencia es la transición de `formerNames` (`EXXON CORP` termina el 1999-11-30). **Es peor que una clasificación errónea**: en la escisión hay un factor raro detectable; en la fusión **no hay nada que detectar**. Un detector basado en la serie encontrará las escisiones y **se perderá todas las fusiones**.
+- **Ocho tipos declarados** (`SPLIT`, `TICKER_CHANGE`, `NAME_CHANGE`, `MERGER`, `SPINOFF`, `REORGANIZATION`, `SUCCESSION`, `UNKNOWN`). Del registro actual, **4 de 12 acciones están verificadas contra la SEC**; las otras 8 se marcan como no verificadas y **no se ascienden**.
+- **La reutilización de ticker se clasifica `UNKNOWN`, nunca `SUCCESSION`**: no es una transformación *del* instrumento histórico sino *otro* instrumento reutilizando la etiqueta. Llamarlo sucesión sería el falso positivo de D-43.
+- **Política propuesta, no implantada**: `FLAG` para lo ajustable (`SPLIT`, `TICKER_CHANGE`, `NAME_CHANGE`, `REORGANIZATION`, `SUCCESSION`); **`EXCLUDE` para `MERGER` y `SPINOFF`**; `AMBIGUOUS` para `UNKNOWN`. Por medida: `RAW_RETURN` y `ABNORMAL_RETURN` excluyen —**descontar el S&P 500 de un retorno que compara dos empresas distintas sigue comparando dos empresas distintas**—; `VOLUME_RELATIVE_TO_PRE_EVENT` queda `AMBIGUOUS` porque una escisión cambia las acciones en circulación y **el efecto no se ha medido**.
+- **`TRUNCATE` se evaluó y se descarta como opción general**: acortar la ventana cambia la longitud del horizonte, y comparar un `2_60d` truncado a 11 sesiones con otro completo mezcla dos medidas distintas.
+- **`REORGANIZATION` no cambia el instrumento económico**: rompe el mapa ticker→CIK, no la exposición. Por eso el evento de XOM del 2026-05-01 sale `MARCADA` y no `AMBIGUA`.
+
+## D-45 · Cuatro clases de relación, y el traversal causal usa lista negra
+
+**Vigente** (2026-09-08). **Amplía D-23, que solo había cerrado el caso del benchmark.**
+
+- **Clasificación declarada**: `CAUSAL` (transmite efecto económico), `STRUCTURAL` (puente de identidad entre capas), `MEASUREMENT` (medida o comparación, D-23) y `REFERENCE` (clasificación o localización).
+- **Medido** sobre `sec:NVDA.NASDAQ`, profundidad 3, a fecha 2026-09-08: **95 caminos**, de los cuales **88 (93%) tienen al menos una arista causal** y **7 (7%) no tienen ninguna** — cadenas como `LISTED_ON`, `ISSUED_BY → DOMICILED_IN → DOMICILED_IN` o `ISSUED_BY → CLASSIFIED_AS`.
+- **`ISSUED_BY` como puente es legítimo**: `ISSUED_BY → SUPPLIES` sí transmite, y sin ese salto no se llega del instrumento a la entidad económica. Lo que no aporta nada es **terminar** en la entidad, el país o el sector.
+- **El riesgo de fondo es la forma de la regla**: `PREDICADOS_NO_CAUSALES` es una **lista negra** con solo `BENCHMARKED_BY` y `COMPARED_TO`, así que **todo predicado nuevo entra al motor causal por defecto**. `SUCCESSOR_OF` (D-42) lo haría el día que se añada.
+- **Mitigación aplicada**: `SUCCESSOR_OF` se clasifica **`STRUCTURAL` antes de existir**, con un test que comprueba a la vez que no está en `PREDICADOS` y que ya tiene clase asignada.
+- **La corrección de fondo NO se ha hecho**: pasar de lista negra a **lista blanca de predicados `CAUSAL`** tocaría P5A, que está cerrada, y excede el alcance de esta auditoría. Queda registrado con su medición para que la decisión se tome con el número delante.
+
