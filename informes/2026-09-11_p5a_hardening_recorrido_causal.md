@@ -381,3 +381,5 @@ cuatro caminos de D-52; todos esos resultados están literales en §1.)
   camino es causal porque **contiene** causalidad declarada.
 
 **Detenido aquí**, como pedía el encargo.
+
+**Commit**: `ff7a4da`.

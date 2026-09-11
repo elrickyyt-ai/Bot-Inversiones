@@ -104,7 +104,7 @@ CONSUMO (desacoplado, no dicta el motor)   Power BI · Web App
 | D-43/44/45 | `018e520` | Cobertura de acciones corporativas: identidad durante la ventana, el filing manda, cuatro clases de relación |
 | D-46/47/48/49 | `e581e22` | Backfill readiness: `false`; el cuello es la identidad del instrumento, no la cobertura |
 | D-50/51/52 | `86068de` | Historical Instrument Master v1: aliases fechados, `SUCCEEDED_BY` no causal, validador temporal |
-| D-53 | `PENDIENTE` | P5A hardening: el recorrido causal se define por contenido, no por lista negra |
+| D-53 | `ff7a4da` | P5A hardening: el recorrido causal se define por contenido, no por lista negra |
 
 Detalle por fase, con qué se rompe si cae y cómo recuperarla: `informes/2026-09-07_trazabilidad_fases_P0_P61.md`.
 
