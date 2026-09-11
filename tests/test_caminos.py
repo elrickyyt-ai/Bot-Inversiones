@@ -311,23 +311,37 @@ class TestSieteProfundidad(unittest.TestCase):
         self.assertIn(None, motivos)
 
     def test_declarar_identidad_conecta_empresas_que_solo_comparten_mercado(self):
-        """FRAGIL A PROPOSITO -- evidencia viva para D-49.
+        """EVIDENCIA DE D-52, YA RESUELTA POR D-53 (2026-09-11).
 
-        Declarar los instrumentos de WBA y Mobilicom (identidad legitima y
-        verificada) hace que el recorrido conecte NVDA con ellos por el solo
-        hecho de cotizar en el mismo mercado. Ninguno de esos caminos
-        contiene una arista causal: son exactamente la clase que la variante
-        C de D-49 eliminaria. Este test documenta el coste actual de la
-        lista negra y se rompera el dia que se aplique la lista blanca."""
+        Nació frágil a propósito: documentaba que declarar los instrumentos
+        de WBA y Mobilicom (identidad legítima y verificada) hacía que el
+        recorrido conectara NVDA con ellos por el solo hecho de cotizar en
+        el mismo mercado, y decía que **se rompería el día que se aplicara
+        la variante C**. Ese día llegó.
+
+        Se reescribe a lo que sigue siendo cierto y a lo que cambió: los
+        caminos **siguen existiendo** en `descubrir()` —el recorrido no se
+        restringió, esa era la variante B que D-49 descartó— pero ahora
+        salen etiquetados `STRUCTURAL_ONLY_PATH` y **no forman parte del
+        conjunto causal**. Que el camino siga siendo visible importa: la
+        cotización compartida es un hecho verdadero; lo que era falso era
+        presentarla como causalidad."""
         cs = caminos.descubrir("ev4:t7", "sec:NVDA.NASDAQ", self.k, HOY, max_depth=3)
         cruzados = [c for c in cs
                     if any(x in n["entity_id"] for n in c["nodes"]
                            for x in ("MOB", "mobilicom", "WBA", "walgreens"))]
-        self.assertTrue(cruzados, "la evidencia de D-49 dejo de reproducirse")
+        self.assertTrue(cruzados, "la evidencia de D-52 dejo de reproducirse")
         causales = {"SUPPLIES", "USES", "DEPENDS_ON", "SUBSTITUTES", "EXPOSED_TO"}
         for c in cruzados:
             self.assertFalse({e["predicate"] for e in c["edges"]} & causales,
                              "un camino a otra empresa del mismo mercado no puede ser causal")
+            # D-53: lo que antes solo se documentaba, ahora se declara.
+            self.assertEqual(c["path_semantics"], caminos.STRUCTURAL_ONLY_PATH)
+        causal_set = caminos.caminos_causales("ev4:t7", "sec:NVDA.NASDAQ", self.k,
+                                              HOY, max_depth=3)
+        ids_causales = {c["path_id"] for c in causal_set}
+        for c in cruzados:
+            self.assertNotIn(c["path_id"], ids_causales)
 
 
 class TestInvariancia(unittest.TestCase):

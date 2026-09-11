@@ -104,6 +104,7 @@ CONSUMO (desacoplado, no dicta el motor)   Power BI · Web App
 | D-43/44/45 | `018e520` | Cobertura de acciones corporativas: identidad durante la ventana, el filing manda, cuatro clases de relación |
 | D-46/47/48/49 | `e581e22` | Backfill readiness: `false`; el cuello es la identidad del instrumento, no la cobertura |
 | D-50/51/52 | `86068de` | Historical Instrument Master v1: aliases fechados, `SUCCEEDED_BY` no causal, validador temporal |
+| D-53 | `PENDIENTE` | P5A hardening: el recorrido causal se define por contenido, no por lista negra |
 
 Detalle por fase, con qué se rompe si cae y cómo recuperarla: `informes/2026-09-07_trazabilidad_fases_P0_P61.md`.
 
@@ -201,14 +202,17 @@ magnitud      UNKNOWN                      (P6)
 | Samsung / SK Hynix / Micron | `knowledge/pendiente/` | **Ya tienen fuente verificada**; fuera del alcance acordado, promovibles en un paso |
 | `tech:cowos` se evalúa como insumo de coste, no como restricción de capacidad | informe de P6 | P5B enruta por R5; decisión de no tocar P5B |
 | **Solo 8 securities con identidad histórica declarada** | D-50 · `knowledge/entities/securities.json` | Los otros 25 del universo siguen sin mapa. Es curación, no diseño |
-| **El grafo causal conecta empresas del mismo mercado** | D-52 | 4 caminos NVDA↔Mobilicom/Walgreens sin arista causal. Aparecieron al declarar identidad correcta |
+| **Dos mecanismos para lo mismo en P5A** | D-53 · `caminos.indice()` | `PREDICADOS_NO_CAUSALES` saca `SUCCEEDED_BY` del índice, así que `sec:DWDP.NYSE` no tiene **ningún** camino pese a que `rel:0057` existe. Con la variante C esa lista ya no hace falta como salvaguarda causal, pero suprime estructura verdadera |
+| **Ningún consumidor usa `caminos_causales()`** | D-53 | P5B usa a propósito un camino sin mecanismo para demostrar su `UNKNOWN`. Qué capa consume qué conjunto es trabajo de P5B/P5D/P6 |
+| **`IDENTITY_MONOTONICITY` medida, no declarada invariante** | D-53 · `tests/test_p5a_hardening.py` | Falta el caso donde **debe** fallar con razón: una fusión sí transfiere exposición económica |
+| ~~**El grafo causal conecta empresas del mismo mercado**~~ | — | **Cerrada por D-53**: los 4 caminos siguen existiendo —compartir mercado es verdadero— pero salen `STRUCTURAL_ONLY_PATH` y fuera del conjunto causal |
 | **`historical_ticker` al 0% en los 31** | D-46 · `readiness_universo.json` | Ninguna fuente determinista dice qué ticker designaba a un instrumento en una fecha pasada. **Es el cuello de botella del backfill** |
 | **Precio ausente justo en los 3 deslistados** | D-47 | DWDP, UTX y WBA. La cobertura que falta tiene forma de sesgo de superviviencia, no de laguna aleatoria |
 | **`companyconcept` da falsos negativos** | D-48 | Para KO devuelve 0 donde `companyfacts` da 233. El pipeline futuro debe usar `companyfacts` o comparar ambos |
 | **Acciones corporativas `NOT_MEASURED` en 26 de 31 activos** | D-43 · `acciones_corporativas.json` | La tasa de contaminación del universo es **desconocida**, no baja. Es lo que decide si el Instrument Master es mejora o requisito |
 | **8 de 12 acciones sin verificar contra la SEC** | D-44 | Clasificadas por indicio de ratio. Marcadas como no verificadas, sin ascender |
 | **No hay detector posible de fusiones** | D-44 | No dejan señal en el precio. Un detector sobre la serie encontraría escisiones y perdería fusiones |
-| **El traversal causal usa lista negra** | D-45 | 7 de 95 caminos sin arista causal. Pasar a lista blanca tocaría P5A, cerrada |
+| ~~**El traversal causal usa lista negra**~~ | D-45 → **D-53** | **Cerrada**: `caminos_causales()` exige ≥1 arista `CAUSAL`. Medido: 78 de 454 caminos sin contenido causal salen del conjunto, **0 legítimos**. Queda una deuda menor nueva, abajo |
 | **La escisión de Kyndryl no está marcada en IBM** | D-41 · `identidad_instrumento.json` | Serie cargada desde 1970 con un `1046:1000` el 2021-11-04 que es una escisión. IBM es 1/3 de la cohorte; impacto sobre los perfiles **no cuantificado** |
 | **XOM tiene dos CIK** | D-40 | El histórico (`0000034088`, `tickers: []`) y el del holding (`0002115436`, desde 2026-07). El pipeline actual no lo sabe |
 | **Las fusiones no las declara el proveedor de precios** | D-41 | XOM no marca nada en 1999. Peor que declararlas mal: no hay señal que detectar |
@@ -524,11 +528,39 @@ sec:NVDA.NASDAQ -> ven:NASDAQ -> sec:WBA.NASDAQ -> org:walgreens
 
 > **Declarar más conocimiento verdadero no solo puede mejorar el grafo.** Con recorrido por lista negra, cada entidad nueva amplía la superficie de caminos espurios.
 
+---
+
+**Undécima pieza: P5A hardening — APLICADO** (`informes/2026-09-11_p5a_hardening_recorrido_causal.md`, decisión **D-53**). Ejecuta la recomendación que D-49 dejó registrada y cierra el coste que D-52 midió. `knowledge/` y `data/` **intactos**: P5A es una transformación derivada y un test lo comprueba por hash.
+
+La definición se recuperó **literal** de D-49 —*"no restringir el recorrido; exigir ≥1 arista `CAUSAL` en el camino emitido"*— y la clave está en **cómo** se aplica: **etiquetando, no filtrando**.
+
+```
+descubrir()         firma intacta, devuelve TODOS los caminos, cada uno con
+                    path_semantics ∈ {CAUSAL_PATH, STRUCTURAL_ONLY_PATH}
+caminos_causales()  NUEVA — es el recorrido causal
+validar()           rechaza un camino que no declare su semántica
+```
+
+```
+  total 454 · con contenido causal 376 · sin contenido causal 78
+  eliminados 78 · anadidos 0 · cambiados 0
+  caminos legitimos eliminados (con arista causal): 0
+  EXPOSED_TO|EXPOSED_TO|LISTED_ON: 28 -> 28   (la forma que hundió la variante B)
+```
+
+**Cinco clases semánticas** (refinan las cuatro de D-45 separando `IDENTITY` de `STRUCTURAL`), y **lo no declarado no es causal**: un predicado nuevo no se vuelve causal porque nadie lo haya prohibido. **La regla no menciona ninguna entidad**, y hay un test que lo vigila con `inspect.getsource()`.
+
+**El primer intento fue arquitectónicamente incorrecto y conviene retenerlo**: filtrar dentro de `descubrir()` rompió 7 tests que, clasificados uno a uno en vez de darlos por caducados, resultaron ser **usos legítimos no causales** (vigencia de un listing; el camino sin mecanismo con el que P5B demuestra su `UNKNOWN`). **`descubrir()` no es el recorrido causal**: se había confundido *"qué caminos se emiten como causales"* con *"qué caminos existen"* — la misma clase de fallo que la lista negra, con el signo cambiado.
+
+**`IDENTITY_MONOTONICITY` queda propuesta y medida, no declarada invariante permanente**: sobre fixture sintética, añadir identidad, cotización y domicilio verdaderos lleva el grafo de 3 a 8 caminos y deja el conjunto causal en 2.
+
+> **Un camino es causal porque contiene causalidad declarada, no porque nadie lo haya metido en una lista negra.**
+
 **Lo siguiente**, por orden de lo que desbloquea:
 
 1. **Decidir el precio histórico de DWDP, UTX y WBA** — es la decisión A/B/C: (A) la fuente existente lo recupera → backfill; (B) existe pero la continuidad económica es ambigua → flag/exclude por horizonte; (C) no recuperable → **solo entonces** tiene sentido estudiar un proveedor de pago.
 2. **Mapa de identidad para los 25 activos restantes** del universo — trabajo de curación, no de diseño.
-3. **`P5A hardening`** (variante C de D-49), ahora con coste medido.
+3. ~~**`P5A hardening`** (variante C de D-49)~~ — **hecho** (D-53).
 4. **Clasificar las acciones corporativas de los 31 desde el 8-K** — hoy 5 de 31.
 5. **Conectar el punto de control a `poblacion()`**.
 6. **Entonces sí**: ampliar población y volver a medir independencia y solape.

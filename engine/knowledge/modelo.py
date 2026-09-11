@@ -103,6 +103,56 @@ PREDICADOS = {
     "SUCCEEDED_BY":   ({"security"}, {"security"}),
 }
 
+# --- Naturaleza semantica de cada predicado (P5A hardening, 2026-09-11) ---
+#
+# Refina la clasificacion de D-45, que tenia cuatro clases, separando
+# IDENTITY de STRUCTURAL: no es lo mismo "que entidad esta detras de este
+# instrumento" que "en que mercado cotiza". La primera resuelve identidad;
+# la segunda solo situa.
+#
+# Se clasifica por lo que la relacion SIGNIFICA, nunca por el nombre de las
+# entidades que une. Un hub estructural (un mercado, un pais, un sector) no
+# crea causalidad por el hecho de que dos cosas cuelguen de el.
+CAUSAL = "CAUSAL"            # transmite un efecto economico
+IDENTITY = "IDENTITY"        # dice QUIEN es o en que se convirtio algo
+STRUCTURAL = "STRUCTURAL"    # situa el instrumento en una estructura de mercado
+MEASUREMENT = "MEASUREMENT"  # relacion de medida o comparacion (D-21/D-23)
+REFERENCE = "REFERENCE"      # atributo de clasificacion o localizacion
+
+SEMANTICA_PREDICADO = {
+    "SUPPLIES":       CAUSAL,
+    "USES":           CAUSAL,
+    "DEPENDS_ON":     CAUSAL,
+    "SUBSTITUTES":    CAUSAL,
+    "EXPOSED_TO":     CAUSAL,
+    "ISSUED_BY":      IDENTITY,
+    "SUCCEEDED_BY":   IDENTITY,
+    "LISTED_ON":      STRUCTURAL,
+    "DOMICILED_IN":   REFERENCE,
+    "CLASSIFIED_AS":  REFERENCE,
+    "BENCHMARKED_BY": MEASUREMENT,
+    "COMPARED_TO":    MEASUREMENT,
+}
+PREDICADOS_CAUSALES = frozenset(p for p, c in SEMANTICA_PREDICADO.items() if c == CAUSAL)
+
+
+def semantica_de(predicado):
+    """Clase semantica de un predicado. Lo no declarado NO es causal: el
+    sistema no deduce semantica por ausencia de una excepcion."""
+    return SEMANTICA_PREDICADO.get(predicado, REFERENCE)
+
+
+def tiene_contenido_causal(aristas):
+    """Variante C de D-49, literal: un camino tiene contenido causal si
+    contiene AL MENOS UNA arista causal.
+
+    No exige que TODAS lo sean -- esa era la variante B, que D-49 midio
+    destruyendo 84 caminos de la forma EXPOSED_TO|EXPOSED_TO|LISTED_ON, que
+    son legitimos: el contenido economico esta en las dos primeras aristas y
+    la tercera solo situa el resultado."""
+    return any(semantica_de(a.get("predicate")) == CAUSAL for a in aristas)
+
+
 POLARIDADES = {
     "AFFIRMS": "la relacion se da",
     "DENIES":  "se ha comprobado que NO se da -- es informacion, no ausencia",

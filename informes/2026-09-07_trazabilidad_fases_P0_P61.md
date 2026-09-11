@@ -142,6 +142,8 @@ Si los tres pasan, las veintidós fases están sanas. Si falla alguno, la tabla 
 
 **Cerrado y no se modifica.** Hay un test en P5B (`test_p5a_no_se_ha_tocado`) que comprueba que `caminos.py` no importa nada de P5B.
 
+**Reabierta una vez, el 2026-09-11** (`P5A hardening`, D-53): se añadió `path_semantics` a cada camino y la función `caminos_causales()`. `descubrir()` conserva firma y conteos, así que la fase sigue siendo compatible hacia atrás. Ver la entrada de P5A hardening más abajo.
+
 **Medido**: profundidad 1/2/3 → 4/25/89 caminos desde NVDA. Vigencia real: XRP↔Coinbase inalcanzable a 2022-01-01, alcanzable a 2024-01-01.
 
 ---
@@ -334,6 +336,31 @@ Si los tres pasan, las veintidós fases están sanas. Si falla alguno, la tabla 
 
 **Informe**: `informes/2026-09-08_implementacion_historical_instrument_master_v1.md`.
 
+---
+
+### P5A hardening · El recorrido causal por contenido — D-53
+
+**Ficheros**: `engine/knowledge/modelo.py` · `engine/causal/caminos.py` · `tests/test_p5a_hardening.py` (nuevo, 27 tests) · `tests/fixtures/caminos/identidad_monotonia.json` (nueva) · `tests/test_caminos.py`
+
+**No escribe nada**: `knowledge/`, `data/` y `history/` intactos, comprobado por hash en el test de invariancia de P5A.
+
+- **Variante C de D-49, literal**, aplicada **etiquetando, no filtrando**: `descubrir()` devuelve todos los caminos con `path_semantics` ∈ {`CAUSAL_PATH`, `STRUCTURAL_ONLY_PATH`}; **`caminos_causales()`** es el recorrido causal.
+- **Medido**: 454 caminos → 376 causales · 78 sin contenido causal · **0 añadidos · 0 legítimos eliminados**. `EXPOSED_TO|EXPOSED_TO|LISTED_ON` 28→28 en NVDA, IBM y XOM.
+- **Cinco clases semánticas**; `semantica_de()` devuelve `REFERENCE` para lo no declarado.
+- **La regla no menciona ninguna entidad**, y un test lo vigila sobre el código fuente de las cuatro funciones que la implementan.
+
+**Tests deliberadamente frágiles**:
+- `test_la_regla_no_menciona_ninguna_entidad_concreta` — se rompe en cuanto alguien meta un `sec:`/`org:`/`ven:` en la regla.
+- `test_el_camino_al_instrumento_reutilizado_deja_de_ser_causal` y su gemelo — se rompen si la evidencia de D-52 deja de reproducirse **o** si vuelve al conjunto causal.
+- `test_un_camino_causal_que_atraviesa_una_relacion_estructural_sobrevive` — se rompe si alguien reintroduce la variante B.
+- `test_el_validador_rechaza_un_camino_que_no_la_declara` — se rompe si `path_semantics` vuelve a ser opcional.
+
+**Un test frágil de D-52 se cumplió y se reescribió** (§3 del protocolo): `test_declarar_identidad_conecta_empresas_que_solo_comparten_mercado` se escribió para romperse hoy. Ahora afirma lo que sigue siendo cierto: los caminos existen, salen `STRUCTURAL_ONLY_PATH` y no están en el conjunto causal.
+
+**Qué se rompe si cae**: nada aguas abajo — ningún consumidor usa `caminos_causales()` todavía. Lo que se pierde es la garantía de que un camino sin mecanismo no se presente como causal.
+
+**Informe**: `informes/2026-09-11_p5a_hardening_recorrido_causal.md`.
+
 ## Dependencias entre fases
 
 ```
@@ -500,6 +527,9 @@ CONSUMPTION   Power BI + Web App
 | Sin ventana base para medidas de nivel | D-27 · `perfil_reaccion.MEDIDAS_DE_NIVEL` | Bloquea 6 de los 20 perfiles. Es una decisión metodológica, no un problema de datos |
 | No existe `n_effective` | informe de HRP v1 §11 | 52 observaciones de 3 acciones del mismo mercado no son 52 unidades independientes de información. Los `n` reportados son de eventos |
 | La cohorte son 52 de ~356 eventos reales | fixtures de `eventos_resultados/` | Subconjunto disperso: la tasa de solape medida (11,5% a 2_60d) no es representativa de la serie completa |
+| Dos mecanismos causales conviven en P5A | D-53 · `caminos.indice()` | `PREDICADOS_NO_CAUSALES` saca `SUCCEEDED_BY` del índice: `sec:DWDP.NYSE` no tiene **ningún** camino pese a que `rel:0057` existe y está vigente. Con la variante C la lista ya no hace falta como salvaguarda causal, pero suprime estructura verdadera |
+| `IDENTITY_MONOTONICITY` medida, no declarada invariante | D-53 · `tests/test_p5a_hardening.py` | Compatible con todos los casos legítimos de hoy (777 tests). Falta el caso donde **debe** fallar con razón: una fusión sí transfiere exposición económica |
+| Ningún consumidor usa `caminos_causales()` | D-53 | P5B usa a propósito un camino sin mecanismo para demostrar su `UNKNOWN`. Decidir qué capa consume qué conjunto es trabajo de P5B/P5D/P6 |
 | `ASSET_CLASS` declarado y rechazado | `modelo.ROLES_NO_ACTIVOS` | Su definición no está cerrada: para una acción `MARKET` y `ASSET_CLASS` difieren, para un cripto coinciden. Reactivarlo cuesta una línea |
 
 ---

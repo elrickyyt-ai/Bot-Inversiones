@@ -540,3 +540,42 @@ sec:NVDA.NASDAQ -> ven:NASDAQ -> sec:WBA.NASDAQ -> org:walgreens
 - **Un test caducó y se reescribió** (§3 del protocolo): `test_el_limite_de_profundidad_se_distingue_de_la_falta_de_conocimiento` exigía que a profundidad 3 apareciese `NO_FURTHER_KNOWLEDGE`, apoyándose en que NASDAQ fuese un callejón sin salida. **Se apoyaba en una ausencia de conocimiento, no en una propiedad del motor.** Reescrito a lo que sigue siendo cierto: los motivos no se confunden y ampliar la profundidad nunca convierte un `COMPLETE` en incompleto.
 - **Lección general**, y es la que conviene retener: **declarar más conocimiento verdadero no solo puede mejorar el grafo**. Con una regla de recorrido por lista negra, cada entidad nueva amplía la superficie de caminos espurios.
 
+
+## D-53 · El recorrido causal se define por lo que un camino contiene, no por lo que no está en una lista negra
+
+**Vigente** (P5A hardening, 2026-09-11). **Ejecuta la recomendación de D-49 y cierra el coste medido en D-52.**
+
+- **Definición aplicada, recuperada literal de D-49**: *"no restringir el recorrido; exigir ≥1 arista `CAUSAL` en el camino emitido"* (variante C). No se reinventó.
+- **Cómo se aplica — etiquetando, no filtrando**. Es la diferencia que hace que el cambio sea un no-op para todo lo demás:
+  - `descubrir()` **conserva su firma y devuelve todos los caminos**, cada uno con `path_semantics` ∈ {`CAUSAL_PATH`, `STRUCTURAL_ONLY_PATH`}.
+  - **`caminos_causales()`** (nueva) **es** el recorrido causal: los caminos con contenido causal.
+  - `validar()` rechaza un camino que no declare su semántica: **no declararla dejaría que el consumidor la dedujera por ausencia**, justo lo que D-49 prohíbe.
+- **Cinco clases semánticas** (refinan las cuatro de D-45 separando `IDENTITY` de `STRUCTURAL`): `CAUSAL` {SUPPLIES, USES, DEPENDS_ON, SUBSTITUTES, EXPOSED_TO} · `IDENTITY` {ISSUED_BY, SUCCEEDED_BY} · `STRUCTURAL` {LISTED_ON} · `MEASUREMENT` {BENCHMARKED_BY, COMPARED_TO} · `REFERENCE` {DOMICILED_IN, CLASSIFIED_AS}. **`semantica_de()` devuelve `REFERENCE` para lo no declarado**: un predicado nuevo no se vuelve causal porque nadie lo haya prohibido.
+- **Medición completa** (`informes/2026-09-11_p5a_hardening_recorrido_causal.md`, 8 combinaciones origen/profundidad sobre el Knowledge real):
+
+```
+  total 454 · con contenido causal 376 · sin contenido causal 78
+  eliminados 78 · anadidos 0 · cambiados 0
+  caminos legitimos eliminados (con arista causal): 0   (18 formas, clasificadas una a una)
+  EXPOSED_TO|EXPOSED_TO|LISTED_ON: 28 -> 28 en NVDA, IBM y XOM
+  T5_ciclo 4 -> 4 · T6_contradiccion 1 -> 1
+```
+
+- **`added: 0` no es un resultado afortunado, es estructural**: al no restringir el recorrido, el conjunto causal es por construcción un subconjunto del recorrido. Hay test de la propiedad, no del conteo.
+- **Los cuatro caminos de D-52 siguen existiendo y salen del conjunto causal.** Que sigan existiendo importa: cotizar en el mismo mercado es un hecho verdadero; lo falso era presentarlo como causalidad. **El 51% de lo eliminado (40 de 78) cruza un hub de mercado** — la forma que crecía cada vez que se declaraba un instrumento nuevo.
+- **La regla no menciona ninguna entidad.** Un test lo comprueba con `inspect.getsource()` sobre las cuatro funciones que la implementan, con un patrón derivado de los prefijos del propio modelo — no contra una lista de nombres prohibidos.
+- **`IDENTITY_MONOTONICITY` queda PROPUESTA y medida, NO declarada invariante permanente**, como pedía el encargo. Medida sobre fixture sintética: añadir emisión, cotización en el mismo mercado, domicilio en el mismo país y sucesión de instrumento lleva el grafo de 3 a 8 caminos y deja el conjunto causal **en 2**. Falta el caso donde la propiedad **debe** fallar con razón: una fusión sí transfiere exposición económica.
+
+### Revisión de D-49 y D-52
+
+- **D-49 decía**: *"la pérdida de conteos convierte el cambio en una revisión de los tests de una fase cerrada, no en un no-op, y el criterio pedido era regresión cero"*. **Cierto para filtrar; falso para etiquetar.** Con `caminos_causales()` aparte, la regresión es **cero**: 777 tests en verde y ningún test de P5A reescrito por conteos.
+- **D-52 dejó un test frágil a propósito** para que se rompiera el día de la variante C. **Ese día llegó** y se ha reescrito a lo que sigue siendo cierto (§3 del protocolo): los caminos siguen existiendo, ahora etiquetados `STRUCTURAL_ONLY_PATH`, y no están en el conjunto causal.
+
+### Error propio registrado
+
+**La primera aplicación de la variante C fue arquitectónicamente incorrecta**: filtrar dentro de `descubrir()` con `solo_causales=True` por defecto. **Rompió 7 tests.** Clasificados uno a uno en vez de darlos por caducados, resultaron ser **usos legítimos no causales**: `TestTresVigencia` recorre un `LISTED_ON` para comprobar vigencia temporal; `TestUnoRecorridoReal` y `test_valoracion.TestReal` usan `ISSUED_BY|DOMICILED_IN` **a propósito sin mecanismo**, para exigir que P5B devuelva `UNKNOWN`. **`descubrir()` no es el recorrido causal**: es el recorrido, y tiene consumidores que preguntan por estructura, identidad y vigencia. Se confundió *"qué caminos se emiten como causales"* con *"qué caminos existen"* — la misma clase de fallo que la lista negra, con el signo cambiado. Se supo porque los tests fallaron y se clasificaron; relajarlos habría dejado el cambio en verde y mal.
+
+### Deuda que abre
+
+- **Dos mecanismos conviven**: `PREDICADOS_NO_CAUSALES` saca `BENCHMARKED_BY`, `COMPARED_TO` y `SUCCEEDED_BY` del índice, y la variante C etiqueta lo emitido. Con C, la lista negra ya no hace falta **como salvaguarda causal**, pero sigue suprimiendo conocimiento estructural verdadero del recorrido: medido, `sec:DWDP.NYSE` a profundidad 2 da **0 caminos** pese a que `rel:0057` (`SUCCEEDED_BY`) existe y está vigente. No se unificó: es un cambio de comportamiento de P5A fuera del alcance.
+- **Ningún consumidor usa `caminos_causales()` todavía.** P5B usa a propósito un camino sin mecanismo para demostrar su `UNKNOWN`; decidir qué capa consume qué conjunto es trabajo de P5B/P5D/P6.

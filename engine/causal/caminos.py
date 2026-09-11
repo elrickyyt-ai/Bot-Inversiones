@@ -65,7 +65,24 @@ CAMPOS_ARISTA = {"relationship_id", "from", "to", "traversal_direction", "predic
                  "source_id", "validity", "status", "support_level", "nature"}
 CAMPOS_CAMINO = {"path_id", "event_id", "origin_entity", "nodes", "edges", "depth",
                  "direction_status", "validity", "completeness", "incomplete_at",
-                 "incomplete_reason", "contradictions", "source_refs", "as_of", "unknowns"}
+                 "incomplete_reason", "contradictions", "source_refs", "as_of", "unknowns",
+                 "path_semantics"}
+
+# P5A hardening (2026-09-11) -- D-49 variante C, literal:
+#
+#     "no restringir el recorrido; exigir >=1 arista CAUSAL en el camino emitido"
+#
+# El recorrido NO cambia: sigue visitando todo el grafo, porque una arista
+# de identidad o de estructura puede ser el PUENTE necesario para llegar a
+# una causal. Lo que cambia es que un camino sin NINGUNA arista causal deja
+# de presentarse como camino causal.
+#
+# Se descarto la variante B (restringir que predicados se recorren): D-49
+# midio que destruye 84 caminos EXPOSED_TO|EXPOSED_TO|LISTED_ON, legitimos,
+# porque el contenido economico esta en las dos primeras aristas.
+CAUSAL_PATH = "CAUSAL_PATH"
+STRUCTURAL_ONLY_PATH = "STRUCTURAL_ONLY_PATH"
+SEMANTICAS_CAMINO = (CAUSAL_PATH, STRUCTURAL_ONLY_PATH)
 
 
 class PathError(Exception):
@@ -195,6 +212,10 @@ def _componer(event_id, origen, camino, negadas, as_of, tipos, completeness,
         "source_refs": sorted({a["source_id"] for a in camino}),
         "as_of": as_of.isoformat(),
         "unknowns": unknowns,
+        # Un camino es causal si contiene AL MENOS UNA arista causal. No se
+        # exige que todas lo sean: eso eliminaria puentes legitimos.
+        "path_semantics": (CAUSAL_PATH if _knowledge_mod().tiene_contenido_causal(camino)
+                           else STRUCTURAL_ONLY_PATH),
     }
 
 
@@ -205,6 +226,16 @@ def descubrir(event_id, origen, k, as_of=None, max_depth=PROFUNDIDAD_POR_DEFECTO
     Con `tipos_objetivo` busca alcanzar una entidad de esos tipos y marca
     PATH_INCOMPLETE cuando no lo consigue, diciendo en que nodo se quedo
     y por que. Sin objetivo, enumera lo alcanzable.
+
+    ESTA FUNCION NO ES EL RECORRIDO CAUSAL, y la distincion se midio: sus
+    consumidores tambien preguntan cosas que no son causales -- la vigencia
+    temporal de un listing (T3, XRP/Coinbase) o el camino ISSUED_BY ->
+    DOMICILED_IN con el que P5B comprueba que devuelve UNKNOWN ante un
+    camino sin mecanismo. Filtrar aqui por contenido causal romperia usos
+    legitimos.
+
+    Cada camino sale ETIQUETADO con `path_semantics`. Para el conjunto
+    causal se usa `caminos_causales()`.
     """
     as_of = as_of or datetime.date.today()
     salidas, negadas = indice(k, as_of)
@@ -249,6 +280,23 @@ def descubrir(event_id, origen, k, as_of=None, max_depth=PROFUNDIDAD_POR_DEFECTO
     return sorted(caminos, key=lambda c: (c["depth"], c["path_id"]))
 
 
+def caminos_causales(event_id, origen, k, as_of=None,
+                     max_depth=PROFUNDIDAD_POR_DEFECTO, tipos_objetivo=None):
+    """EL RECORRIDO CAUSAL: solo los caminos con contenido causal.
+
+    Variante C de D-49, literal: no restringe el recorrido -- una arista de
+    identidad o estructura puede ser el PUENTE necesario para alcanzar una
+    causal -- y exige >=1 arista CAUSAL en el camino emitido.
+
+    Un camino es causal porque CONTIENE causalidad declarada, no porque
+    nadie lo haya metido en una lista negra. Compartir mercado, pais o
+    sector no basta: esos hubs no aportan ninguna arista causal, asi que
+    los caminos que solo pasan por ellos salen STRUCTURAL_ONLY_PATH. La
+    regla es semantica y no menciona ninguna entidad concreta."""
+    todos = descubrir(event_id, origen, k, as_of, max_depth, tipos_objetivo)
+    return [c for c in todos if c["path_semantics"] == CAUSAL_PATH]
+
+
 # --- Validacion -------------------------------------------------------------
 
 def validar(camino, k=None):
@@ -261,6 +309,10 @@ def validar(camino, k=None):
         raise PathError(f"completeness {camino['completeness']!r} fuera del vocabulario")
     if camino["direction_status"] not in DIRECCIONES:
         raise PathError(f"direction_status {camino['direction_status']!r} fuera del vocabulario")
+    # D-53: un camino emitido SIEMPRE declara si tiene contenido causal. No
+    # declararlo dejaria que el consumidor lo dedujera por ausencia.
+    if camino.get("path_semantics") not in SEMANTICAS_CAMINO:
+        raise PathError(f"path_semantics {camino.get('path_semantics')!r} fuera del vocabulario")
     if camino["completeness"] == "PATH_INCOMPLETE":
         if not camino["incomplete_at"]:
             raise PathError("un camino incompleto tiene que decir DONDE se interrumpio")
@@ -301,7 +353,8 @@ def explicar(camino, k):
     L.append(f" 2. Entidades            " + " → ".join(
         f"{n['entity_id']}({n['type']})" for n in camino["nodes"]))
     L.append(f" 3. Relaciones           " + (", ".join(
-        f"{a['predicate']}[{a['traversal_direction'][0]}]" for a in camino["edges"]) or "ninguna"))
+        f"{a['predicate']}[{a['traversal_direction'][0]}]" for a in camino["edges"]) or "ninguna")
+             + f"  → {camino['path_semantics']}")
     L.append(" 4. Fuentes")
     for a in camino["edges"]:
         s = fuentes.get(a["source_id"], {})

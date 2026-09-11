@@ -1,0 +1,85 @@
+{
+  "_nota": "FIXTURES SINTETICAS para IDENTITY_MONOTONICITY (P5A hardening, 2026-09-11). Nombres genericos a proposito: la propiedad se comprueba sobre la SEMANTICA de las relaciones, nunca sobre nombres concretos de entidades. BASE y CON_IDENTIDAD tienen exactamente las mismas aristas causales; la segunda solo anade identidad, listing y sucesion verdaderas.",
+
+  "BASE": {
+    "entities": [
+      {"entity_id": "sec:alfa", "type": "security", "nombre": "Alfa", "status": "ACTIVE", "source_id": "src:fx"},
+      {"entity_id": "sec:beta", "type": "security", "nombre": "Beta", "status": "ACTIVE", "source_id": "src:fx"},
+      {"entity_id": "org:alfa", "type": "organization", "nombre": "Alfa Corp", "status": "ACTIVE", "source_id": "src:fx"},
+      {"entity_id": "org:beta", "type": "organization", "nombre": "Beta Corp", "status": "ACTIVE", "source_id": "src:fx"},
+      {"entity_id": "org:proveedor", "type": "organization", "nombre": "Proveedor", "status": "ACTIVE", "source_id": "src:fx"},
+      {"entity_id": "ven:mercado", "type": "venue", "nombre": "Mercado", "status": "ACTIVE", "source_id": "src:fx"},
+      {"entity_id": "reg:pais", "type": "region", "nombre": "Pais", "status": "ACTIVE", "source_id": "src:fx"},
+      {"entity_id": "tech:proceso", "type": "technology", "nombre": "Proceso", "status": "ACTIVE", "source_id": "src:fx"}
+    ],
+    "relationships": [
+      {"relationship_id": "fx:c1", "subject": "org:proveedor", "predicate": "SUPPLIES", "object": "org:alfa",
+       "polarity": "AFFIRMS", "nature": "STRUCTURAL", "status": "VERIFIED", "support_level": "ALTO",
+       "source_id": "src:fx", "statement": "arista CAUSAL declarada", "valid_from": "2000-01-01",
+       "valid_to": null, "last_verified": "2026-09-11", "verification_method": "fixture"},
+      {"relationship_id": "fx:c2", "subject": "org:alfa", "predicate": "USES", "object": "tech:proceso",
+       "polarity": "AFFIRMS", "nature": "STRUCTURAL", "status": "VERIFIED", "support_level": "ALTO",
+       "source_id": "src:fx", "statement": "arista CAUSAL declarada", "valid_from": "2000-01-01",
+       "valid_to": null, "last_verified": "2026-09-11", "verification_method": "fixture"},
+      {"relationship_id": "fx:i1", "subject": "sec:alfa", "predicate": "ISSUED_BY", "object": "org:alfa",
+       "polarity": "AFFIRMS", "nature": "STRUCTURAL", "status": "VERIFIED", "support_level": "ALTO",
+       "source_id": "src:fx", "statement": "identidad", "valid_from": "2000-01-01",
+       "valid_to": null, "last_verified": "2026-09-11", "verification_method": "fixture"}
+    ],
+    "concepts": [], "sources": []
+  },
+
+  "CON_IDENTIDAD": {
+    "_que_anade": "sec:beta con su emisor, el listing de AMBOS en el mismo mercado, el domicilio de ambas organizaciones en el mismo pais y una sucesion de instrumento. TODO verdadero y TODO no causal. Ninguna arista causal nueva.",
+    "entities": [
+      {"entity_id": "sec:alfa", "type": "security", "nombre": "Alfa", "status": "ACTIVE", "source_id": "src:fx"},
+      {"entity_id": "sec:beta", "type": "security", "nombre": "Beta", "status": "ACTIVE", "source_id": "src:fx"},
+      {"entity_id": "sec:beta-antiguo", "type": "security", "nombre": "Beta (predecesor)", "status": "HISTORICAL", "source_id": "src:fx"},
+      {"entity_id": "org:alfa", "type": "organization", "nombre": "Alfa Corp", "status": "ACTIVE", "source_id": "src:fx"},
+      {"entity_id": "org:beta", "type": "organization", "nombre": "Beta Corp", "status": "ACTIVE", "source_id": "src:fx"},
+      {"entity_id": "org:proveedor", "type": "organization", "nombre": "Proveedor", "status": "ACTIVE", "source_id": "src:fx"},
+      {"entity_id": "ven:mercado", "type": "venue", "nombre": "Mercado", "status": "ACTIVE", "source_id": "src:fx"},
+      {"entity_id": "reg:pais", "type": "region", "nombre": "Pais", "status": "ACTIVE", "source_id": "src:fx"},
+      {"entity_id": "tech:proceso", "type": "technology", "nombre": "Proceso", "status": "ACTIVE", "source_id": "src:fx"}
+    ],
+    "relationships": [
+      {"relationship_id": "fx:c1", "subject": "org:proveedor", "predicate": "SUPPLIES", "object": "org:alfa",
+       "polarity": "AFFIRMS", "nature": "STRUCTURAL", "status": "VERIFIED", "support_level": "ALTO",
+       "source_id": "src:fx", "statement": "arista CAUSAL declarada", "valid_from": "2000-01-01",
+       "valid_to": null, "last_verified": "2026-09-11", "verification_method": "fixture"},
+      {"relationship_id": "fx:c2", "subject": "org:alfa", "predicate": "USES", "object": "tech:proceso",
+       "polarity": "AFFIRMS", "nature": "STRUCTURAL", "status": "VERIFIED", "support_level": "ALTO",
+       "source_id": "src:fx", "statement": "arista CAUSAL declarada", "valid_from": "2000-01-01",
+       "valid_to": null, "last_verified": "2026-09-11", "verification_method": "fixture"},
+      {"relationship_id": "fx:i1", "subject": "sec:alfa", "predicate": "ISSUED_BY", "object": "org:alfa",
+       "polarity": "AFFIRMS", "nature": "STRUCTURAL", "status": "VERIFIED", "support_level": "ALTO",
+       "source_id": "src:fx", "statement": "identidad", "valid_from": "2000-01-01",
+       "valid_to": null, "last_verified": "2026-09-11", "verification_method": "fixture"},
+      {"relationship_id": "fx:i2", "subject": "sec:beta", "predicate": "ISSUED_BY", "object": "org:beta",
+       "polarity": "AFFIRMS", "nature": "STRUCTURAL", "status": "VERIFIED", "support_level": "ALTO",
+       "source_id": "src:fx", "statement": "identidad NUEVA y verdadera", "valid_from": "2000-01-01",
+       "valid_to": null, "last_verified": "2026-09-11", "verification_method": "fixture"},
+      {"relationship_id": "fx:l1", "subject": "sec:alfa", "predicate": "LISTED_ON", "object": "ven:mercado",
+       "polarity": "AFFIRMS", "nature": "STRUCTURAL", "status": "VERIFIED", "support_level": "ALTO",
+       "source_id": "src:fx", "statement": "listing", "valid_from": "2000-01-01",
+       "valid_to": null, "last_verified": "2026-09-11", "verification_method": "fixture"},
+      {"relationship_id": "fx:l2", "subject": "sec:beta", "predicate": "LISTED_ON", "object": "ven:mercado",
+       "polarity": "AFFIRMS", "nature": "STRUCTURAL", "status": "VERIFIED", "support_level": "ALTO",
+       "source_id": "src:fx", "statement": "el HUB estructural: mismo mercado que sec:alfa", "valid_from": "2000-01-01",
+       "valid_to": null, "last_verified": "2026-09-11", "verification_method": "fixture"},
+      {"relationship_id": "fx:d1", "subject": "org:alfa", "predicate": "DOMICILED_IN", "object": "reg:pais",
+       "polarity": "AFFIRMS", "nature": "STRUCTURAL", "status": "VERIFIED", "support_level": "ALTO",
+       "source_id": "src:fx", "statement": "referencia", "valid_from": "2000-01-01",
+       "valid_to": null, "last_verified": "2026-09-11", "verification_method": "fixture"},
+      {"relationship_id": "fx:d2", "subject": "org:beta", "predicate": "DOMICILED_IN", "object": "reg:pais",
+       "polarity": "AFFIRMS", "nature": "STRUCTURAL", "status": "VERIFIED", "support_level": "ALTO",
+       "source_id": "src:fx", "statement": "segundo HUB estructural: mismo pais", "valid_from": "2000-01-01",
+       "valid_to": null, "last_verified": "2026-09-11", "verification_method": "fixture"},
+      {"relationship_id": "fx:s1", "subject": "sec:beta-antiguo", "predicate": "SUCCEEDED_BY", "object": "sec:beta",
+       "polarity": "AFFIRMS", "nature": "STRUCTURAL", "status": "VERIFIED", "support_level": "ALTO",
+       "source_id": "src:fx", "statement": "sucesion de instrumento", "valid_from": "2010-01-01",
+       "valid_to": null, "last_verified": "2026-09-11", "verification_method": "fixture"}
+    ],
+    "concepts": [], "sources": []
+  }
+}
