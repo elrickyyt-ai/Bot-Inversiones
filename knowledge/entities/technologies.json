@@ -1,0 +1,22 @@
+[
+ {
+  "entity_id": "tech:defi-smart-contracts",
+  "type": "technology",
+  "nombre": "Contratos inteligentes de finanzas descentralizadas",
+  "status": "ACTIVE",
+  "asset_id": null,
+  "aliases": [],
+  "source_id": "src:cadencias-no-aplica",
+  "nota": "Necesaria para poder AFIRMAR una ausencia (polarity DENIES) en vez de dejar una casilla vacia."
+ },
+ {
+  "entity_id": "tech:cowos",
+  "type": "technology",
+  "nombre": "CoWoS (Chip-on-Wafer-on-Substrate)",
+  "status": "ACTIVE",
+  "asset_id": null,
+  "aliases": [],
+  "source_id": "src:tsmc-20f-fy2025",
+  "nota": "Tipada como 'technology' y no como 'product' (pendiente/ la habia anotado como prod:cowos). Razon: TIPOS_ENTIDAD define product como 'bien o servicio concreto, con capacidad y precio' y technology como 'proceso o capacidad que se emplea, no se compra'. NVIDIA no compra 'un CoWoS': compra encapsulado hecho CON CoWoS ('We utilize CoWoS technology for semiconductor packaging'). Contraargumento real, que se deja anotado y no se esconde: TSMC lo vende como 'CoWoS advanced packaging SERVICES', y un servicio si tiene capacidad y precio -- de hecho la capacidad CoWoS es justo la variable economica interesante. Si en P6 hace falta tratar la capacidad como magnitud, sera un concept, no un cambio de tipo de esta entidad."
+ }
+]

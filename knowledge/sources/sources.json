@@ -1,0 +1,156 @@
+[
+ {
+  "source_id": "src:dimasset-equity",
+  "tipo": "DATA_PROVIDER",
+  "publisher": "org:alpha-vantage",
+  "titulo": "COMPANY_OVERVIEW de Alpha Vantage, materializado en DimAsset",
+  "localizador": "data/assets/{IBM,NVDA,XOM}.json",
+  "fecha_publicacion": "2026-09-03",
+  "fecha_consulta": "2026-09-06",
+  "accesible": true,
+  "nota": "Los campos name/sector/country/exchange son literales de Alpha Vantage, no asignados por este sistema."
+ },
+ {
+  "source_id": "src:dimasset-crypto",
+  "tipo": "DATA_PROVIDER",
+  "publisher": "org:coingecko",
+  "titulo": "Metadatos de CoinGecko, materializados en DimAsset",
+  "localizador": "data/assets/{ADA,BTC,DOT,ETH,SOL,XRP}.json",
+  "fecha_publicacion": "2026-09-03",
+  "fecha_consulta": "2026-09-06",
+  "accesible": true,
+  "nota": "sector='Cripto' y currency='EUR' son etiquetas ASIGNADAS por este sistema, no propiedades del activo."
+ },
+ {
+  "source_id": "src:kraken-pairs",
+  "tipo": "INTERNAL_RULE",
+  "publisher": null,
+  "titulo": "Tabla KRAKEN_PAIR del fetcher tecnico",
+  "localizador": "engine/technical/fetch_data.py:14-16",
+  "fecha_publicacion": null,
+  "fecha_consulta": "2026-09-06",
+  "accesible": true,
+  "nota": "El hecho subyacente es de Kraken; esto es donde este proyecto lo escribio. No verificado contra la documentacion de Kraken."
+ },
+ {
+  "source_id": "src:coinbase-products",
+  "tipo": "INTERNAL_RULE",
+  "publisher": null,
+  "titulo": "Tabla COINBASE_PAIR del fetcher de backfill tecnico",
+  "localizador": "engine/technical/fetch_backfill.py:60-62",
+  "fecha_publicacion": null,
+  "fecha_consulta": "2026-09-06",
+  "accesible": true,
+  "nota": "Mismo caracter que src:kraken-pairs."
+ },
+ {
+  "source_id": "src:coingecko-ids",
+  "tipo": "INTERNAL_RULE",
+  "publisher": null,
+  "titulo": "Tabla ASSETS del fetcher de fundamentales cripto",
+  "localizador": "engine/crypto/fetch_data.py:20-25",
+  "fecha_publicacion": null,
+  "fecha_consulta": "2026-09-06",
+  "accesible": true,
+  "nota": "Contiene tvl_chain=None para BTC y XRP, que es la unica huella de que su TVL no aplica."
+ },
+ {
+  "source_id": "src:thesis-macro-uniforme",
+  "tipo": "INTERNAL_RULE",
+  "publisher": null,
+  "titulo": "build_thesis() aplica score_us() y score_ea() a todos los activos por igual",
+  "localizador": "engine/reasoning/thesis.py:81-82 y :190-191",
+  "fecha_publicacion": null,
+  "fecha_consulta": "2026-09-06",
+  "accesible": true,
+  "nota": "NO es evidencia de exposicion economica. Es evidencia de que el software actual usa macro de EE.UU. y de la Eurozona para todos los activos sin distinguirlos."
+ },
+ {
+  "source_id": "src:xrp-coinbase-delisting",
+  "tipo": "OWN_ANALYSIS",
+  "publisher": null,
+  "titulo": "Hueco de 905 dias en la serie de precio de XRP en Coinbase",
+  "localizador": "engine/technical/score.py:106-107 (comentario) y data/history/crypto/XRP/ (medicion)",
+  "fecha_publicacion": "2026-09-04",
+  "fecha_consulta": "2026-09-06",
+  "accesible": true,
+  "nota": "Fechas medidas sobre el contrato, no estimadas: ultimo dato 2021-01-19, reanudacion 2023-07-13."
+ },
+ {
+  "source_id": "src:cadencias-no-aplica",
+  "tipo": "OWN_ANALYSIS",
+  "publisher": null,
+  "titulo": "Tabla NO_APLICA de cadencias.py (P1b)",
+  "localizador": "engine/contract/cadencias.py",
+  "fecha_publicacion": "2026-09-06",
+  "fecha_consulta": "2026-09-06",
+  "accesible": true,
+  "nota": "Declara que la ausencia de TVL en BTC y XRP es estructural, no un hueco de datos."
+ },
+ {
+  "source_id": "src:nvda-10k-fy2026",
+  "tipo": "FILING",
+  "publisher": "org:nvidia",
+  "titulo": "NVIDIA Corporation, Form 10-K del ejercicio cerrado el 25 de enero de 2026",
+  "localizador": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000021/nvda-20260125.htm (Item 1 Business, epigrafe 'Manufacturing'; Item 1A Risk Factors)",
+  "fecha_publicacion": "2026-02-25",
+  "fecha_consulta": "2026-09-07",
+  "accesible": true,
+  "nota": "Primera fuente EXTERNA y primaria del proyecto: no es codigo de este repositorio ni un proveedor de datos, es un documento regulatorio releible por cualquiera en la URL citada. Sesgo a tener presente: es la parte interesada describiendo su propia cadena de suministro; NVIDIA no tiene incentivo para nombrar en falso a un proveedor, pero tampoco esta obligada a nombrarlos a todos ('foundries, SUCH AS ...' es explicitamente no exhaustivo)."
+ },
+ {
+  "source_id": "src:tsmc-20f-fy2025",
+  "tipo": "FILING",
+  "publisher": "org:tsmc",
+  "titulo": "Taiwan Semiconductor Manufacturing Company Limited, Form 20-F del ejercicio cerrado el 31 de diciembre de 2025",
+  "localizador": "https://www.sec.gov/Archives/edgar/data/1046179/000162828026025362/tsm-20251231.htm (Item 4.B Business Overview, plataforma High Performance Computing)",
+  "fecha_publicacion": "2026-04-16",
+  "fecha_consulta": "2026-09-07",
+  "accesible": true,
+  "nota": "Se eligio el 20-F y NO la pagina comercial tsmc.com/english/dedicatedFoundry/technology/cowos, que era el documento previsto en pendiente/: la pagina web es COMPANY_STATEMENT, no tiene fecha estable, esta detras de proteccion anti-bot (curl recibe 'Just a moment...') y su contenido puede cambiar sin dejar rastro. El 20-F dice lo mismo, es FILING, y su URL en EDGAR es inmutable."
+ },
+ {
+  "source_id": "src:yahoo-gspc",
+  "tipo": "DATA_PROVIDER",
+  "publisher": null,
+  "titulo": "Serie diaria del nivel de cierre del indice S&P 500 (^GSPC), Yahoo Finance chart API",
+  "localizador": "https://query1.finance.yahoo.com/v8/finance/chart/%5EGSPC?period1=0&period2=9999999999&interval=1d (meta: instrumentType=INDEX, currency=USD, exchangeTimezoneName=America/New_York, dataGranularity=1d)",
+  "fecha_publicacion": null,
+  "fecha_consulta": "2026-09-07",
+  "accesible": true,
+  "nota": "Se cita la SERIE, no la metodologia del indice. La documentacion metodologica de S&P Dow Jones Indices NO se ha podido citar: spglobal.com responde 403 desde este entorno, la misma situacion que D-07 resolvio prefiriendo un localizador reabrible. Verificado en vivo el 2026-09-07 sobre esta URL: 14.291 sesiones desde 1970-01-02, cero eventos de split o dividendo, y close == adjclose en las 2.299 sesiones comparadas -- un nivel de indice no tiene acciones corporativas que ajustar, asi que la eleccion de 'close' no es una eleccion. Deuda registrada: point_in_time_capable se afirma sobre esta comprobacion, no sobre una declaracion del proveedor."
+ },
+ {
+  "source_id": "src:sec-submissions",
+  "tipo": "FILING",
+  "publisher": "org:sec",
+  "titulo": "EDGAR submissions API (formerNames, filings, acceptanceDateTime)",
+  "localizador": "https://data.sec.gov/submissions/CIK{cik}.json",
+  "fecha_publicacion": "2026-09-08",
+  "fecha_consulta": "2026-09-08",
+  "accesible": true,
+  "nota": "Identidad legal por CIK con intervalos de validez. El CIK es permanente frente a renombramientos y fusiones, pero una reorganizacion en holding crea un CIK NUEVO (medido en XOM)."
+ },
+ {
+  "source_id": "src:sec-8k12b-xom-2026",
+  "tipo": "FILING",
+  "publisher": "org:sec",
+  "titulo": "ExxonMobil Holdings Corp, Form 8-K12B (registro de emisor sucesor)",
+  "localizador": "CIK 0002115436, acceptance 2026-07-01T16:36:49Z, items 1.01,2.01,2.03,3.03,5.02,5.03,9.01",
+  "fecha_publicacion": "2026-07-01",
+  "fecha_consulta": "2026-09-08",
+  "accesible": true,
+  "nota": "Reorganizacion en holding. Un 25-NSE del 2026-07-02 bajo el CIK historico 0000034088 completa el par."
+ },
+ {
+  "source_id": "src:yahoo-meta-mob",
+  "tipo": "DATA_PROVIDER",
+  "publisher": "org:yahoo-finance",
+  "titulo": "Metadatos del simbolo MOB",
+  "localizador": "chart/MOB -> meta.longName='Mobilicom Limited', firstTradeDate=1661434200 (2022-08-25), exchangeName=NCM",
+  "fecha_publicacion": "2026-09-08",
+  "fecha_consulta": "2026-09-08",
+  "accesible": true,
+  "nota": "Prueba de reutilizacion de ticker: el simbolo de Mobil Corporation, absorbida en 1999, designa hoy a otra empresa."
+ }
+]

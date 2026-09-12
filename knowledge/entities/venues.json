@@ -1,0 +1,39 @@
+[
+ {
+  "entity_id": "ven:NYSE",
+  "type": "venue",
+  "nombre": "New York Stock Exchange",
+  "status": "ACTIVE",
+  "asset_id": null,
+  "aliases": [],
+  "source_id": "src:dimasset-equity"
+ },
+ {
+  "entity_id": "ven:NASDAQ",
+  "type": "venue",
+  "nombre": "Nasdaq Stock Market",
+  "status": "ACTIVE",
+  "asset_id": null,
+  "aliases": [],
+  "source_id": "src:dimasset-equity",
+  "nota": "trading_calendar.py aplica el calendario NYSE a todo asset_type='equity' sin mirar el mercado. Hoy es inocuo porque los dos calendarios coinciden; es una coincidencia, no una garantia."
+ },
+ {
+  "entity_id": "ven:kraken",
+  "type": "venue",
+  "nombre": "Kraken",
+  "status": "ACTIVE",
+  "asset_id": null,
+  "aliases": [],
+  "source_id": "src:kraken-pairs"
+ },
+ {
+  "entity_id": "ven:coinbase",
+  "type": "venue",
+  "nombre": "Coinbase Exchange",
+  "status": "ACTIVE",
+  "asset_id": null,
+  "aliases": [],
+  "source_id": "src:coinbase-products"
+ }
+]

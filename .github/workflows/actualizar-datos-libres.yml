@@ -6,6 +6,12 @@ name: Actualizar datos (cripto + macro)
 # manuales -- el conector MCP solo es invocable desde una sesion de
 # Claude, ver engine/equity/README.md y engine/news/README.md.
 #
+# DEPENDENCIAS: el job de ingesta corre con Python estandar puro, sin
+# instalar nada -- PyArrow no aparece en el camino critico diario. El job
+# de verificacion, que se ejecuta despues, si lo instala para abrir los
+# parquet de history/. Ver engine/contract/qa.py: la ingesta produce estado
+# UNVERIFIED y solo la verificacion puede elevarlo a VERIFIED.
+#
 # No usa ninguna clave/secreto: las 4 fuentes son APIs publicas sin
 # autenticacion, y el push usa el GITHUB_TOKEN automatico del propio
 # workflow (permissions: contents: write mas abajo), no un PAT.
@@ -61,13 +67,17 @@ jobs:
       - name: Descargar datos macro de FRED
         run: python3 engine/macro/fetch_data.py
 
-      - name: Construir el Data Contract (cripto + macro, sin acciones/noticias)
+      - name: Construir el Data Contract (append a data/incoming/*.csv)
         run: python3 engine/contract/build.py --skip-equity
 
-      - name: Validar el Data Contract (qa.py)
+      - name: QA-CORE (obligatorio, sin PyArrow)
+        # Valida por completo las filas recien ingeridas (incoming/, CSV) y
+        # comprueba por hash que ninguna particion cerrada de history/ ha
+        # cambiado. El estado sera UNVERIFIED, no PASS: sin abrir los parquet
+        # no se ha comprobado su contenido, y eso queda declarado.
         run: python3 engine/contract/qa.py
 
-      - name: Ejecutar la suite de tests
+      - name: Tests (los de parquet se saltan de forma explicita)
         run: python3 -m unittest discover -s tests -v
 
       - name: Comprobar si hay cambios reales en data/
@@ -90,3 +100,37 @@ jobs:
           git add data/
           git commit -m "Actualización automática de datos (cripto + macro) — $(date -u +%Y-%m-%d)"
           git push
+
+  # ---------------------------------------------------------------------
+  # Verificacion del artefacto. Depende de la ingesta y SI instala PyArrow.
+  # Que este job falle no impide que la ingesta del dia se haya commiteado
+  # -- sus filas estan validadas al 100% por QA-CORE -- pero deja el ciclo
+  # marcado como no verificado, que es justo lo que queremos distinguir:
+  # "no se pudo verificar" nunca debe leerse como "verificado".
+  # ---------------------------------------------------------------------
+  verificar:
+    needs: actualizar
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar PyArrow (solo en este job, nunca en la ingesta)
+        # VERSION FIJADA (S0.2): estaba sin pinear, en un proyecto que pinea
+        # todas sus fuentes. Una version nueva de PyArrow podria cambiar la
+        # serializacion de los parquet y romper la verificacion por hash del
+        # manifiesto de history/ sin que nada lo hubiese anunciado.
+        run: pip install --quiet pyarrow==25.0.1
+
+      - name: QA completo (CORE + PARQUET, exige ambos)
+        run: python3 engine/contract/qa.py --require-parquet
+
+      - name: Suite completa, incluidos los tests de parquet
+        run: python3 -m unittest discover -s tests -v

@@ -1,0 +1,6 @@
+# VZ: RESUMEN TRANSCRITO (no transcripcion linea a linea).
+# 122 trimestres contiguos 1996-03-31 .. 2026-06-30 (122 esperados = 122 observados).
+# estimatedEPS presente en las 122. reportedEPS presente en las 122.
+# reportTime presente en las 122: 121 "pre-market" + 1 "post-market".
+# La UNICA excepcion, enumerada para que sea verificable:
+2001-04-24 post E

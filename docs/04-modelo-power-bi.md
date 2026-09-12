@@ -1,5 +1,8 @@
 # Modelo de datos para Power BI (Fases B-G, sin código de interfaz)
 
+> **Estado (2026-09-07)**: **especificación de consumo, no contrato arquitectónico.** El modelo estrella (`DimAsset`, `DimDate`, `FactMetrics`, `FactThesis`…) sigue siendo válido **para la capa de consumo que describe**, pero ya no es el modelo central del proyecto: `FactMetrics` no representa Knowledge, Evidence, Events, CausalPath, CausalAssessment ni EconomicImpact, y no hay que forzarlos dentro. Los conteos y ejemplos son del 2026-09-03. Ver `docs/06-diseno-p61-materialidad.md` §7. **Ningún motor se diseña pensando primero en `FactMetrics`.**
+
+
 **Fecha:** 2026-09-03 · **Precede a:** `docs/03-arquitectura-visualizacion-y-acceso.md` (arquitectura general) · **Basado en:** el diagnóstico real de `engine/contract/qa.py`, no en suposiciones — ver `informes/2026-09-03_data_qa_v1.md`.
 
 ## Hallazgo que condiciona todo lo demás — actualización 2026-09-03 (resuelto)
@@ -21,7 +24,13 @@ Igual que pediste, mapea casi 1:1 con el Data Contract ya construido:
 
 Con `asset_id`/`data_as_of` copiados directamente (no solo enlazados vía `thesis_id`), para que se relacione con `DimAsset`/`DimDate` como cualquier otra tabla de hechos, sin depender de una relación fact-a-fact (mala práctica en Power BI, la evito desde el diseño).
 
-**FactThesis** (simplificada, sin las 4 listas): `thesis_id, asset_id, thesis_type, data_as_of, retrieved_at, confidence_pct, bull_case, base_case, bear_case`.
+**FactThesis** (simplificada, sin las 4 listas): `thesis_id, asset_id, thesis_type, data_as_of, retrieved_at, confidence_pct, evidence_validity, bull_case, base_case, bear_case`.
+
+**Añadido en P1 (2026-09-06)**: `evidence_validity` (`VALID`/`INVALID`/`UNKNOWN`) y `evidence`, una lista de registros. `evidence` sigue el mismo patrón que las cuatro listas anteriores y por la misma razón — va a su propia tabla en vez de a una celda:
+
+**FactThesisEvidence**: `thesis_id, asset_id, entidad, dominio, metrica, papel (REQUERIDA|PUBLICADA|CONTEXTO), data_as_of, frescura (FRESH|LAGGING|STALE|UNKNOWN), retraso, unidad`
+
+Con esto, la página "Thesis Performance" puede responder algo que hoy no puede: *de qué evidencia dependía esta tesis y en qué estado estaba cuando se emitió*. Nótese que el `data_as_of` de `FactThesis` es la fecha del **razonamiento** (una tesis sí se produce hoy), mientras que el `data_as_of` de `FactThesisEvidence` es el de cada dato sobre el que razonó — la distancia entre los dos es justo lo que antes quedaba oculto. Una tesis con `evidence_validity` distinto de `VALID` tiene `confidence_pct` vacío por diseño, no por un fallo de carga: cualquier medida DAX sobre confianza debe tratar el vacío como "no calculable", no como cero.
 
 ### DimAsset — gap real encontrado
 `name`, `sector`, `country` que pediste **no existen todavía en ningún fichero de `data/`** — los adaptadores solo generan filas de métrica y de tesis, nunca atributos estáticos del activo. Los datos brutos sí los tienen (`engine/equity/_data/*_overview.json` trae `Name`/`Sector`/`Country` de Alpha Vantage; CoinGecko trae el nombre de cada cripto) — haría falta un tercer tipo de adaptador (`adapt_asset_attributes()`) que hoy no existe. Lo marco como pendiente, no lo invento.

@@ -1,0 +1,3 @@
+# DWDP: RESPUESTA VACIA. EARNINGS devolvio {} -- cero trimestres.
+# SYMBOL_SEARCH "DowDuPont" devuelve un conjunto de resultados VACIO: el ticker
+# no esta en el directorio de simbolos de Alpha Vantage.

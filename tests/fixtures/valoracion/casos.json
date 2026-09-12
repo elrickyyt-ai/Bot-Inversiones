@@ -1,0 +1,884 @@
+{
+ "_nota": "FIXTURES SINTETICAS declaradas. Usan EXCLUSIVAMENTE predicados del vocabulario cerrado de P2 (USES, SUPPLIES, SUBSTITUTES). NO usan CONSUMES ni PRODUCES, y no los mapean a los existentes, porque NO son equivalentes: USES puede ser tecnologia o infraestructura y CONSUMES implica flujo; SUPPLIES es organizacion->organizacion y PRODUCES es organizacion->producto. Quedan como candidatos futuros, sin reabrir P2.",
+ "T1_cadena": {
+  "_nota": "demanda de A sube; B le suministra; B usa un recurso con capacidad medida",
+  "_esperado": "B revenue POSITIVE/SUPPORTED · pricing_power POSITIVE/PARTIAL (no hay fila SUBSTITUTES)",
+  "knowledge": {
+   "entities": [
+    {
+     "entity_id": "org:a",
+     "type": "organization",
+     "nombre": "org:a",
+     "status": "ACTIVE",
+     "asset_id": null,
+     "aliases": [],
+     "source_id": "src:fx"
+    },
+    {
+     "entity_id": "org:b",
+     "type": "organization",
+     "nombre": "org:b",
+     "status": "ACTIVE",
+     "asset_id": null,
+     "aliases": [],
+     "source_id": "src:fx"
+    },
+    {
+     "entity_id": "org:c",
+     "type": "organization",
+     "nombre": "org:c",
+     "status": "ACTIVE",
+     "asset_id": null,
+     "aliases": [],
+     "source_id": "src:fx"
+    },
+    {
+     "entity_id": "prod:p",
+     "type": "product",
+     "nombre": "prod:p",
+     "status": "ACTIVE",
+     "asset_id": null,
+     "aliases": [],
+     "source_id": "src:fx"
+    },
+    {
+     "entity_id": "prod:q",
+     "type": "product",
+     "nombre": "prod:q",
+     "status": "ACTIVE",
+     "asset_id": null,
+     "aliases": [],
+     "source_id": "src:fx"
+    },
+    {
+     "entity_id": "mat:x",
+     "type": "material",
+     "nombre": "mat:x",
+     "status": "ACTIVE",
+     "asset_id": null,
+     "aliases": [],
+     "source_id": "src:fx"
+    }
+   ],
+   "relationships": [
+    {
+     "relationship_id": "rel:v01",
+     "subject": "org:b",
+     "predicate": "SUPPLIES",
+     "object": "org:a",
+     "polarity": "AFFIRMS",
+     "nature": "STRUCTURAL",
+     "status": "VERIFIED",
+     "support_level": "ALTO",
+     "source_id": "src:fx",
+     "statement": "org:b SUPPLIES org:a (fixture)",
+     "valid_from": "2020-01-01",
+     "valid_to": null,
+     "last_verified": "2026-09-07",
+     "verification_method": "fixture sintetica"
+    },
+    {
+     "relationship_id": "rel:v02",
+     "subject": "org:c",
+     "predicate": "SUPPLIES",
+     "object": "org:b",
+     "polarity": "AFFIRMS",
+     "nature": "STRUCTURAL",
+     "status": "VERIFIED",
+     "support_level": "ALTO",
+     "source_id": "src:fx",
+     "statement": "org:c SUPPLIES org:b (fixture)",
+     "valid_from": "2020-01-01",
+     "valid_to": null,
+     "last_verified": "2026-09-07",
+     "verification_method": "fixture sintetica"
+    },
+    {
+     "relationship_id": "rel:v03",
+     "subject": "org:b",
+     "predicate": "USES",
+     "object": "prod:p",
+     "polarity": "AFFIRMS",
+     "nature": "STRUCTURAL",
+     "status": "VERIFIED",
+     "support_level": "ALTO",
+     "source_id": "src:fx",
+     "statement": "org:b USES prod:p (fixture)",
+     "valid_from": "2020-01-01",
+     "valid_to": null,
+     "last_verified": "2026-09-07",
+     "verification_method": "fixture sintetica"
+    }
+   ],
+   "sources": [
+    {
+     "source_id": "src:fx",
+     "tipo": "OWN_ANALYSIS",
+     "publisher": null,
+     "titulo": "fixture sintetica de P5B",
+     "localizador": "tests/fixtures/valoracion/casos.json",
+     "fecha_publicacion": null,
+     "fecha_consulta": "2026-09-07",
+     "accesible": true
+    }
+   ],
+   "concepts": []
+  },
+  "evidence": [
+   {
+    "evidence_id": "ev:fx:d1",
+    "entity_id": "org:a",
+    "metric": "demand",
+    "value_num": 1.0,
+    "value_text": null,
+    "nature": "MEASURED",
+    "source": "fixture",
+    "source_scale": "market_data_priority",
+    "source_rank": 1,
+    "occurred_at": "2026-09-01",
+    "known_at": "2026-09-02"
+   },
+   {
+    "evidence_id": "ev:fx:c1",
+    "entity_id": "prod:p",
+    "metric": "capacity_utilization",
+    "value_num": 95.0,
+    "value_text": null,
+    "nature": "MEASURED",
+    "source": "fixture",
+    "source_scale": "market_data_priority",
+    "source_rank": 1,
+    "occurred_at": "2026-09-01",
+    "known_at": "2026-09-02"
+   }
+  ],
+  "event": {
+   "event_id": "ev4:fx:demanda",
+   "primary_entity": "org:a",
+   "action": "demand_change",
+   "direction": "UP"
+  },
+  "origen": "org:a",
+  "profundidad": 2
+ },
+ "T1b_ausencia_verificada": {
+  "_nota": "igual que T1 pero con una NEGACION explicita de sustituto para prod:p",
+  "_esperado": "pricing_power POSITIVE/SUPPORTED: la ausencia esta COMPROBADA, no solo desconocida",
+  "knowledge": {
+   "entities": [
+    {
+     "entity_id": "org:a",
+     "type": "organization",
+     "nombre": "org:a",
+     "status": "ACTIVE",
+     "asset_id": null,
+     "aliases": [],
+     "source_id": "src:fx"
+    },
+    {
+     "entity_id": "org:b",
+     "type": "organization",
+     "nombre": "org:b",
+     "status": "ACTIVE",
+     "asset_id": null,
+     "aliases": [],
+     "source_id": "src:fx"
+    },
+    {
+     "entity_id": "org:c",
+     "type": "organization",
+     "nombre": "org:c",
+     "status": "ACTIVE",
+     "asset_id": null,
+     "aliases": [],
+     "source_id": "src:fx"
+    },
+    {
+     "entity_id": "prod:p",
+     "type": "product",
+     "nombre": "prod:p",
+     "status": "ACTIVE",
+     "asset_id": null,
+     "aliases": [],
+     "source_id": "src:fx"
+    },
+    {
+     "entity_id": "prod:q",
+     "type": "product",
+     "nombre": "prod:q",
+     "status": "ACTIVE",
+     "asset_id": null,
+     "aliases": [],
+     "source_id": "src:fx"
+    },
+    {
+     "entity_id": "mat:x",
+     "type": "material",
+     "nombre": "mat:x",
+     "status": "ACTIVE",
+     "asset_id": null,
+     "aliases": [],
+     "source_id": "src:fx"
+    }
+   ],
+   "relationships": [
+    {
+     "relationship_id": "rel:v01",
+     "subject": "org:b",
+     "predicate": "SUPPLIES",
+     "object": "org:a",
+     "polarity": "AFFIRMS",
+     "nature": "STRUCTURAL",
+     "status": "VERIFIED",
+     "support_level": "ALTO",
+     "source_id": "src:fx",
+     "statement": "org:b SUPPLIES org:a (fixture)",
+     "valid_from": "2020-01-01",
+     "valid_to": null,
+     "last_verified": "2026-09-07",
+     "verification_method": "fixture sintetica"
+    },
+    {
+     "relationship_id": "rel:v02",
+     "subject": "org:c",
+     "predicate": "SUPPLIES",
+     "object": "org:b",
+     "polarity": "AFFIRMS",
+     "nature": "STRUCTURAL",
+     "status": "VERIFIED",
+     "support_level": "ALTO",
+     "source_id": "src:fx",
+     "statement": "org:c SUPPLIES org:b (fixture)",
+     "valid_from": "2020-01-01",
+     "valid_to": null,
+     "last_verified": "2026-09-07",
+     "verification_method": "fixture sintetica"
+    },
+    {
+     "relationship_id": "rel:v03",
+     "subject": "org:b",
+     "predicate": "USES",
+     "object": "prod:p",
+     "polarity": "AFFIRMS",
+     "nature": "STRUCTURAL",
+     "status": "VERIFIED",
+     "support_level": "ALTO",
+     "source_id": "src:fx",
+     "statement": "org:b USES prod:p (fixture)",
+     "valid_from": "2020-01-01",
+     "valid_to": null,
+     "last_verified": "2026-09-07",
+     "verification_method": "fixture sintetica"
+    },
+    {
+     "relationship_id": "rel:v04",
+     "subject": "prod:q",
+     "predicate": "SUBSTITUTES",
+     "object": "prod:p",
+     "polarity": "DENIES",
+     "nature": "STRUCTURAL",
+     "status": "VERIFIED",
+     "support_level": "ALTO",
+     "source_id": "src:fx",
+     "statement": "prod:q SUBSTITUTES prod:p (fixture)",
+     "valid_from": "2020-01-01",
+     "valid_to": null,
+     "last_verified": "2026-09-07",
+     "verification_method": "fixture sintetica"
+    }
+   ],
+   "sources": [
+    {
+     "source_id": "src:fx",
+     "tipo": "OWN_ANALYSIS",
+     "publisher": null,
+     "titulo": "fixture sintetica de P5B",
+     "localizador": "tests/fixtures/valoracion/casos.json",
+     "fecha_publicacion": null,
+     "fecha_consulta": "2026-09-07",
+     "accesible": true
+    }
+   ],
+   "concepts": []
+  },
+  "evidence": [
+   {
+    "evidence_id": "ev:fx:d1",
+    "entity_id": "org:a",
+    "metric": "demand",
+    "value_num": 1.0,
+    "value_text": null,
+    "nature": "MEASURED",
+    "source": "fixture",
+    "source_scale": "market_data_priority",
+    "source_rank": 1,
+    "occurred_at": "2026-09-01",
+    "known_at": "2026-09-02"
+   },
+   {
+    "evidence_id": "ev:fx:c1",
+    "entity_id": "prod:p",
+    "metric": "capacity_utilization",
+    "value_num": 95.0,
+    "value_text": null,
+    "nature": "MEASURED",
+    "source": "fixture",
+    "source_scale": "market_data_priority",
+    "source_rank": 1,
+    "occurred_at": "2026-09-01",
+    "known_at": "2026-09-02"
+   }
+  ],
+  "event": {
+   "event_id": "ev4:fx:demanda",
+   "primary_entity": "org:a",
+   "action": "demand_change",
+   "direction": "UP"
+  },
+  "origen": "org:a",
+  "profundidad": 2
+ },
+ "T2_coste": {
+  "_nota": "el precio del insumo X sube y A lo usa",
+  "_esperado": "A cost POSITIVE/SUPPORTED · A margin NEGATIVE/PARTIAL con supuesto declarado",
+  "knowledge": {
+   "entities": [
+    {
+     "entity_id": "org:a",
+     "type": "organization",
+     "nombre": "org:a",
+     "status": "ACTIVE",
+     "asset_id": null,
+     "aliases": [],
+     "source_id": "src:fx"
+    },
+    {
+     "entity_id": "org:b",
+     "type": "organization",
+     "nombre": "org:b",
+     "status": "ACTIVE",
+     "asset_id": null,
+     "aliases": [],
+     "source_id": "src:fx"
+    },
+    {
+     "entity_id": "org:c",
+     "type": "organization",
+     "nombre": "org:c",
+     "status": "ACTIVE",
+     "asset_id": null,
+     "aliases": [],
+     "source_id": "src:fx"
+    },
+    {
+     "entity_id": "prod:p",
+     "type": "product",
+     "nombre": "prod:p",
+     "status": "ACTIVE",
+     "asset_id": null,
+     "aliases": [],
+     "source_id": "src:fx"
+    },
+    {
+     "entity_id": "prod:q",
+     "type": "product",
+     "nombre": "prod:q",
+     "status": "ACTIVE",
+     "asset_id": null,
+     "aliases": [],
+     "source_id": "src:fx"
+    },
+    {
+     "entity_id": "mat:x",
+     "type": "material",
+     "nombre": "mat:x",
+     "status": "ACTIVE",
+     "asset_id": null,
+     "aliases": [],
+     "source_id": "src:fx"
+    }
+   ],
+   "relationships": [
+    {
+     "relationship_id": "rel:v10",
+     "subject": "org:a",
+     "predicate": "USES",
+     "object": "mat:x",
+     "polarity": "AFFIRMS",
+     "nature": "STRUCTURAL",
+     "status": "VERIFIED",
+     "support_level": "ALTO",
+     "source_id": "src:fx",
+     "statement": "org:a USES mat:x (fixture)",
+     "valid_from": "2020-01-01",
+     "valid_to": null,
+     "last_verified": "2026-09-07",
+     "verification_method": "fixture sintetica"
+    }
+   ],
+   "sources": [
+    {
+     "source_id": "src:fx",
+     "tipo": "OWN_ANALYSIS",
+     "publisher": null,
+     "titulo": "fixture sintetica de P5B",
+     "localizador": "tests/fixtures/valoracion/casos.json",
+     "fecha_publicacion": null,
+     "fecha_consulta": "2026-09-07",
+     "accesible": true
+    }
+   ],
+   "concepts": []
+  },
+  "evidence": [
+   {
+    "evidence_id": "ev:fx:px",
+    "entity_id": "mat:x",
+    "metric": "price",
+    "value_num": 120.0,
+    "value_text": null,
+    "nature": "MEASURED",
+    "source": "fixture",
+    "source_scale": "market_data_priority",
+    "source_rank": 1,
+    "occurred_at": "2026-09-01",
+    "known_at": "2026-09-02"
+   }
+  ],
+  "event": {
+   "event_id": "ev4:fx:precio",
+   "primary_entity": "mat:x",
+   "action": "price_change",
+   "direction": "UP"
+  },
+  "origen": "mat:x",
+  "profundidad": 1
+ },
+ "T3_sustitucion": {
+  "_nota": "igual que T1 pero con un sustituto AFIRMADO y vigente para prod:p",
+  "_esperado": "pricing_power pasa a UNKNOWN; el resto de la cadena NO cambia",
+  "knowledge": {
+   "entities": [
+    {
+     "entity_id": "org:a",
+     "type": "organization",
+     "nombre": "org:a",
+     "status": "ACTIVE",
+     "asset_id": null,
+     "aliases": [],
+     "source_id": "src:fx"
+    },
+    {
+     "entity_id": "org:b",
+     "type": "organization",
+     "nombre": "org:b",
+     "status": "ACTIVE",
+     "asset_id": null,
+     "aliases": [],
+     "source_id": "src:fx"
+    },
+    {
+     "entity_id": "org:c",
+     "type": "organization",
+     "nombre": "org:c",
+     "status": "ACTIVE",
+     "asset_id": null,
+     "aliases": [],
+     "source_id": "src:fx"
+    },
+    {
+     "entity_id": "prod:p",
+     "type": "product",
+     "nombre": "prod:p",
+     "status": "ACTIVE",
+     "asset_id": null,
+     "aliases": [],
+     "source_id": "src:fx"
+    },
+    {
+     "entity_id": "prod:q",
+     "type": "product",
+     "nombre": "prod:q",
+     "status": "ACTIVE",
+     "asset_id": null,
+     "aliases": [],
+     "source_id": "src:fx"
+    },
+    {
+     "entity_id": "mat:x",
+     "type": "material",
+     "nombre": "mat:x",
+     "status": "ACTIVE",
+     "asset_id": null,
+     "aliases": [],
+     "source_id": "src:fx"
+    }
+   ],
+   "relationships": [
+    {
+     "relationship_id": "rel:v01",
+     "subject": "org:b",
+     "predicate": "SUPPLIES",
+     "object": "org:a",
+     "polarity": "AFFIRMS",
+     "nature": "STRUCTURAL",
+     "status": "VERIFIED",
+     "support_level": "ALTO",
+     "source_id": "src:fx",
+     "statement": "org:b SUPPLIES org:a (fixture)",
+     "valid_from": "2020-01-01",
+     "valid_to": null,
+     "last_verified": "2026-09-07",
+     "verification_method": "fixture sintetica"
+    },
+    {
+     "relationship_id": "rel:v02",
+     "subject": "org:c",
+     "predicate": "SUPPLIES",
+     "object": "org:b",
+     "polarity": "AFFIRMS",
+     "nature": "STRUCTURAL",
+     "status": "VERIFIED",
+     "support_level": "ALTO",
+     "source_id": "src:fx",
+     "statement": "org:c SUPPLIES org:b (fixture)",
+     "valid_from": "2020-01-01",
+     "valid_to": null,
+     "last_verified": "2026-09-07",
+     "verification_method": "fixture sintetica"
+    },
+    {
+     "relationship_id": "rel:v03",
+     "subject": "org:b",
+     "predicate": "USES",
+     "object": "prod:p",
+     "polarity": "AFFIRMS",
+     "nature": "STRUCTURAL",
+     "status": "VERIFIED",
+     "support_level": "ALTO",
+     "source_id": "src:fx",
+     "statement": "org:b USES prod:p (fixture)",
+     "valid_from": "2020-01-01",
+     "valid_to": null,
+     "last_verified": "2026-09-07",
+     "verification_method": "fixture sintetica"
+    },
+    {
+     "relationship_id": "rel:v05",
+     "subject": "prod:q",
+     "predicate": "SUBSTITUTES",
+     "object": "prod:p",
+     "polarity": "AFFIRMS",
+     "nature": "STRUCTURAL",
+     "status": "VERIFIED",
+     "support_level": "ALTO",
+     "source_id": "src:fx",
+     "statement": "prod:q SUBSTITUTES prod:p (fixture)",
+     "valid_from": "2020-01-01",
+     "valid_to": null,
+     "last_verified": "2026-09-07",
+     "verification_method": "fixture sintetica"
+    }
+   ],
+   "sources": [
+    {
+     "source_id": "src:fx",
+     "tipo": "OWN_ANALYSIS",
+     "publisher": null,
+     "titulo": "fixture sintetica de P5B",
+     "localizador": "tests/fixtures/valoracion/casos.json",
+     "fecha_publicacion": null,
+     "fecha_consulta": "2026-09-07",
+     "accesible": true
+    }
+   ],
+   "concepts": []
+  },
+  "evidence": [
+   {
+    "evidence_id": "ev:fx:d1",
+    "entity_id": "org:a",
+    "metric": "demand",
+    "value_num": 1.0,
+    "value_text": null,
+    "nature": "MEASURED",
+    "source": "fixture",
+    "source_scale": "market_data_priority",
+    "source_rank": 1,
+    "occurred_at": "2026-09-01",
+    "known_at": "2026-09-02"
+   },
+   {
+    "evidence_id": "ev:fx:c1",
+    "entity_id": "prod:p",
+    "metric": "capacity_utilization",
+    "value_num": 95.0,
+    "value_text": null,
+    "nature": "MEASURED",
+    "source": "fixture",
+    "source_scale": "market_data_priority",
+    "source_rank": 1,
+    "occurred_at": "2026-09-01",
+    "known_at": "2026-09-02"
+   }
+  ],
+  "event": {
+   "event_id": "ev4:fx:demanda",
+   "primary_entity": "org:a",
+   "action": "demand_change",
+   "direction": "UP"
+  },
+  "origen": "org:a",
+  "profundidad": 2
+ },
+ "T5_sin_evidencia": {
+  "_nota": "existe la relacion estructural pero no hay NINGUNA Evidence de la variable",
+  "_esperado": "UNKNOWN con requires_evidence nombrando lo que falta",
+  "knowledge": {
+   "entities": [
+    {
+     "entity_id": "org:a",
+     "type": "organization",
+     "nombre": "org:a",
+     "status": "ACTIVE",
+     "asset_id": null,
+     "aliases": [],
+     "source_id": "src:fx"
+    },
+    {
+     "entity_id": "org:b",
+     "type": "organization",
+     "nombre": "org:b",
+     "status": "ACTIVE",
+     "asset_id": null,
+     "aliases": [],
+     "source_id": "src:fx"
+    },
+    {
+     "entity_id": "org:c",
+     "type": "organization",
+     "nombre": "org:c",
+     "status": "ACTIVE",
+     "asset_id": null,
+     "aliases": [],
+     "source_id": "src:fx"
+    },
+    {
+     "entity_id": "prod:p",
+     "type": "product",
+     "nombre": "prod:p",
+     "status": "ACTIVE",
+     "asset_id": null,
+     "aliases": [],
+     "source_id": "src:fx"
+    },
+    {
+     "entity_id": "prod:q",
+     "type": "product",
+     "nombre": "prod:q",
+     "status": "ACTIVE",
+     "asset_id": null,
+     "aliases": [],
+     "source_id": "src:fx"
+    },
+    {
+     "entity_id": "mat:x",
+     "type": "material",
+     "nombre": "mat:x",
+     "status": "ACTIVE",
+     "asset_id": null,
+     "aliases": [],
+     "source_id": "src:fx"
+    }
+   ],
+   "relationships": [
+    {
+     "relationship_id": "rel:v10",
+     "subject": "org:a",
+     "predicate": "USES",
+     "object": "mat:x",
+     "polarity": "AFFIRMS",
+     "nature": "STRUCTURAL",
+     "status": "VERIFIED",
+     "support_level": "ALTO",
+     "source_id": "src:fx",
+     "statement": "org:a USES mat:x (fixture)",
+     "valid_from": "2020-01-01",
+     "valid_to": null,
+     "last_verified": "2026-09-07",
+     "verification_method": "fixture sintetica"
+    }
+   ],
+   "sources": [
+    {
+     "source_id": "src:fx",
+     "tipo": "OWN_ANALYSIS",
+     "publisher": null,
+     "titulo": "fixture sintetica de P5B",
+     "localizador": "tests/fixtures/valoracion/casos.json",
+     "fecha_publicacion": null,
+     "fecha_consulta": "2026-09-07",
+     "accesible": true
+    }
+   ],
+   "concepts": []
+  },
+  "evidence": [],
+  "event": {
+   "event_id": "ev4:fx:precio",
+   "primary_entity": "mat:x",
+   "action": "price_change",
+   "direction": "UP"
+  },
+  "origen": "mat:x",
+  "profundidad": 1
+ },
+ "T6_evento_sin_impulso": {
+  "_nota": "una noticia: un medio afirma una postura, que no es un cambio observado",
+  "_esperado": "sin impulso: todo UNKNOWN, y se dice por que",
+  "knowledge": {
+   "entities": [
+    {
+     "entity_id": "org:a",
+     "type": "organization",
+     "nombre": "org:a",
+     "status": "ACTIVE",
+     "asset_id": null,
+     "aliases": [],
+     "source_id": "src:fx"
+    },
+    {
+     "entity_id": "org:b",
+     "type": "organization",
+     "nombre": "org:b",
+     "status": "ACTIVE",
+     "asset_id": null,
+     "aliases": [],
+     "source_id": "src:fx"
+    },
+    {
+     "entity_id": "org:c",
+     "type": "organization",
+     "nombre": "org:c",
+     "status": "ACTIVE",
+     "asset_id": null,
+     "aliases": [],
+     "source_id": "src:fx"
+    },
+    {
+     "entity_id": "prod:p",
+     "type": "product",
+     "nombre": "prod:p",
+     "status": "ACTIVE",
+     "asset_id": null,
+     "aliases": [],
+     "source_id": "src:fx"
+    },
+    {
+     "entity_id": "prod:q",
+     "type": "product",
+     "nombre": "prod:q",
+     "status": "ACTIVE",
+     "asset_id": null,
+     "aliases": [],
+     "source_id": "src:fx"
+    },
+    {
+     "entity_id": "mat:x",
+     "type": "material",
+     "nombre": "mat:x",
+     "status": "ACTIVE",
+     "asset_id": null,
+     "aliases": [],
+     "source_id": "src:fx"
+    }
+   ],
+   "relationships": [
+    {
+     "relationship_id": "rel:v01",
+     "subject": "org:b",
+     "predicate": "SUPPLIES",
+     "object": "org:a",
+     "polarity": "AFFIRMS",
+     "nature": "STRUCTURAL",
+     "status": "VERIFIED",
+     "support_level": "ALTO",
+     "source_id": "src:fx",
+     "statement": "org:b SUPPLIES org:a (fixture)",
+     "valid_from": "2020-01-01",
+     "valid_to": null,
+     "last_verified": "2026-09-07",
+     "verification_method": "fixture sintetica"
+    },
+    {
+     "relationship_id": "rel:v02",
+     "subject": "org:c",
+     "predicate": "SUPPLIES",
+     "object": "org:b",
+     "polarity": "AFFIRMS",
+     "nature": "STRUCTURAL",
+     "status": "VERIFIED",
+     "support_level": "ALTO",
+     "source_id": "src:fx",
+     "statement": "org:c SUPPLIES org:b (fixture)",
+     "valid_from": "2020-01-01",
+     "valid_to": null,
+     "last_verified": "2026-09-07",
+     "verification_method": "fixture sintetica"
+    },
+    {
+     "relationship_id": "rel:v03",
+     "subject": "org:b",
+     "predicate": "USES",
+     "object": "prod:p",
+     "polarity": "AFFIRMS",
+     "nature": "STRUCTURAL",
+     "status": "VERIFIED",
+     "support_level": "ALTO",
+     "source_id": "src:fx",
+     "statement": "org:b USES prod:p (fixture)",
+     "valid_from": "2020-01-01",
+     "valid_to": null,
+     "last_verified": "2026-09-07",
+     "verification_method": "fixture sintetica"
+    }
+   ],
+   "sources": [
+    {
+     "source_id": "src:fx",
+     "tipo": "OWN_ANALYSIS",
+     "publisher": null,
+     "titulo": "fixture sintetica de P5B",
+     "localizador": "tests/fixtures/valoracion/casos.json",
+     "fecha_publicacion": null,
+     "fecha_consulta": "2026-09-07",
+     "accesible": true
+    }
+   ],
+   "concepts": []
+  },
+  "evidence": [
+   {
+    "evidence_id": "ev:fx:d1",
+    "entity_id": "org:a",
+    "metric": "demand",
+    "value_num": 1.0,
+    "value_text": null,
+    "nature": "MEASURED",
+    "source": "fixture",
+    "source_scale": "market_data_priority",
+    "source_rank": 1,
+    "occurred_at": "2026-09-01",
+    "known_at": "2026-09-02"
+   }
+  ],
+  "event": {
+   "event_id": "ev4:fx:noticia",
+   "primary_entity": "org:a",
+   "action": "sentiment_assertion",
+   "direction": null
+  },
+  "origen": "org:a",
+  "profundidad": 2
+ }
+}

@@ -1,0 +1,20 @@
+[
+ {
+  "entity_id": "sect:technology",
+  "type": "sector",
+  "nombre": "Technology",
+  "status": "ACTIVE",
+  "asset_id": null,
+  "aliases": [],
+  "source_id": "src:dimasset-equity"
+ },
+ {
+  "entity_id": "sect:energy",
+  "type": "sector",
+  "nombre": "Energy",
+  "status": "ACTIVE",
+  "asset_id": null,
+  "aliases": [],
+  "source_id": "src:dimasset-equity"
+ }
+]

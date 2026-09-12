@@ -1,0 +1,56 @@
+{
+  "asset_id": "DOT",
+  "asset_type": "crypto",
+  "particiones": [
+    {
+      "fichero": "2021.parquet",
+      "anio": 2021,
+      "revision": 1,
+      "sha256": "e019e276b84bd186d7197b89395a12220df82d4825de662bd30287d06f5e4596",
+      "filas": 1552,
+      "data_as_of_min": "2021-06-16",
+      "data_as_of_max": "2021-12-31",
+      "created_at": "2026-09-05T17:59:29Z"
+    },
+    {
+      "fichero": "2022.parquet",
+      "anio": 2022,
+      "revision": 1,
+      "sha256": "835d976446e1b4956148d05172601ac44a050138d41b5570fd90ee06885308f4",
+      "filas": 3650,
+      "data_as_of_min": "2022-01-01",
+      "data_as_of_max": "2022-12-31",
+      "created_at": "2026-09-05T17:59:29Z"
+    },
+    {
+      "fichero": "2023.parquet",
+      "anio": 2023,
+      "revision": 1,
+      "sha256": "3d2444ec78a99d0f6e622682155991c147aa666f1dd501608f24e750927e037a",
+      "filas": 3650,
+      "data_as_of_min": "2023-01-01",
+      "data_as_of_max": "2023-12-31",
+      "created_at": "2026-09-05T17:59:29Z"
+    },
+    {
+      "fichero": "2024.parquet",
+      "anio": 2024,
+      "revision": 1,
+      "sha256": "d5ed649b39e66bbf90e4f86d4ef70a9232ee3a60d45b1ebd9d4669194b6687f9",
+      "filas": 3660,
+      "data_as_of_min": "2024-01-01",
+      "data_as_of_max": "2024-12-31",
+      "created_at": "2026-09-05T17:59:29Z"
+    },
+    {
+      "fichero": "2025.parquet",
+      "anio": 2025,
+      "revision": 1,
+      "sha256": "d5df5f747ef580ddbd46a1449c5af8d2c5e95c8abdc65d0e22ea593d3306effa",
+      "filas": 3650,
+      "data_as_of_min": "2025-01-01",
+      "data_as_of_max": "2025-12-31",
+      "created_at": "2026-09-05T17:59:29Z"
+    }
+  ]
+}

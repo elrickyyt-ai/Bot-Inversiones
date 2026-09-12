@@ -1,0 +1,168 @@
+{
+ "_nota": "FIXTURES SINTETICAS declaradas. El Knowledge real no contiene ningun ciclo (medido) ni ninguna pareja AFFIRMS/DENIES sobre el mismo triple: las dos relaciones DENIES que existen (BTC y XRP sobre tech:defi-smart-contracts) no tienen contraparte afirmativa. Fabricarlas en knowledge/ seria contaminar conocimiento verificado.",
+ "T5_ciclo": {
+  "_esperado": "A -> B -> C -> A: el traversal termina sin duplicar infinitamente",
+  "entities": [
+   {
+    "entity_id": "org:a",
+    "type": "organization",
+    "nombre": "org:a",
+    "status": "ACTIVE",
+    "asset_id": null,
+    "aliases": [],
+    "source_id": "src:fx"
+   },
+   {
+    "entity_id": "org:b",
+    "type": "organization",
+    "nombre": "org:b",
+    "status": "ACTIVE",
+    "asset_id": null,
+    "aliases": [],
+    "source_id": "src:fx"
+   },
+   {
+    "entity_id": "org:c",
+    "type": "organization",
+    "nombre": "org:c",
+    "status": "ACTIVE",
+    "asset_id": null,
+    "aliases": [],
+    "source_id": "src:fx"
+   }
+  ],
+  "relationships": [
+   {
+    "relationship_id": "rel:fx01",
+    "subject": "org:a",
+    "predicate": "SUPPLIES",
+    "object": "org:b",
+    "polarity": "AFFIRMS",
+    "nature": "STRUCTURAL",
+    "status": "VERIFIED",
+    "support_level": "ALTO",
+    "source_id": "src:fx",
+    "statement": "org:a SUPPLIES org:b (fixture)",
+    "valid_from": "2020-01-01",
+    "valid_to": null,
+    "last_verified": "2026-09-07",
+    "verification_method": "fixture sintetica"
+   },
+   {
+    "relationship_id": "rel:fx02",
+    "subject": "org:b",
+    "predicate": "SUPPLIES",
+    "object": "org:c",
+    "polarity": "AFFIRMS",
+    "nature": "STRUCTURAL",
+    "status": "VERIFIED",
+    "support_level": "ALTO",
+    "source_id": "src:fx",
+    "statement": "org:b SUPPLIES org:c (fixture)",
+    "valid_from": "2020-01-01",
+    "valid_to": null,
+    "last_verified": "2026-09-07",
+    "verification_method": "fixture sintetica"
+   },
+   {
+    "relationship_id": "rel:fx03",
+    "subject": "org:c",
+    "predicate": "SUPPLIES",
+    "object": "org:a",
+    "polarity": "AFFIRMS",
+    "nature": "STRUCTURAL",
+    "status": "VERIFIED",
+    "support_level": "ALTO",
+    "source_id": "src:fx",
+    "statement": "org:c SUPPLIES org:a (fixture)",
+    "valid_from": "2020-01-01",
+    "valid_to": null,
+    "last_verified": "2026-09-07",
+    "verification_method": "fixture sintetica"
+   }
+  ],
+  "sources": [
+   {
+    "source_id": "src:fx",
+    "tipo": "OWN_ANALYSIS",
+    "publisher": null,
+    "titulo": "fixture sintetica de P5A",
+    "localizador": "tests/fixtures/caminos/casos.json",
+    "fecha_publicacion": null,
+    "fecha_consulta": "2026-09-07",
+    "accesible": true
+   }
+  ],
+  "concepts": []
+ },
+ "T6_contradiccion": {
+  "_esperado": "A SUPPLIES B y A DENIES SUPPLIES B: el camino se marca CONTESTED, no se resuelve",
+  "entities": [
+   {
+    "entity_id": "org:a",
+    "type": "organization",
+    "nombre": "org:a",
+    "status": "ACTIVE",
+    "asset_id": null,
+    "aliases": [],
+    "source_id": "src:fx"
+   },
+   {
+    "entity_id": "org:b",
+    "type": "organization",
+    "nombre": "org:b",
+    "status": "ACTIVE",
+    "asset_id": null,
+    "aliases": [],
+    "source_id": "src:fx"
+   }
+  ],
+  "relationships": [
+   {
+    "relationship_id": "rel:fx11",
+    "subject": "org:a",
+    "predicate": "SUPPLIES",
+    "object": "org:b",
+    "polarity": "AFFIRMS",
+    "nature": "STRUCTURAL",
+    "status": "VERIFIED",
+    "support_level": "ALTO",
+    "source_id": "src:fx",
+    "statement": "org:a SUPPLIES org:b (fixture)",
+    "valid_from": "2020-01-01",
+    "valid_to": null,
+    "last_verified": "2026-09-07",
+    "verification_method": "fixture sintetica"
+   },
+   {
+    "relationship_id": "rel:fx12",
+    "subject": "org:a",
+    "predicate": "SUPPLIES",
+    "object": "org:b",
+    "polarity": "DENIES",
+    "nature": "STRUCTURAL",
+    "status": "VERIFIED",
+    "support_level": "ALTO",
+    "source_id": "src:fx",
+    "statement": "org:a SUPPLIES org:b (fixture)",
+    "valid_from": "2020-01-01",
+    "valid_to": null,
+    "last_verified": "2026-09-07",
+    "verification_method": "fixture sintetica"
+   }
+  ],
+  "sources": [
+   {
+    "source_id": "src:fx",
+    "tipo": "OWN_ANALYSIS",
+    "publisher": null,
+    "titulo": "fixture sintetica de P5A",
+    "localizador": "tests/fixtures/caminos/casos.json",
+    "fecha_publicacion": null,
+    "fecha_consulta": "2026-09-07",
+    "accesible": true
+   }
+  ],
+  "concepts": []
+ }
+}

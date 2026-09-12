@@ -21,6 +21,7 @@ from adapters import (
     adapt_crypto, adapt_technical, adapt_macro, adapt_equity, adapt_thesis, adapt_news,
     adapt_asset_crypto, adapt_asset_equity, adapt_asset_macro,
 )
+import storage
 from schema import validate_metric_row, validate_thesis_row, validate_asset_row, validate_news_row, ContractError
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -53,18 +54,40 @@ def _load_existing(path):
 
 
 def _write_metric_rows(asset_id, new_rows):
+    """Anade filas nuevas a incoming/, con la MISMA clave logica de siempre.
+
+    Solo deduplica contra incoming/, no contra history/, y no es un atajo:
+    history/ contiene unicamente anios ya cerrados, asi que una fila del
+    anio en curso no puede colisionar con el. Una fila de un anio cerrado
+    no es un duplicado sino un dato TARDIO, y va a incoming/{ID}_late.csv
+    para consolidarse mas adelante como una revision -- nunca reescribiendo
+    la particion cerrada.
+
+    Escribe solo CSV con la biblioteca estandar: es el camino critico
+    diario y no debe adquirir la dependencia de PyArrow.
+    """
     for row in new_rows:
         validate_metric_row(row)
-    path = os.path.join(DATA_DIR, "metrics", f"{asset_id}.json")
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    existing = _load_existing(path)
-    existing_keys = {_metric_key(r) for r in existing}
-    added = [r for r in new_rows if _metric_key(r) not in existing_keys]
-    merged = existing + added
-    merged.sort(key=lambda r: (r["metric"], r["data_as_of"]))
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(merged, f, ensure_ascii=False, indent=2)
-    return len(merged), len(added), len(new_rows) - len(added)
+    rows = [storage.from_json_row(r) for r in new_rows]
+    anio = storage.anio_abierto()
+
+    destinos = {}
+    for r in rows:
+        late = r["data_as_of"].year < anio
+        destinos.setdefault(storage.incoming_path(asset_id, anio, late=late), []).append(r)
+
+    total = added = 0
+    for path, candidatas in destinos.items():
+        existentes = storage.read_incoming(path)
+        claves = {storage.logical_key(r) for r in existentes}
+        nuevas = [r for r in candidatas if storage.logical_key(r) not in claves]
+        storage.append_incoming(path, nuevas)
+        added += len(nuevas)
+        total += len(existentes) + len(nuevas)
+
+    # "total" es lo acumulado en incoming/; el histórico cerrado vive en
+    # history/ y no se toca en el flujo diario.
+    return total, added, len(new_rows) - added
 
 
 def _write_asset_row(asset_id, row):
@@ -204,7 +227,32 @@ def build_all(include_equity=True):
             print(f"  - {e}")
         raise SystemExit(1)
 
+    _escribir_cobertura()
     return summary
+
+
+def _escribir_cobertura():
+    """data/coverage.json -- derivado, gitignored, recalculado entero en
+    cada build. Solo lee incoming/ (biblioteca estandar): no mete PyArrow
+    en el camino critico del cron diario. Nunca falla el build: la
+    frescura es una declaracion del estado, no una puerta -- que el IPC
+    envejezca hasta su cadencia normal es correcto y no debe impedir
+    commitear datos nuevos."""
+    import cobertura
+    try:
+        res = cobertura.evaluar()
+    except Exception as e:  # noqa: BLE001 -- ver docstring
+        print(f"\ncoverage.json NO generado ({type(e).__name__}: {e}) -- el build sigue.")
+        return
+    tmp = cobertura.COVERAGE_PATH + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(res, f, ensure_ascii=False, indent=1)
+    os.replace(tmp, cobertura.COVERAGE_PATH)
+    resumen = {}
+    for fila in res["por_dominio"]:
+        resumen[fila["estado_frescura"]] = resumen.get(fila["estado_frescura"], 0) + 1
+    print(f"\ncoverage.json: {len(res['por_dominio'])} dominios — "
+          + ", ".join(f"{v} {k}" for k, v in sorted(resumen.items())))
 
 
 if __name__ == "__main__":

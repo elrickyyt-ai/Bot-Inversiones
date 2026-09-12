@@ -1,0 +1,73 @@
+{
+  "_nota": "Registro DECLARADO de acciones corporativas. Ningun motor lo escribe. La CLASIFICACION no se deduce del factor de precio: el factor es una SENAL, la autoridad es el filing (D-41). Cada entrada dice en que se basa su clasificacion y si esta verificada contra la SEC.",
+  "_version": "auditoria de cobertura de corporate actions v1 (2026-09-08)",
+
+  "tipos": {
+    "SPLIT":          "division o agrupacion de acciones; no cambia la exposicion economica",
+    "TICKER_CHANGE":  "cambia la etiqueta de cotizacion, no el instrumento",
+    "NAME_CHANGE":    "cambia el nombre de la entidad legal, no el instrumento",
+    "MERGER":         "A -> B; la exposicion cambia por combinacion",
+    "SPINOFF":        "A -> B + C; la exposicion cambia por reparto",
+    "REORGANIZATION": "cambio de estructura societaria (p.ej. holding) sin cambio economico directo",
+    "SUCCESSION":     "un instrumento sucede a otro sin transformacion economica adicional",
+    "UNKNOWN":        "hay senal de discontinuidad y no se ha podido clasificar"
+  },
+  "_regla_de_clasificacion": "Un ratio no redondo es indicio de escision, NUNCA prueba. La clasificacion exige el filing. Lo no verificado se marca como tal y no se asciende a verificado.",
+
+  "acciones": [
+    {"asset_id": "IBM", "fecha": "1999-05-27", "tipo": "SPLIT", "detalle": "2:1",
+     "senal_de_precio": "split 2:1 declarado por Yahoo",
+     "clasificacion_basada_en": "ratio redondo",
+     "verificado_contra_sec": false},
+
+    {"asset_id": "IBM", "fecha": "2021-11-04", "tipo": "SPINOFF", "detalle": "escision de Kyndryl",
+     "senal_de_precio": "Yahoo lo declara como split 1046:1000 -- ratio no redondo",
+     "clasificacion_basada_en": "8-K del 2021-11-04 con items 2.01,7.01,9.01 (acc 0001558370-21-014643). El Item 2.01 es 'Completion of Acquisition or Disposition of Assets' y su fecha coincide exactamente con el factor de precio",
+     "verificado_contra_sec": true},
+
+    {"asset_id": "NVDA", "fecha": "2021-07-20", "tipo": "SPLIT", "detalle": "4:1",
+     "senal_de_precio": "split 4:1 declarado por Yahoo",
+     "clasificacion_basada_en": "ratio redondo", "verificado_contra_sec": false},
+    {"asset_id": "NVDA", "fecha": "2024-06-10", "tipo": "SPLIT", "detalle": "10:1",
+     "senal_de_precio": "split 10:1 declarado por Yahoo",
+     "clasificacion_basada_en": "ratio redondo", "verificado_contra_sec": false},
+
+    {"asset_id": "XOM", "fecha": "1999-11-30", "tipo": "MERGER", "detalle": "fusion con Mobil",
+     "senal_de_precio": "NINGUNA -- la fuente de precios no declara nada en 1999",
+     "clasificacion_basada_en": "transicion de formerNames en SEC: 'EXXON CORP' termina el 1999-11-30 y pasa a 'EXXON MOBIL CORP' (CIK 0000034088)",
+     "verificado_contra_sec": true},
+    {"asset_id": "XOM", "fecha": "2001-07-19", "tipo": "SPLIT", "detalle": "2:1",
+     "senal_de_precio": "split 2:1 declarado por Yahoo",
+     "clasificacion_basada_en": "ratio redondo", "verificado_contra_sec": false},
+    {"asset_id": "XOM", "fecha": "2026-07-01", "tipo": "REORGANIZATION",
+     "detalle": "reorganizacion en holding: el ticker XOM pasa al CIK 0002115436",
+     "senal_de_precio": "NINGUNA",
+     "clasificacion_basada_en": "8-K12B del 2026-07-01 (acceptance 16:36:49Z, items 1.01,2.01,2.03,3.03,5.02,5.03,9.01) del CIK 0002115436, mas un 25-NSE el 2026-07-02 bajo el CIK historico 0000034088",
+     "verificado_contra_sec": true},
+
+    {"asset_id": "DWDP", "fecha": "2019-04-02", "tipo": "SPINOFF", "detalle": "escision de Dow",
+     "senal_de_precio": "Yahoo lo declara como split 1487:1000 sobre DD",
+     "clasificacion_basada_en": "ratio no redondo mas la cronologia societaria conocida",
+     "verificado_contra_sec": false},
+    {"asset_id": "DWDP", "fecha": "2019-06-03", "tipo": "SPINOFF", "detalle": "escision de Corteva mas contrasplit",
+     "senal_de_precio": "Yahoo lo declara como split 4725:10000 sobre DD",
+     "clasificacion_basada_en": "ratio no redondo mas la cronologia societaria conocida",
+     "verificado_contra_sec": false},
+
+    {"asset_id": "UTX", "fecha": "2020-04-03", "tipo": "SPINOFF", "detalle": "escisiones de Otis y Carrier",
+     "senal_de_precio": "Yahoo lo declara como un unico split 15890:10000 sobre RTX",
+     "clasificacion_basada_en": "ratio no redondo mas la cronologia societaria conocida",
+     "verificado_contra_sec": false},
+    {"asset_id": "UTX", "fecha": "2020-04-03", "tipo": "MERGER", "detalle": "fusion con Raytheon",
+     "senal_de_precio": "NINGUNA -- coincide en fecha con la escision y la fuente solo declara un factor",
+     "clasificacion_basada_en": "transicion de formerNames: 'UNITED TECHNOLOGIES CORP /DE/' termina el 2020-04-06",
+     "verificado_contra_sec": true},
+
+    {"asset_id": "MOB", "fecha": "2022-08-25", "tipo": "UNKNOWN",
+     "detalle": "el ticker MOB pasa a designar a Mobilicom Limited (NASDAQ), sin relacion con Mobil Corporation",
+     "senal_de_precio": "NINGUNA -- la serie simplemente empieza",
+     "clasificacion_basada_en": "metadatos de la fuente de precios: longName 'Mobilicom Limited', firstTradeDate 1661434200 (2022-08-25)",
+     "verificado_contra_sec": false,
+     "por_que_UNKNOWN": "no es una transformacion DEL instrumento historico: es OTRO instrumento que reutiliza la etiqueta. Clasificarlo como SUCCESSION seria justo el falso positivo de identidad que este registro existe para impedir."}
+  ]
+}

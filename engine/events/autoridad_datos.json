@@ -1,0 +1,195 @@
+{
+  "_nota": "Autoridad de dato por COMPONENTE de un earnings event. Declarativo y curado a mano, como universo_v1.json y episodios.json (D-04). Ningun motor lo escribe. No define un pipeline: define quien manda sobre cada pieza y con que calidad temporal.",
+  "_version": "auditoria de autoridad de datos historicos v1 (2026-09-08)",
+  "regla_fundacional": "La cobertura de un proveedor NO define quien existio en nuestro pasado. Que una empresa no aparezca en un proveedor es un hecho sobre el PROVEEDOR, nunca sobre la EMPRESA. Demostrado con DWDP y UTX: ausentes en Alpha Vantage y en company_tickers.json de la SEC, y sin embargo plenamente presentes en EDGAR con su historial completo.",
+  "estados_de_cobertura": {
+    "AVAILABLE": "medido y presente",
+    "UNAVAILABLE": "medido y AUSENTE en esa fuente. Es un hallazgo, no una laguna",
+    "NOT_MEASURED": "no se ha comprobado. Nunca se convierte en UNAVAILABLE",
+    "AMBIGUOUS": "recuperable pero por un mecanismo que no es autoritativo (heuristica, busqueda de texto), o presente con semantica dudosa"
+  },
+  "_regla_de_estados": "UNAVAILABLE y NOT_MEASURED no se intercambian en ninguna direccion. Uno dice 'lo miramos y no esta'; el otro, 'no lo hemos mirado'.",
+  "roles_de_proveedor": {
+    "AUTHORITATIVE_SOURCE": "manda sobre el componente: define si existe y con que valor",
+    "ENRICHMENT_SOURCE": "complementa un componente que otra fuente ya estableci. Su ausencia NUNCA niega la existencia del hecho",
+    "MARKET_SOURCE": "serie de mercado observada",
+    "BENCHMARK_SOURCE": "nivel publicado de un indice (D-25)"
+  },
+  "componentes": [
+    {
+      "componente": "company_instrument_existence",
+      "autoridad": "SEC EDGAR (CIK + formerNames con intervalo de validez)",
+      "estado": "AVAILABLE",
+      "verificado": "CIK 0001666700 conserva 'DowDuPont Inc.' 2016-03-01..2019-05-31; CIK 0000101829 conserva 'UNITED TECHNOLOGIES CORP /DE/' 1994-01-24..2020-04-06 y 'RAYTHEON TECHNOLOGIES CORP' 2020-04-07..2023-06-29.",
+      "por_que_no_alpha_vantage": "EARNINGS y SYMBOL_SEARCH devuelven vacio para ambos: no distinguen 'no existio' de 'ya no cotiza con ese simbolo'."
+    },
+    {
+      "componente": "ticker_historico_a_CIK",
+      "autoridad": "NINGUNA autoritativa medida",
+      "estado": "AMBIGUOUS",
+      "verificado": "company_tickers.json de la SEC es SOLO SUPERVIVIENTES (10.415 empresas; DWDP y UTX ausentes). EDGAR full-text search SI los recupera -- 'DWDP' da CIK 0001666700 en 44 de 76 documentos y 'UTX' da 0000101829 en 68 de 100 -- pero es busqueda de TEXTO con ruido real (Dow, Corteva, fondos que citan el simbolo), no un registro de identificadores.",
+      "consecuencia": "el mapa ticker-historico -> CIK es RECUPERABLE pero necesita corroboracion (que formerNames del CIK case con la empresa en ese periodo). Es el hueco de un Historical Instrument Master."
+    },
+    {
+      "componente": "event_occurrence",
+      "autoridad": "SEC EDGAR -- 8-K con Item 2.02 (Results of Operations)",
+      "estado": "AVAILABLE",
+      "verificado": "DWDP: 4 8-K con Item 2.02 en 2017-09..2019-06. UTX: 9 en 2017-09..2020-04-06. Ambos en la era ya deslistada."
+    },
+    {
+      "componente": "available_at",
+      "autoridad": "SEC EDGAR -- acceptanceDateTime",
+      "estado": "AVAILABLE",
+      "verificado": "presente en el 100% de los filings de ambos CIKs (1009 y 1002), con segundos y en UTC.",
+      "mejora_sobre_alpha_vantage": "acceptanceDateTime es un INSTANTE; el reportTime de Alpha Vantage es una etiqueta binaria de dia (PROVEEDOR_DIA). De un instante se DERIVA pre/intra/post comparando con el horario de NYSE; al reves no se puede."
+    },
+    {
+      "componente": "actual_financial_result",
+      "autoridad": "SEC XBRL (companyconcept)",
+      "estado": "AVAILABLE",
+      "verificado": "DWDP 131 observaciones de EarningsPerShareDiluted (2015-12-31..2026-06-30), UTX 324 (2007-12-31..2026-06-30). El 100% llevan 'filed' y 'accn'.",
+      "propiedad_critica": "XBRL es NATIVAMENTE VINTAGE: cada observacion dice cuando se presento. Permite reconstruir lo conocido en T filtrando filed <= T. Medido: el EPS de UTX para end=2019-12-31 vale 1.32 presentado en 2020-02-06 y 6.41 presentado en 2022-02-11 -- una reexpresion que NADIE conocia en 2019. Tomar el ultimo valor seria look-ahead puro."
+    },
+    {
+      "componente": "expectation_estimatedEPS",
+      "autoridad": "Alpha Vantage, como ENRICHMENT_SOURCE",
+      "estado": "AVAILABLE para supervivientes · UNAVAILABLE para deslistados",
+      "verificado": "488 trimestres medidos con 8 estimatedEPS ausentes (AAPL, todos anteriores a 2004). Cero para DWDP y UTX.",
+      "advertencia": "el estimatedEPS de Alpha Vantage no declara vintage ni fecha de corte del consenso: no se sabe de que momento es la expectativa."
+    },
+    {
+      "componente": "consensus_point_in_time",
+      "autoridad": "NINGUNA",
+      "estado": "UNAVAILABLE",
+      "verificado": "ninguna fuente gratuita medida en este proyecto publica el consenso con la fecha en que ese consenso estaba vigente.",
+      "consecuencia": "expectation_status = UNAVAILABLE y surprise_status = UNAVAILABLE. NO elimina el evento."
+    },
+    {
+      "componente": "reportTime_pre_post",
+      "autoridad": "SEC acceptanceDateTime (derivado) · Alpha Vantage como ENRICHMENT",
+      "estado": "AVAILABLE",
+      "verificado": "reportTime de Alpha Vantage presente en las 488 filas medidas, pero es BINARIO. Medido un contraejemplo real: el 8-K Item 2.02 de DWDP del 2019-04-18 se acepto a las 19:38:27Z = 15:38 ET, en pleno mercado, 22 minutos antes del cierre. Ni pre ni post.",
+      "advertencia": "reportTime tampoco es constante por activo (MSFT mezcla pre y post, D-32)."
+    },
+    {
+      "componente": "price",
+      "autoridad": "fuente de mercado (Yahoo) para supervivientes",
+      "estado": "UNAVAILABLE bajo el simbolo historico · AMBIGUOUS bajo el simbolo sucesor",
+      "verificado": "Yahoo devuelve 404 para DWDP y para UTX. Los sucesores DD y RTX SI devuelven la ventana 2017-2020 completa (930 sesiones), pero REBASEADA: Yahoo codifica las escisiones como splits (DD: 1487:1000 el 2019-04-02 por la escision de Dow, y 4725:10000 el 2019-06-03 por Corteva) y el close de DD el 2019-04-18 es 103.61 cuando DowDuPont cotizaba en torno a 53.",
+      "consecuencia": "el NIVEL de precio de la era deslistada no es recuperable tal cual; los RETORNOS si lo son mientras la ventana no atraviese la accion corporativa, porque un rebaseo multiplicativo uniforme se cancela en un cociente. Yahoo DECLARA esos eventos, asi que las ventanas contaminadas son detectables."
+    },
+    {
+      "componente": "benchmark",
+      "autoridad": "bm:sp500 (nivel publicado, D-25)",
+      "estado": "AVAILABLE",
+      "verificado": "14.291 sesiones 1970-01-02..2026-09-04; presentes las fechas de evento de DWDP y UTX comprobadas.",
+      "por_que_es_inmune": "es el nivel publicado de un indice, no una cesta reconstruida: no depende de que sus componentes sigan existiendo (D-25)."
+    }
+  ],
+  "matriz_proveedores": [
+    {
+      "proveedor": "SEC EDGAR / XBRL",
+      "roles": [
+        "AUTHORITATIVE_SOURCE"
+      ],
+      "componentes": [
+        "company_instrument_existence",
+        "event_occurrence",
+        "available_at",
+        "actual_financial_result"
+      ],
+      "calidad_temporal": "EXCELENTE -- acceptanceDateTime al segundo y XBRL nativamente vintage (filed + accn)",
+      "survivorship_risk": "BAJO por CIK · ALTO si se entra por ticker (company_tickers.json es solo supervivientes)",
+      "limitaciones_medidas": "sin consenso ni expectativa; XBRL arranca ~2009 (UTX desde 2007-12-31, DWDP desde 2015-12-31 por ser entidad nueva); rate limiting real desde esta IP compartida"
+    },
+    {
+      "proveedor": "Alpha Vantage",
+      "roles": [
+        "ENRICHMENT_SOURCE"
+      ],
+      "componentes": [
+        "expectation_estimatedEPS",
+        "reportTime_pre_post",
+        "actual_financial_result (secundario)"
+      ],
+      "calidad_temporal": "MEDIA -- reportedDate a nivel de dia, reportTime binario, SIN vintage",
+      "survivorship_risk": "ALTO Y DEMOSTRADO -- devuelve vacio para deslistados y no los tiene en su directorio de simbolos",
+      "limitaciones_medidas": "25 llamadas/dia; return_full_data:false no reduce la respuesta; el conector MCP no escribe a disco",
+      "NO_es": "autoridad del universo. Su ausencia nunca implica que la empresa o el evento no existieran."
+    },
+    {
+      "proveedor": "Yahoo Finance",
+      "roles": [
+        "MARKET_SOURCE",
+        "BENCHMARK_SOURCE"
+      ],
+      "componentes": [
+        "price",
+        "benchmark"
+      ],
+      "calidad_temporal": "BUENA para el superviviente; el historico del sucesor esta rebaseado por acciones corporativas",
+      "survivorship_risk": "ALTO por simbolo (404 en DWDP y UTX) · MEDIO por sucesor (serie presente pero rebaseada) · NULO para el indice publicado",
+      "limitaciones_medidas": "codifica escisiones como splits, lo que rompe el supuesto del bloque 4 de que 'close solo esta ajustado por splits, que son artefactos mecanicos'. Una escision NO es un artefacto mecanico"
+    }
+  ],
+  "matriz_cobertura_medida": {
+    "_nota": "Solo celdas MEDIDAS. Todo lo no listado queda NOT_MEASURED y nunca se rellena. 'benchmark' es AVAILABLE para todos por fecha, no por activo: bm:sp500 es un nivel publicado y no depende de que el activo exista (D-25).",
+    "_columnas": [
+      "sec",
+      "event",
+      "actual",
+      "expectation",
+      "consensus",
+      "reportTime",
+      "price",
+      "benchmark"
+    ],
+    "_consensus_global": "UNAVAILABLE para todos: ninguna fuente medida publica consenso con su fecha de vigencia.",
+    "celdas": {
+      "DWDP": {
+        "sec": "AVAILABLE",
+        "event": "AVAILABLE",
+        "actual": "AVAILABLE",
+        "expectation": "UNAVAILABLE",
+        "reportTime": "AVAILABLE",
+        "price": "AMBIGUOUS",
+        "_detalle": "SEC CIK 0001666700 con formerNames fechados; 4 8-K Item 2.02 en la era deslistada; 131 obs XBRL. Alpha Vantage vacio. Yahoo 404 bajo DWDP; DD cubre la ventana pero rebaseada por dos escisiones."
+      },
+      "UTX": {
+        "sec": "AVAILABLE",
+        "event": "AVAILABLE",
+        "actual": "AVAILABLE",
+        "expectation": "UNAVAILABLE",
+        "reportTime": "AVAILABLE",
+        "price": "AMBIGUOUS",
+        "_detalle": "SEC CIK 0000101829 con dos formerNames fechados; 9 8-K Item 2.02; 324 obs XBRL. Alpha Vantage vacio. Yahoo 404 bajo UTX; RTX cubre la ventana pero rebaseada."
+      },
+      "AAPL": {
+        "expectation": "AVAILABLE",
+        "reportTime": "AVAILABLE",
+        "_detalle": "122 trimestres, 8 estimatedEPS ausentes (todos < 2004)."
+      },
+      "CAT": {
+        "expectation": "AVAILABLE",
+        "reportTime": "AVAILABLE",
+        "_detalle": "122 trimestres, reportTime uniforme pre-market."
+      },
+      "VZ": {
+        "expectation": "AVAILABLE",
+        "reportTime": "AVAILABLE",
+        "_detalle": "122 trimestres, 1 excepcion post-market."
+      },
+      "MSFT": {
+        "expectation": "AVAILABLE",
+        "reportTime": "AVAILABLE",
+        "_detalle": "122 trimestres, reportTime mixto (26 pre / 96 post)."
+      },
+      "IBM": {
+        "expectation": "AVAILABLE",
+        "reportTime": "AVAILABLE",
+        "price": "AVAILABLE",
+        "_detalle": "123 trimestres medidos en sesion anterior (discrepancia de contigüidad pendiente); precio verificado en la ventana 2017-2020."
+      }
+    }
+  }
+}

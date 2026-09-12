@@ -1,0 +1,189 @@
+[
+ {
+  "entity_id": "org:ibm",
+  "type": "organization",
+  "nombre": "International Business Machines",
+  "status": "ACTIVE",
+  "asset_id": null,
+  "aliases": [
+   {
+    "scheme": "sec_cik",
+    "value": "0000051143",
+    "venue": null,
+    "valid_from": null,
+    "valid_to": null,
+    "source_id": "src:sec-submissions"
+   }
+  ],
+  "source_id": "src:dimasset-equity"
+ },
+ {
+  "entity_id": "org:nvidia",
+  "type": "organization",
+  "nombre": "NVIDIA Corporation",
+  "status": "ACTIVE",
+  "asset_id": null,
+  "aliases": [
+   {
+    "scheme": "sec_cik",
+    "value": "0001045810",
+    "venue": null,
+    "valid_from": null,
+    "valid_to": null,
+    "source_id": "src:sec-submissions"
+   }
+  ],
+  "source_id": "src:dimasset-equity"
+ },
+ {
+  "entity_id": "org:exxonmobil",
+  "type": "organization",
+  "nombre": "Exxon Mobil Corp",
+  "status": "ACTIVE",
+  "asset_id": null,
+  "aliases": [
+   {
+    "scheme": "sec_cik",
+    "value": "0000034088",
+    "venue": null,
+    "valid_from": null,
+    "valid_to": null,
+    "source_id": "src:sec-submissions"
+   }
+  ],
+  "source_id": "src:dimasset-equity",
+  "nota": "CIK 0000034088. formerNames: 'EXXON CORP' 1994-05-11..1999-11-30. Tras la reorganizacion de 2026-07-01 conserva sus 1000 filings y queda con tickers: []."
+ },
+ {
+  "entity_id": "org:alpha-vantage",
+  "type": "organization",
+  "nombre": "Alpha Vantage",
+  "status": "ACTIVE",
+  "asset_id": null,
+  "aliases": [],
+  "source_id": "src:dimasset-equity",
+  "nota": "Presente porque es el publisher de una fuente: la procedencia de una afirmacion es una entidad, no un entero."
+ },
+ {
+  "entity_id": "org:coingecko",
+  "type": "organization",
+  "nombre": "CoinGecko",
+  "status": "ACTIVE",
+  "asset_id": null,
+  "aliases": [],
+  "source_id": "src:dimasset-crypto"
+ },
+ {
+  "entity_id": "org:tsmc",
+  "type": "organization",
+  "nombre": "Taiwan Semiconductor Manufacturing Company Limited",
+  "status": "ACTIVE",
+  "asset_id": null,
+  "aliases": [
+   {
+    "scheme": "sec_cik",
+    "value": "0001046179",
+    "valid_from": "1997-10-08",
+    "valid_to": null
+   }
+  ],
+  "source_id": "src:tsmc-20f-fy2025",
+  "nota": "Primera organizacion del grafo que NO es ni un activo de la watchlist ni un proveedor de datos de este sistema: entra porque una fuente externa la nombra, no porque el codigo la mencione."
+ },
+ {
+  "entity_id": "org:sec",
+  "type": "organization",
+  "nombre": "U.S. Securities and Exchange Commission",
+  "status": "ACTIVE",
+  "source_id": "src:sec-submissions",
+  "nota": "Regulador. Se declara porque es el publisher de las fuentes de identidad historica."
+ },
+ {
+  "entity_id": "org:yahoo-finance",
+  "type": "organization",
+  "nombre": "Yahoo Finance",
+  "status": "ACTIVE",
+  "source_id": "src:yahoo-meta-mob",
+  "nota": "Proveedor de series de mercado. NO es autoridad de identidad (D-36)."
+ },
+ {
+  "entity_id": "org:dupont",
+  "type": "organization",
+  "nombre": "DuPont de Nemours, Inc.",
+  "status": "ACTIVE",
+  "source_id": "src:sec-submissions",
+  "aliases": [
+   {
+    "scheme": "sec_cik",
+    "value": "0001666700",
+    "venue": null,
+    "valid_from": null,
+    "valid_to": null,
+    "source_id": "src:sec-submissions"
+   }
+  ],
+  "nota": "CIK 0001666700. formerNames: 'DowDuPont Inc.' 2016-03-01..2019-05-31."
+ },
+ {
+  "entity_id": "org:rtx",
+  "type": "organization",
+  "nombre": "RTX Corp",
+  "status": "ACTIVE",
+  "source_id": "src:sec-submissions",
+  "aliases": [
+   {
+    "scheme": "sec_cik",
+    "value": "0000101829",
+    "venue": null,
+    "valid_from": null,
+    "valid_to": null,
+    "source_id": "src:sec-submissions"
+   }
+  ],
+  "nota": "CIK 0000101829. formerNames: 'UNITED TECHNOLOGIES CORP /DE/' 1994-01-24..2020-04-06 y 'RAYTHEON TECHNOLOGIES CORP' 2020-04-07..2023-06-29."
+ },
+ {
+  "entity_id": "org:walgreens",
+  "type": "organization",
+  "nombre": "Walgreens Boots Alliance, Inc.",
+  "status": "INACTIVE",
+  "source_id": "src:sec-submissions",
+  "aliases": [
+   {
+    "scheme": "sec_cik",
+    "value": "0001618921",
+    "venue": null,
+    "valid_from": null,
+    "valid_to": null,
+    "source_id": "src:sec-submissions"
+   }
+  ],
+  "nota": "CIK 0001618921, AUSENTE de company_tickers.json. Recuperado por EDGAR full-text; 211 observaciones de NetIncomeLoss."
+ },
+ {
+  "entity_id": "org:exxonmobil-holdings",
+  "type": "organization",
+  "nombre": "ExxonMobil Holdings Corp",
+  "status": "ACTIVE",
+  "source_id": "src:sec-8k12b-xom-2026",
+  "aliases": [
+   {
+    "scheme": "sec_cik",
+    "value": "0002115436",
+    "venue": null,
+    "valid_from": "2026-07-01",
+    "valid_to": null,
+    "source_id": "src:sec-8k12b-xom-2026"
+   }
+  ],
+  "nota": "CIK NUEVO creado por la reorganizacion en holding de 2026-07-01. Demuestra que el CIK no es identidad permanente de mercado."
+ },
+ {
+  "entity_id": "org:mobilicom",
+  "type": "organization",
+  "nombre": "Mobilicom Limited",
+  "status": "ACTIVE",
+  "source_id": "src:yahoo-meta-mob",
+  "nota": "Sin relacion alguna con Mobil Corporation. Se declara para que el ticker MOB resuelva a QUIEN es hoy y NO al historico."
+ }
+]

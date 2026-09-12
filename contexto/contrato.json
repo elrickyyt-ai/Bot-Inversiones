@@ -1,0 +1,576 @@
+{
+ "contrato": "contexto/v1",
+ "_estado": "T2 COMPLETO (2026-09-12). Las tres clases y los dos estados de respuesta.",
+ "superficie": "contexto/ESTADO_VIGENTE.md",
+ "bloque_de_referencias": "CANONICAL REFERENCES",
+ "state_queries": [
+  {
+   "query_id": "predicados_no_causales",
+   "question": "¿Qué predicados son no causales?",
+   "class": "CODE-ANCHORED",
+   "canonical_source": "engine/knowledge/modelo.py::PREDICADOS_NO_CAUSALES",
+   "canonical_fingerprint": "f5d1ca60118498826528e476d706a8c48e9105cc6bd30a88d78022a3dd8a2d03",
+   "canonical_fingerprint_version": "canonical-fingerprint/v1",
+   "_canonical_fingerprint_es": "metadata / provenance, no query result"
+  },
+  {
+   "query_id": "clases_semanticas_de_predicado",
+   "question": "¿Qué clase semántica tiene cada predicado?",
+   "class": "CODE-ANCHORED",
+   "canonical_source": "engine/knowledge/modelo.py::SEMANTICA_PREDICADO",
+   "canonical_fingerprint": "78d55727559eac7f1deec4784c041a7b256cf7d68fda0b9399fbe70b4d01558c",
+   "canonical_fingerprint_version": "canonical-fingerprint/v1",
+   "_canonical_fingerprint_es": "metadata / provenance, no query result"
+  },
+  {
+   "query_id": "rule_version_causal",
+   "question": "¿Qué versión de reglas causales está vigente?",
+   "class": "CODE-ANCHORED",
+   "canonical_source": "engine/causal/mecanismos.py::RULE_VERSION",
+   "canonical_fingerprint": "f0a573d6b307f13a7623abe2098c9f62bca3784e1c839ac24a5ed5575b77a84c",
+   "canonical_fingerprint_version": "canonical-fingerprint/v1",
+   "_canonical_fingerprint_es": "metadata / provenance, no query result"
+  },
+  {
+   "query_id": "direcciones_economicas",
+   "question": "¿Qué direcciones económicas admite un camino?",
+   "class": "CODE-ANCHORED",
+   "canonical_source": "engine/causal/mecanismos.py::DIRECCIONES_CAMINO",
+   "canonical_fingerprint": "c164b5d8132d240b500e9476193b26756bb764c864325eb61220c056715bfbb2",
+   "canonical_fingerprint_version": "canonical-fingerprint/v1",
+   "_canonical_fingerprint_es": "metadata / provenance, no query result"
+  },
+  {
+   "query_id": "niveles_de_soporte",
+   "question": "¿Qué niveles de soporte existen?",
+   "class": "CODE-ANCHORED",
+   "canonical_source": "engine/causal/mecanismos.py::SOPORTES",
+   "canonical_fingerprint": "9337544d28c93d4bdc56cad6cd243a3472327c56de41916c9ada7a8042c662e7",
+   "canonical_fingerprint_version": "canonical-fingerprint/v1",
+   "_canonical_fingerprint_es": "metadata / provenance, no query result"
+  },
+  {
+   "query_id": "variables_de_mecanismo",
+   "question": "¿Qué variables observa un mecanismo?",
+   "class": "CODE-ANCHORED",
+   "canonical_source": "engine/causal/mecanismos.py::VARIABLES_MECANISMO",
+   "canonical_fingerprint": "d45b2415138264c91d7149bd04963509a119590a00135dae9ab3aa9ebb648d2d",
+   "canonical_fingerprint_version": "canonical-fingerprint/v1",
+   "_canonical_fingerprint_es": "metadata / provenance, no query result"
+  },
+  {
+   "query_id": "semanticas_de_camino",
+   "question": "¿Qué semánticas puede tener un camino causal?",
+   "class": "CODE-ANCHORED",
+   "canonical_source": "engine/causal/caminos.py::SEMANTICAS_CAMINO",
+   "canonical_fingerprint": "862c8d26249937d4f5aed7edd0457ad78f949755235bafa338004a562940c746",
+   "canonical_fingerprint_version": "canonical-fingerprint/v1",
+   "_canonical_fingerprint_es": "metadata / provenance, no query result"
+  },
+  {
+   "query_id": "campos_causal_assessment",
+   "question": "¿Qué campos tiene un CausalAssessment?",
+   "class": "CODE-ANCHORED",
+   "canonical_source": "engine/causal/valoracion.py::CAMPOS_ASSESSMENT",
+   "canonical_fingerprint": "373b7094efb180b4789423526425761d64044d4ae0582e501a3119627ee551e6",
+   "canonical_fingerprint_version": "canonical-fingerprint/v1",
+   "_canonical_fingerprint_es": "metadata / provenance, no query result"
+  },
+  {
+   "query_id": "estados_integridad_historica",
+   "question": "¿Qué estados admite el manifiesto histórico?",
+   "class": "CODE-ANCHORED",
+   "canonical_source": "contexto/integridad.py::ESTADOS",
+   "canonical_fingerprint": "9447e9bc28e427eb17c2ac2d13fcca976ae8ebd337c06175db0beed40ded8479",
+   "canonical_fingerprint_version": "canonical-fingerprint/v1",
+   "_canonical_fingerprint_es": "metadata / provenance, no query result"
+  },
+  {
+   "query_id": "relaciones_economicas_afirmativas",
+   "question": "¿Cuántas relaciones económicas afirmativas existen?",
+   "class": "AMBIGUOUS",
+   "candidate_sources": [
+    {
+     "canonical_source": "engine/knowledge/modelo.py::PREDICADOS_CAUSALES",
+     "lectura": "21 — EXPOSED_TO cuenta como CAUSAL para el recorrido (P5A)"
+    },
+    {
+     "canonical_source": "engine/causal/mecanismos.py::SIN_MECANISMO",
+     "lectura": "3 — EXPOSED_TO no puede producir signo económico (P5B, D-02)"
+    }
+   ],
+   "ambiguity_note": "La palabra 'causal' significa dos cosas distintas en dos capas, y las dos son deliberadas. EXPOSED_TO está simultáneamente en PREDICADOS_CAUSALES y en SIN_MECANISMO. X-1.",
+   "discrepancy_check": "interseccion_no_vacia",
+   "resolution_ref": null,
+   "_no_se_resuelve_en_F1": "pertenece a P5A, capa cerrada. F1 la REGISTRA, no la resuelve."
+  },
+  {
+   "query_id": "p5b_implementado",
+   "question": "¿Está P5B implementado?",
+   "class": "HUMAN-ASSERTED",
+   "asserted_value": "sí — engine/causal/valoracion.py, reglas R0-R5, 32 tests",
+   "asserted_at": "2026-09-12",
+   "asserted_by": "sesión de F1 (auditoría del repositorio), revisada por el usuario",
+   "evidence_ref": "commit:0c4003f",
+   "_test_verifica": "TRAZABILIDAD, no veracidad. Una afirmación falsa pero bien citada pasa."
+  },
+  {
+   "query_id": "p5a_endurecido",
+   "question": "¿Está aplicada la variante C de D-49 sobre P5A?",
+   "class": "HUMAN-ASSERTED",
+   "asserted_value": "sí — D-53, path_semantics y caminos_causales()",
+   "asserted_at": "2026-09-12",
+   "asserted_by": "sesión de F1 (auditoría del repositorio), revisada por el usuario",
+   "evidence_ref": "commit:ff7a4da",
+   "_test_verifica": "TRAZABILIDAD, no veracidad. Una afirmación falsa pero bien citada pasa."
+  },
+  {
+   "query_id": "f1_estado",
+   "question": "¿En qué punto está F1?",
+   "class": "HUMAN-ASSERTED",
+   "asserted_value": "T1, T5 y los slices de T2/T4/T6 cerrados; T7-T10 pendientes",
+   "superseded_by": "f1_estado_r2",
+   "_caducidad": "CADUCO EL MISMO DIA en que se escribio: T7 (30022c9), T8 (032c9e5) y T9 (f784b85) son POSTERIORES a 8c38056, el commit que esta entrada cita como evidencia. Paso el validador estando obsoleta porque HUMAN-ASSERTED verifica trazabilidad, no vigencia -- correcto por diseno, y la razon por la que D-56 saca el cierre de bloque de este mecanismo. El valor NO se borra: es el registro de que el mecanismo fallo, y borrarlo perderia la informacion mas util.",
+   "asserted_at": "2026-09-12",
+   "asserted_by": "sesión de F1 (auditoría del repositorio), revisada por el usuario",
+   "evidence_ref": "commit:8c38056",
+   "_test_verifica": "TRAZABILIDAD, no veracidad. Una afirmación falsa pero bien citada pasa."
+  },
+  {
+   "query_id": "f1_estado_r2",
+   "question": "¿En qué punto está F1?",
+   "class": "HUMAN-ASSERTED",
+   "asserted_value": "alcance de F1 completo -- T1-T9 entregados y T10 materializado el 2026-09-12. Su CIERRE no es esta afirmacion: lo calcula validar.veredicto_cierre('F1') sobre siete obligaciones, y hoy da OPEN porque DF-6 lo bloquea.",
+   "asserted_at": "2026-09-12",
+   "asserted_by": "sesión de S0.4, sobre el repositorio reverificado",
+   "evidence_ref": "file:informes/2026-09-12_f1_contexto_durable_y_cierre.md",
+   "supersedes": "f1_estado",
+   "_test_verifica": "TRAZABILIDAD, no veracidad. Y por eso esta entrada NO declara el cierre: solo la intencion y el alcance. El estado de cierre es un VEREDICTO CALCULADO (D-56), nunca una afirmacion humana."
+  },
+  {
+   "query_id": "backfill_ready",
+   "question": "¿Está el universo histórico listo para backfill?",
+   "class": "HUMAN-ASSERTED",
+   "asserted_value": "no — BACKFILL_READY=false, el cuello es la identidad de instrumento",
+   "asserted_at": "2026-09-12",
+   "asserted_by": "sesión de F1 (auditoría del repositorio), revisada por el usuario",
+   "evidence_ref": "file:informes/2026-09-08_backfill_readiness_historico.md",
+   "_test_verifica": "TRAZABILIDAD, no veracidad. Una afirmación falsa pero bien citada pasa."
+  }
+ ],
+ "mecanismos": {
+  "canonical-fingerprint/v1": {
+   "naturaleza": "metadata / provenance -- NO es query result",
+   "formula": "SHA-256(canonical_serialization(canonical_value)) en hex minusculas",
+   "normalizacion": "coleccion (set/frozenset/list/tuple) -> lista ORDENADA de str(x); escalar -> str(x). El orden incidental NO forma parte del valor; la multiplicidad SI.",
+   "serializacion": "coleccion: elementos unidos por LF. Escalar: su str.",
+   "codificacion": "UTF-8",
+   "por_que_es_compatible_con_el_arco_1": "el valor canonico NO se almacena. La respuesta a la STATE QUERY se obtiene SIEMPRE resolviendo la fuente viva; el fingerprint solo detecta que la declaracion se hizo contra otro estado del codigo.",
+   "cambiarlo_exige": "canonical-fingerprint/v2"
+  },
+  "heuristic/v1": {
+   "aplica_a": "DUPLICATED_AS_TRUTH detection",
+   "que_detecta": "renderizaciones directas del valor canonico completo en la superficie",
+   "limitacion": "heuristic detection != formal proof of absence. No garantiza detectar parafrasis ni representaciones semanticamente equivalentes.",
+   "proteccion_primaria": "contractual: CODE-ANCHORED -> canonical_source -> canonical_fingerprint -> NO value field"
+  },
+  "copia-parcial/v1": {
+   "aplica_a": "deteccion de copia parcial del estado en CLAUDE.md tras D-PRD-1",
+   "que_detecta": "la marca de seccion, y cualquier linea de >=80 caracteres del contenido extraido que siga en CLAUDE.md",
+   "limitacion": "heuristic detection != formal proof of absence. Una parafrasis la evadiria.",
+   "proteccion_primaria": "contractual: la seccion se extrae entera y su ancla se verifica aparte"
+  },
+  "l0-closure/v1": {
+   "frontera": "OBLIGATORY LOAD != REFERENCE != POINTER",
+   "cierre": "(a) todo CLAUDE.md del arbol + (b) imports explicitos + (c) lecturas obligatorias INCONDICIONALES",
+   "condicional_es_L2": "una lectura obligatoria acotada a una parte del trabajo (protocolo de privacidad) es L2; su enunciado esta en L0, su texto integro se recupera bajo demanda",
+   "limitacion": "heuristica sobre el patron imperativo de lectura. Una lectura obligatoria redactada de otra forma no seria detectada. Enumerable desde el sistema de ficheros; no introspecciona ningun runtime externo."
+  },
+  "vigencia-decisiones/v1": {
+   "regla": "una decision esta marcada como vigente si su cuerpo contiene **Vigente / **Vigente. / **VIGENTE... / **Decision vigente",
+   "medido": "DECISIONES.md usa CUATRO redacciones distintas; con esta regla las 53 salen marcadas",
+   "limitacion": "eso NO significa que ninguna haya sido superada: DECISIONES.md no distingue vigente de superada de forma legible por maquina, porque el protocolo prohibe borrar historia y las revisiones se anaden dentro de la misma entrada"
+  }
+ },
+ "open_debt": [
+  "Structural enforcement of no-value duplication (D-2): la deteccion es heuristica, no estructural. NO se amplia F1 para resolverla.",
+  "DECISIONES.md no distingue vigente de superada de forma legible por maquina (vigencia-decisiones/v1). F1 lo REGISTRA, no lo resuelve.",
+  "DF-6 RESUELTA en S0.2 (opcion B): el gate de PR era irreproducible en clean-room -- 36 clases de 11 ficheros leian data/history/**.parquet via storage.py y daban 43 ERRORES en un runner sin pyarrow, en un workflow que declara no tener dependencias. Ya NO bloquea F1. Resuelto marcando esas 36 clases con tests/_parquet.py::requiere_parquet (por clase y no por modulo: los mismos ficheros contienen otras 38 que funcionan sin pyarrow, y saltarlas habria perdido cobertura real del PR) y anadiendo contexto/suite_pr.py, que exige 0 errores, 0 fallos y que los saltos coincidan con ci_pr.skips_esperados. El PR sigue SIN dependencias; el cron mantiene pyarrow, ahora con version fijada, y qa.py --require-parquet. Medido en clean-room: 1052 ejecutados, 187 saltados, 0 errores.",
+  "DC-5 (colision de namespace L0): `L0` significa NIVEL DE CARGA DE CONTEXTO en contexto/ (implementado en contrato.json::L0, presupuesto_L0, l0-budget/v1, l0-closure/v1, la suite y el CI) y NIVEL DE AUTONOMIA en la arquitectura objetivo (autonomia:L0..L4, 0 ocurrencias en el arbol). Mismo token, dos significados. S0.4 los SEPARA POR NAMESPACE y lo REGISTRA; no renombra el mecanismo implementado para acomodar al ausente. Misma forma que X-1: dos usos deliberados que siguen discrepando.",
+  "DD-4 (PC-1 sin encaje en el roadmap): el roadmap de producto vigente es P0..P11 (docs/ESTADO.md, informes/...trazabilidad_fases_P0_P61.md) y no contiene PC-1. `bloques` declara PC-1 como bloque de ALCANCE futuro. Producto y alcance son ejes distintos, pero la relacion de PC-1 con P7..P11 no esta declarada. Queda como deuda EXPLICITA, no como omision silenciosa.",
+  "DF-7 (clasificacion-nodos/v2): ARBOLES_HISTORICOS = (docs/, informes/, contexto/historico/) hace que TODO documento normativo puesto en docs/ se clasifique HISTORICAL. No hay clase para 'documento pequeno, vigente, normativo, de carga no obligatoria', que es lo que la arquitectura objetivo es. Por eso vive en contexto/ (clase OTRO). La solucion limpia es una clase nueva en clasificacion-nodos/v2, que es una EVOLUCION DEL MECANISMO y queda FUERA de S0 por decision expresa: meterla convertiria S0 de continuidad en continuidad + rediseno del sistema de clasificacion. Es la deuda DC-3 en su forma accionable.",
+  "DF-1 RESUELTA en S0.1: `alcance_bloque.vigente` (interruptor binario) sustituido por `bloque_activo` + `bloques[*].escritura` con cuatro veredictos, denegacion por defecto y proteccion global DERIVADA del manifiesto. Ya no existe ningun valor del contrato que desactive la guarda."
+ ],
+ "procedencia_historica": {
+  "contexto/historico/claude_md_estado_previo_a_F1.md": {
+   "procede_de": "CLAUDE.md",
+   "seccion": "## Estado del proyecto",
+   "momento": "estado previo a F1",
+   "origen_fichero_sha256": "e924a3e20cf3b209456b6e3b7df09358438941edf9d98d2d89c7c44211b11e16",
+   "origen_repositorio": "3b008f0",
+   "ancla": "ff2003f9d59a162f9c6d753dddbb9c57ff5ba1881bcd593e0ee4a1840c75a9b5",
+   "verificado_por": "contexto/extraccion.py (mecanismo SEPARADO del manifiesto principal, P-1)",
+   "_nota": "La procedencia vive AQUI, fuera del contenido extraido: anadirla dentro del fichero destruiria el ancla (verificado: da ac9854d9...)."
+  }
+ },
+ "clases": {
+  "CODE-ANCHORED": "una unica fuente canonica en codigo. El valor NO se almacena: se resuelve al validar y se compara. Test de IGUALDAD.",
+  "AMBIGUOUS": "dos o mas respuestas defendibles. NO almacena valor y NO es testeable por valor. Se comprueba que las fuentes SIGUEN discrepando; si convergen, la entrada caduca y hay que reclasificarla. No se resuelve en F1.",
+  "HUMAN-ASSERTED": "sin fuente canonica en codigo. Lleva asserted_value, asserted_at, asserted_by y evidence_ref. Su test verifica TRAZABILIDAD, nunca veracidad."
+ },
+ "estados_de_respuesta": {
+  "DECLARED": "la pregunta tiene entrada en el registro",
+  "UNDECLARED": "NO la tiene. Respuesta explicita, NUNCA un valor por defecto, None-como-cero ni cadena vacia."
+ },
+ "L0": [
+  "CLAUDE.md",
+  "contexto/ESTADO_VIGENTE.md"
+ ],
+ "presupuesto_L0": {
+  "gate_duro": 12000,
+  "objetivo_no_vinculante": 10000,
+  "objetivo_10000_es_criterio_de_fallo": false,
+  "metodo_medida": "l0-budget/v1",
+  "metodo_cierre": "l0-closure/v1",
+  "_nota": "12.000 es el limite del PROXY l0-budget/v1, no una medicion universal de tokens de ningun proveedor."
+ },
+ "ci_pr": {
+  "skips_esperados": 187,
+  "motivo": "PyArrow fuera del gate de PR (DF-6, opcion B). 36 clases de 11 ficheros leen data/history/**.parquet via engine/contract/storage.py; se saltan de forma DECLARADA con tests/_parquet.py::requiere_parquet, mas las 12 de test_storage_parquet.py que ya se saltaban.",
+  "autoridad": "contexto/suite_pr.py. El numero vive AQUI y solo aqui: ni el workflow ni suite_pr.py lo llevan como dato -- seria una segunda copia, el mismo defecto que DF-1 corrigio.",
+  "falla_en_los_dos_sentidos": "saltos > declarados significa un test de parquet nuevo sin declarar; saltos < declarados significa que algo dejo de saltarse, o que pyarrow esta en el runner del PR, donde no debe estar. Las dos cosas rompen el PR.",
+  "_por_que_187_y_no_125": "125 fue una estimacion previa hecha como 1052 - 927, la diferencia entre los tests CONTADOS con y sin pyarrow. No era el numero de saltos: cuando setUpClass falla, unittest no cuenta los tests de esa clase. Medido tras aplicar la guarda, el clean-room ejecuta los 1052 y salta 187. La cifra declarada es la MEDIDA, no la estimada.",
+  "cobertura_no_se_pierde": "se retrasa. El job `verificar` del cron diario instala pyarrow con version fijada y corre la suite completa mas qa.py --require-parquet. Ese reparto es el que T9 documento a proposito."
+ },
+ "bloque_activo": "S0",
+ "_bloque_activo": "DF-1. Siempre hay un bloque activo: si esta clave falta o apunta a un bloque no declarado, la guarda devuelve ALCANCE_NO_DECLARADO y FALLA. No existe el estado 'sin guarda' -- eso era el defecto del interruptor `alcance_bloque.vigente` que este contrato sustituye.",
+ "bloques": {
+  "F1": {
+   "escritura": [
+    "contexto/",
+    "tests/",
+    ".github/",
+    "docs/",
+    "informes/",
+    "CLAUDE.md"
+   ],
+   "_escritura_claude_md": "CLAUDE.md faltaba en la declaracion heredada de `alcance_bloque.no_bloquea`, pese a que T5 (8c38056) reescribio legitimamente su bloque de entrada. No es un permiso nuevo: es la declaracion que estaba incompleta y que nadie detecto porque la guarda nunca se ejecuto sobre un rango real.",
+   "desde": "6316bcd78ed78667d2526477c51b23ee8871c6fe",
+   "hasta": "f784b8591ad00606fd85c9c979688c8b9feea88d",
+   "cierre": {
+    "intencion": "El alcance de F1 esta completo: T1-T9 entregados y T10 materializado documentalmente el 2026-09-12.",
+    "intencion_declarada_por": "usuario, en la autorizacion de S0.4",
+    "intencion_declarada_el": "2026-09-12",
+    "_la_intencion_no_cierra": "Esto es lo UNICO que una afirmacion humana puede decir. Las siete obligaciones de OBLIGACIONES_CIERRE se CALCULAN; si alguna falla el bloque no cierra, con independencia de esta intencion. Es la leccion de f1_estado, que caduco tres commits despues de escribirse y aun asi paso el validador.",
+    "commit_de_cierre": "f784b8591ad00606fd85c9c979688c8b9feea88d",
+    "entregables": [
+     "contexto/integridad.py",
+     "contexto/contrato.json",
+     "contexto/ESTADO_VIGENTE.md",
+     "contexto/validar.py",
+     "contexto/extraccion.py",
+     "contexto/historico/claude_md_estado_previo_a_F1.md",
+     "contexto/grafo.py",
+     "tests/test_invariantes_f1.py",
+     ".github/workflows/verificar-contexto.yml",
+     "informes/2026-09-12_f1_contexto_durable_y_cierre.md"
+    ],
+    "_entregables": "T1 integridad . T2 contrato . T4 superficie . T3/T6 validador . T5 extraccion + destino . T7 grafo . T8 bateria negativa . T9 CI de PR . T10 informe. El orden sigue el de los tickets declarados en el cuerpo de 6316bcd.",
+    "tests": "python3 -m unittest discover -s tests",
+    "validadores": [
+     "contexto/validar.py",
+     "contexto/integridad.py",
+     "contexto/extraccion.py",
+     "contexto/grafo.py",
+     "contexto/alcance_pr.py",
+     "engine/knowledge/consulta.py --validar"
+    ],
+    "ultima_verificacion": {
+     "commit": "f784b8591ad00606fd85c9c979688c8b9feea88d",
+     "fecha": "2026-09-12T13:44:43Z",
+     "tests": 942,
+     "resultado": "OK",
+     "autoridades": "6/6 exit=0",
+     "qa": "CORE PASS . PARQUET PASS"
+    },
+    "huella": "020a0642cfb4fa805d022bf936e934077e5875692234d39d70c50b77c5c66844",
+    "_huella": "canonical-fingerprint/v1 sobre los insumos del cierre, TOMADOS EN commit_de_cierre y no en el worktree. Corregido en S0.3: el valor anterior (92d54b29) se habia calculado sobre el arbol de trabajo, asi que cualquier mejora posterior autorizada a un entregable volvia el bloque STALE -- S0.3 amplia ESTADO_VIGENTE.md, que es entregable de F1, y lo disparo. Es el mismo defecto que S0.1 corrigio con hasta/HEAD: el significado historico de un bloque cerrado no puede depender de HEAD. NO cambia la decision de cierre ni su evidencia: cambia la BASE de calculo del sello, que estaba mal definida. Desde ahora es estable."
+   },
+   "decision": "D-54",
+   "estado": "CLOSED",
+   "_estado": "Campo DECLARATIVO, y no es la autoridad: el estado real lo calcula validar.veredicto_cierre('F1') sobre las siete obligaciones. Se mantiene aqui por legibilidad y hay un test que exige que NO divergan -- si divergiesen, este campo seria una segunda fuente, que es el defecto que D-56 corrige.",
+   "_nota": "F1 quedo TECNICAMENTE COMPLETADA (T1-T9 entregados, 942 tests, seis autoridades en verde). Su estado CONTRACTUAL sigue OPEN porque el cierre no estaba persistido. S0 es el trabajo que convierte esa F1 completada en una F1 cerrada; F1 no se rehace."
+  },
+  "S0": {
+   "escritura": [
+    "contexto/",
+    "tests/",
+    ".github/",
+    "docs/",
+    "informes/",
+    "engine/contract/",
+    "data/incoming/"
+   ],
+   "desde": "aadb269",
+   "hasta": null,
+   "decision": "D-55",
+   "estado": "OPEN",
+   "_nota": "S0 declara engine/contract/ y data/incoming/ porque reconcilia las 754 filas del cron en el carril del ano abierto. Eso es exactamente lo que el mecanismo nuevo permite expresar y el interruptor anterior no: un alcance PROPIO, no la ausencia de guarda."
+  },
+  "PC-1": {
+   "escritura": [
+    "engine/",
+    "tests/",
+    "docs/",
+    "informes/",
+    "contexto/"
+   ],
+   "desde": null,
+   "hasta": null,
+   "decision": null,
+   "estado": "UNDECLARED",
+   "_nota": "Declarado por anticipado SOLO como destino del roadmap. `decision: null` y `estado: UNDECLARED` significan que todavia no esta autorizado: activarlo exige ponerlo en bloque_activo con su decision registrada."
+  }
+ },
+ "arquitectura_objetivo": {
+ "_que_es": "ARQUITECTURA OBJETIVO. Que sistema se esta construyendo y como se relacionan sus componentes. NO es el estado actual: eso vive en docs/ESTADO.md seccion 2 y no se duplica aqui. El texto legible para humanos esta en contexto/ARQUITECTURA_OBJETIVO.md; aqui viven SOLO los estados declarados y sus anclas.",
+ "estados": {
+  "IMPLEMENTED": "DERIVADO, no declarado: se calcula resolviendo `ancla`. Declararlo sin ancla resoluble es un fallo.",
+  "PARTIAL": "DECLARATIVO. El componente existe en codigo pero no como objeto contratado. Exige ancla.",
+  "PLANNED": "DECLARATIVO. Arquitectura objetivo, sin implementacion. Exige ancla=null: si aparece codigo, la declaracion ha quedado obsoleta y el validador lo detecta.",
+  "NOT_AUTHORIZED": "DECLARATIVO, y NO es sinonimo de 'no implementado'. Es una capacidad deliberadamente fuera de las autorizadas en el estado actual del sistema. Exige ancla=null."
+ },
+ "_estados_derivado_vs_declarativo": "Solo IMPLEMENTED se deriva. PARTIAL, PLANNED y NOT_AUTHORIZED son declaraciones de intencion y no pueden calcularse desde el codigo: la ausencia de codigo no dice si algo esta planificado o prohibido.",
+ "_not_authorized_no_es_d01": "D-01 dice 'el sistema propone, el usuario ejecuta' -- es una decision de producto sobre quien actua. NOT_AUTHORIZED es un estado de capacidad: esta pieza no esta entre las autorizadas hoy. Estan relacionados (D-01 es la razon por la que EXECUTION_GATE y BROKER_ORDER lo estan) pero no son sinonimos: una capacidad podria dejar de estar autorizada por motivos ajenos a D-01, y D-01 seguiria siendo cierto aunque existiese una ejecucion autorizada y supervisada.",
+ "namespaces": {
+  "contexto:L0": "nivel de CARGA DE CONTEXTO obligatoria. Implementado: contrato.json::L0, presupuesto_L0, l0-budget/v1, l0-closure/v1, validar.py, la suite y el CI de PR.",
+  "autonomia:L0..L4": "escalera de AUTONOMIA -- L0 READ, L1 ANALYZE, L2 PROPOSE, L3 HUMAN-APPROVED EXECUTION, L4 BOUNDED AUTONOMY. Techo inicial L3. NO implementada: 0 ocurrencias en el arbol.",
+  "_colision": "`L0` y `L2` son el mismo token con dos significados. Registrado como deuda DC-5, sin resolver. No se renombra el mecanismo implementado para acomodar al ausente."
+ },
+ "bucles": {
+  "decision": "EVIDENCE -> CAUSAL -> THESIS -> INVESTMENT_PROPOSAL -> RISK -> VERIFICATION -> APPROVAL",
+  "execution": "EXECUTION_GATE -> BROKER_ORDER -> OUTCOME",
+  "learning": "OUTCOME -> LEARNING -> CANDIDATE -> BACKTEST/RISK_TEST -> OOS -> SHADOW -> POLICY_GATE -> POLICY_REGISTRY -> NEW_VERSION",
+  "_por_que_separados": "el sistema no es una cadena lineal: se realimenta. Un cambio aprendido NUNCA entra directo en produccion -- recorre candidate -> validacion -> OOS -> shadow -> aprobacion -> version nueva."
+ },
+ "componentes": [
+  {
+   "id": "DATA",
+   "nivel": "1-comprender",
+   "estado_declarado": "IMPLEMENTED",
+   "ancla": "engine/contract/storage.py"
+  },
+  {
+   "id": "EVIDENCE",
+   "nivel": "1-comprender",
+   "estado_declarado": "IMPLEMENTED",
+   "ancla": "engine/evidence/construir.py"
+  },
+  {
+   "id": "EVENT_CLAIM",
+   "nivel": "1-comprender",
+   "estado_declarado": "IMPLEMENTED",
+   "ancla": "engine/events/consolidar.py"
+  },
+  {
+   "id": "KNOWLEDGE",
+   "nivel": "1-comprender",
+   "estado_declarado": "IMPLEMENTED",
+   "ancla": "engine/knowledge/modelo.py"
+  },
+  {
+   "id": "CAUSAL_PATH",
+   "nivel": "1-comprender",
+   "estado_declarado": "IMPLEMENTED",
+   "ancla": "engine/causal/caminos.py"
+  },
+  {
+   "id": "CAUSAL_ASSESSMENT",
+   "nivel": "1-comprender",
+   "estado_declarado": "IMPLEMENTED",
+   "ancla": "engine/causal/valoracion.py"
+  },
+  {
+   "id": "ECONOMIC_IMPACT",
+   "nivel": "1-comprender",
+   "estado_declarado": "IMPLEMENTED",
+   "ancla": "engine/impact/impacto.py"
+  },
+  {
+   "id": "MATERIALITY",
+   "nivel": "1-comprender",
+   "estado_declarado": "IMPLEMENTED",
+   "ancla": "engine/impact/materialidad.py"
+  },
+  {
+   "id": "TECHNICAL_ASSESSMENT",
+   "nivel": "1-comprender",
+   "estado_declarado": "PARTIAL",
+   "ancla": "engine/technical/score.py",
+   "_nota": "existe como CALCULO, no como objeto contratado: no declara que afirma, con que cobertura ni que UNKNOWN admite"
+  },
+  {
+   "id": "FUNDAMENTAL_ASSESSMENT",
+   "nivel": "1-comprender",
+   "estado_declarado": "PARTIAL",
+   "ancla": "engine/equity/score.py",
+   "_nota": "igual que el tecnico. El ancla cubre acciones; cripto vive en engine/crypto/score.py"
+  },
+  {
+   "id": "THESIS",
+   "nivel": "1-comprender",
+   "estado_declarado": "IMPLEMENTED",
+   "ancla": "engine/reasoning/thesis.py",
+   "_nota": "el Thesis Ledger (engine/reasoning/ledger.py) registra el lado de la PREDICCION; el lado del resultado es OUTCOME, que sigue PLANNED"
+  },
+  {
+   "id": "INVESTMENT_PROPOSAL",
+   "nivel": "2-decidir",
+   "estado_declarado": "PLANNED",
+   "ancla": null,
+   "_nota": "EL PUENTE. Hasta THESIS el sistema explica; desde aqui decide. Es capa propia porque una misma tesis puede dar BUY, WAIT o NO_ACTION segun valoracion, riesgo, exposicion, horizonte y condiciones de entrada"
+  },
+  {
+   "id": "RISK_ASSESSMENT",
+   "nivel": "2-decidir",
+   "estado_declarado": "PLANNED",
+   "ancla": null
+  },
+  {
+   "id": "INDEPENDENT_VERIFICATION",
+   "nivel": "2-decidir",
+   "estado_declarado": "PLANNED",
+   "ancla": null
+  },
+  {
+   "id": "HUMAN_APPROVAL",
+   "nivel": "2-decidir",
+   "estado_declarado": "PLANNED",
+   "ancla": null
+  },
+  {
+   "id": "AUTONOMY_POLICY",
+   "nivel": "2-decidir",
+   "estado_declarado": "PLANNED",
+   "ancla": null,
+   "_nota": "deny by default. Techo inicial autonomia:L3; autonomia:L4 no se contempla en este estado del sistema"
+  },
+  {
+   "id": "EXECUTION_GATE",
+   "nivel": "2-decidir",
+   "estado_declarado": "NOT_AUTHORIZED",
+   "ancla": null,
+   "_nota": "NO es 'todavia no implementado': es una capacidad deliberadamente FUERA de las autorizadas en el estado actual del sistema"
+  },
+  {
+   "id": "BROKER_ORDER",
+   "nivel": "2-decidir",
+   "estado_declarado": "NOT_AUTHORIZED",
+   "ancla": null,
+   "_nota": "idem. Sin credenciales de trading en ninguna parte del sistema (D-01)"
+  },
+  {
+   "id": "OUTCOME",
+   "nivel": "3-aprender",
+   "estado_declarado": "PLANNED",
+   "ancla": null,
+   "_nota": "el Thesis Ledger ya tiene 6 tesis registradas SIN evaluar: existe la prediccion, falta el resultado"
+  },
+  {
+   "id": "LEARNING_ENGINE",
+   "nivel": "3-aprender",
+   "estado_declarado": "PLANNED",
+   "ancla": null,
+   "_nota": "learning NUNCA modifica una politica activa de forma directa"
+  },
+  {
+   "id": "CANDIDATE_IMPROVEMENT",
+   "nivel": "3-aprender",
+   "estado_declarado": "PLANNED",
+   "ancla": null
+  },
+  {
+   "id": "BACKTEST",
+   "nivel": "3-aprender",
+   "estado_declarado": "PARTIAL",
+   "ancla": "engine/events/estudio_resultados.py",
+   "_nota": "PARTIAL cubre SOLO analisis historico de eventos: event study y HistoricalReactionProfile v1 sobre 52 eventos reales, DESCRIPTIVO, sin ninguna senal. NO es backtesting de politica. El ciclo candidate -> backtest -> risk test -> OOS -> shadow -> promotion NO existe en ninguna de sus etapas, y este PARTIAL no debe leerse como que exista."
+  },
+  {
+   "id": "RISK_TEST",
+   "nivel": "3-aprender",
+   "estado_declarado": "PLANNED",
+   "ancla": null
+  },
+  {
+   "id": "OOS",
+   "nivel": "3-aprender",
+   "estado_declarado": "PLANNED",
+   "ancla": null
+  },
+  {
+   "id": "SHADOW",
+   "nivel": "3-aprender",
+   "estado_declarado": "PLANNED",
+   "ancla": null
+  },
+  {
+   "id": "POLICY_GATE",
+   "nivel": "3-aprender",
+   "estado_declarado": "PLANNED",
+   "ancla": null
+  },
+  {
+   "id": "POLICY_REGISTRY",
+   "nivel": "3-aprender",
+   "estado_declarado": "PLANNED",
+   "ancla": null
+  },
+  {
+   "id": "NEW_VERSION",
+   "nivel": "3-aprender",
+   "estado_declarado": "PLANNED",
+   "ancla": null
+  },
+  {
+   "id": "RUN",
+   "nivel": "transversal",
+   "estado_declarado": "PLANNED",
+   "ancla": null,
+   "_nota": "trazabilidad de extremo a extremo. Cada RUN conserva la policy_version EXACTA usada, para que una decision historica no pueda reinterpretarse bajo una politica posterior"
+  }
+ ]
+},
+ "alcance": {
+  "regla": "La REGLA vive en contexto/validar.py::veredicto_alcance. Aqui SOLO se declaran datos: que bloque esta activo y que puede escribir cada bloque. Ninguna lista de arboles protegidos se declara en este fichero ni en el validador -- se DERIVA de contexto/manifiesto.json y de contexto/extraccion.py, que son quienes ya poseen esa autoridad.",
+  "veredictos": [
+   "ALCANCE_NO_DECLARADO",
+   "PROTEGIDO_GLOBAL",
+   "PERMITIDO",
+   "IMPORTADO",
+   "FUERA_DE_ALCANCE"
+  ],
+  "precedencia": "ALCANCE_NO_DECLARADO > PROTEGIDO_GLOBAL > PERMITIDO > IMPORTADO > FUERA_DE_ALCANCE. La proteccion global gana SIEMPRE sobre la lista de escritura del bloque: ningun bloque puede autorizarse a si mismo el historico. IMPORTADO va por DEBAJO de PERMITIDO y de PROTEGIDO_GLOBAL a proposito: una ruta protegida sigue siendo PROTEGIDO_GLOBAL aunque llegue por un merge, de modo que la superficie protegida NO puede blanquearse integrando.",
+  "importado": {
+   "que_es": "Una clasificacion de PROCEDENCIA, no una autorizacion. Significa: esta modificacion detectada en el diff no es autoria del bloque; procede de una integracion y queda fuera del calculo de su alcance propio. NO significa que el bloque pueda importar cualquier cosa, y por eso NO esta en validar.py::VEREDICTOS_QUE_PASAN.",
+   "por_que_existe": "El primer merge real del proyecto -- CI run #1 del PR #1, 2 failures -- revelo una falsa asuncion de D-54: `diff(desde~1, HEAD)` equivale a `lo que escribio el bloque` SOLO mientras la rama es lineal. Un merge introduce en HEAD arboles del otro padre. Fueron seis data/thesis/*.json escritos por el cron de la canonica, que S0 no habia tocado jamas. Ampliar `escritura` para taparlo habria sido falso; exceptuar los PR de integracion habria sido el interruptor `alcance_bloque.vigente` renacido con otro nombre.",
+   "merge_de_integracion": "8326a1be3e27a8e0df7c8a6c5c2678ffc68807a1",
+   "condiciones": [
+    "1. blob(HEAD, ruta) == blob(segundo padre, ruta)",
+    "2. blob(primer padre, ruta) == blob(merge-base, ruta)",
+    "3. ningun commit del bloque toca la ruta: git log --first-parent desde~1..P1",
+    "La ruta tiene que EXISTIR en HEAD y en el segundo padre: borrar es un acto de autoria, y sin esta comprobacion dos ausencias compararian iguales y pasarian solas."
+   ],
+   "las_tres_son_obligatorias": "La 2 no puede eliminarse: `HEAD == segundo padre` NO es condicion suficiente. Y la 3 no es redundante con la 2 -- un bloque que modifica una ruta y luego la REVIERTE deja blob(P1)==blob(MB) y pasaria la 2; el log lo ve igualmente. Si el bloque la modifico no es IMPORTADO, aunque termine igual que el segundo padre. El repositorio real no contiene ese caso, asi que se demuestra sobre la topologia sintetica de tests/test_alcance_bloque.py::TestTopologiaDeMerge.",
+   "limite_del_mecanismo": "IMPORTADO es una clasificacion de integracion aplicable AL MERGE DE INTEGRACION que introduce el arbol base en la rama del bloque. No es una autorizacion generica para merges arbitrarios. Se consulta UN unico merge, el declarado aqui: no hay descubrimiento automatico, ni recorrido del grafo, ni soporte de multiples padres ni de varios merges en el rango. Lo que no explique ESE merge cae a FUERA_DE_ALCANCE por denegacion por defecto, de modo que un segundo merge no declarado no concede nada: falla, y se ve.",
+   "si_hiciera_falta_generalizarlo": "Seria un bloque posterior con su propia decision, no una ampliacion silenciosa de esta.",
+   "sin_codigo_de_fallo_nuevo": "A proposito: el camino de rechazo sigue siendo FUERA_DE_ALCANCE. Las mutaciones M36-M39 comprueban que ese camino se recorre de verdad.",
+   "decision": "D-59"
+  },
+  "denegacion_por_defecto": "una ruta que no encaja en ninguna regla es FUERA_DE_ALCANCE, nunca permitida. Mismo invariante que UNDECLARED != valor por defecto.",
+  "protegido_global_es_condicional": "PROTEGIDO_GLOBAL no significa 'nunca escribible' -- eso haria inejecutable el propio protocolo de cierre de docs/07. Significa que el alcance del bloque NO BASTA: pasa solo si contexto/manifiesto.json viaja en el MISMO diff, y entonces integridad.py decide. Asi la deuda DF-2 deja de ser una costumbre documentada y pasa a ser condicion de PASS.",
+  "bloque_es_desde_mas_hasta": "BLOQUE = desde + hasta. `desde~1..hasta` es el RANGO REPRODUCIBLE del bloque. La guarda evalua ese rango, NO el diff contra la rama base: un bloque responde de los commits que escribio, no de lo que la rama base todavia ignora. Confundir ambas cosas producia 389 falsos FUERA_DE_ALCANCE en el PR de integracion, todos ellos obra de bloques anteriores (P1-P6.2, F1).",
+  "hasta_abierto": "Mientras el bloque esta abierto, `hasta` es null y se resuelve a HEAD como valor OPERATIVO. Al cerrarlo se fija al commit real, y desde ese momento el rango es reproducible para siempre. El significado historico de un bloque cerrado NO depende de HEAD: si dependiera, el bloque cambiaria de contenido con cada commit posterior.",
+  "transicion_de_bloque": "cambiar `bloque_activo`, declarar la `escritura` del bloque nuevo y registrar su decision en docs/DECISIONES.md. El bloque anterior pasa a CLOSED por VEREDICTO CALCULADO, no por afirmacion. No hay ningun valor de este contrato que desactive la guarda entera."
+ }
+}

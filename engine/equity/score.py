@@ -18,7 +18,6 @@ Vantage, no calculado a mano).
 """
 import json
 import os
-from datetime import datetime, timezone
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "_data")
 
@@ -26,6 +25,31 @@ DATA_DIR = os.path.join(os.path.dirname(__file__), "_data")
 def _load(symbol, suffix):
     with open(f"{DATA_DIR}/{symbol}_{suffix}.json") as f:
         return json.load(f)
+
+
+def _trimestre_reportado(earn, latest_quarter):
+    """El bloque de `quarterlyEarnings` que corresponde al trimestre que el
+    overview declara como ultimo cerrado.
+
+    Alpha Vantage da en el MISMO payload las dos fechas que hay que
+    distinguir: `fiscalDateEnding` (fin del periodo economico) y
+    `reportedDate` (el dia en que se publico). Hasta el 2026-09-07 este
+    motor solo exponia la primera, y el adaptador fechaba con ella nueve
+    metricas que no fueron conocibles hasta la segunda -- entre 22 y 32
+    dias despues, medido sobre las fixtures reales de IBM y XOM.
+
+    Se busca por fiscalDateEnding en vez de asumir earn[0]: si el overview
+    y la serie de resultados fueran de descargas distintas, coger el primer
+    elemento podria emparejar un trimestre con la fecha de publicacion de
+    otro. Si no hay coincidencia, se devuelve None y el llamante decide --
+    nunca se inventa una fecha aproximada.
+    """
+    if not latest_quarter:
+        return None
+    for q in earn:
+        if q.get("fiscalDateEnding") == latest_quarter:
+            return q
+    return None
 
 
 def score_asset(symbol):
@@ -75,9 +99,42 @@ def score_asset(symbol):
     else:
         sesgo = f"mixto ({alcistas}/{len(validos)} señales alcistas)"
 
+    # Este motor mezcla dos relojes: la cotizacion es del ultimo dia de
+    # mercado y los fundamentales son del ultimo trimestre CERRADO. No
+    # comparten fecha y no puede haber una sola que sea cierta para ambos.
+    fechas_dato = {
+        "precio": quote["latestDay"],
+        "fundamental": ov.get("LatestQuarter"),
+    }
+    # La fecha del bloque es la del componente mas antiguo. Si algun
+    # componente no trae fecha, el bloque no tiene fecha: None, nunca la
+    # fecha del componente que si la trae (seria optimista por
+    # construccion) y nunca datetime.now(), que era lo que habia antes y
+    # etiquetaba unos fundamentales de junio como si fueran de hoy
+    # (corregido 2026-09-06, P1). El modulo ya no importa datetime: volver
+    # a fechar con la hora de ejecucion seria ahora un NameError, no un
+    # dato mal etiquetado en silencio.
+    conocidas = [f for f in fechas_dato.values() if f]
+    fecha_dato = min(conocidas) if len(conocidas) == len(fechas_dato) else None
+
+    # TERCER reloj, distinto de los dos de arriba (P6.2a, 2026-09-07): los
+    # fundamentales del trimestre no fueron conocibles el dia en que el
+    # trimestre cerro, sino el dia en que la empresa publico resultados.
+    # `fechas_dato` sigue respondiendo "de que fecha es el dato"; esto
+    # responde "desde cuando se pudo saber", que es otra pregunta.
+    trimestre = _trimestre_reportado(earn, ov.get("LatestQuarter"))
+    fecha_publicacion_fundamental = trimestre["reportedDate"] if trimestre else None
+    # pre-market / post-market. No decide available_at (la informacion es
+    # publica el mismo dia en ambos casos); decide la primera sesion en que
+    # se pudo NEGOCIAR, que es una pregunta distinta y vive en P6.2c.
+    momento_publicacion = trimestre.get("reportTime") if trimestre else None
+
     return {
         "activo": symbol,
-        "fecha_dato": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+        "fecha_dato": fecha_dato,
+        "fechas_dato": fechas_dato,
+        "fecha_publicacion_fundamental": fecha_publicacion_fundamental,
+        "momento_publicacion": momento_publicacion,
         "fuente_ultima_cotizacion": quote["latestDay"],
         "precio": price,
         "market_cap_usd": int(ov["MarketCapitalization"]),

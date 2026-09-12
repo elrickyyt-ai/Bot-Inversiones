@@ -1,0 +1,92 @@
+[
+ {
+  "concept_id": "inflation_yoy",
+  "nombre": "Inflacion interanual",
+  "unidad_canonica": "%",
+  "parametros": {
+   "periodo": "12m"
+  },
+  "comparable_entre_entidades": true,
+  "nota_comparabilidad": "Cestas nacionales distintas, pero la magnitud medida es la misma.",
+  "implementaciones": [
+   {
+    "metric": "cpi_yoy_pct",
+    "entity_id": "reg:US",
+    "serie": "CPIAUCSL",
+    "source_id": "src:dimasset-equity"
+   },
+   {
+    "metric": "hicp_yoy_pct",
+    "entity_id": "reg:EA",
+    "serie": "CP0000EZ19M086NEST",
+    "source_id": "src:dimasset-equity"
+   }
+  ]
+ },
+ {
+  "concept_id": "policy_rate",
+  "nombre": "Tipo de politica monetaria",
+  "unidad_canonica": "%",
+  "parametros": {},
+  "comparable_entre_entidades": false,
+  "nota_comparabilidad": "fed_funds_pct es un tipo EFECTIVO de mercado; ecb_deposit_rate_pct es un tipo ADMINISTRADO. Misma funcion de politica, instrumentos distintos: comparar niveles absolutos es incorrecto, comparar direcciones y cambios es valido.",
+  "implementaciones": [
+   {
+    "metric": "fed_funds_pct",
+    "entity_id": "reg:US",
+    "serie": "FEDFUNDS",
+    "source_id": "src:dimasset-equity"
+   },
+   {
+    "metric": "ecb_deposit_rate_pct",
+    "entity_id": "reg:EA",
+    "serie": "ECBDFR",
+    "source_id": "src:dimasset-equity"
+   }
+  ]
+ },
+ {
+  "concept_id": "percentil_en_ventana",
+  "nombre": "Percentil dentro de una ventana movil",
+  "unidad_canonica": "%",
+  "parametros": {
+   "ventana": "obligatorio"
+  },
+  "comparable_entre_entidades": false,
+  "nota_comparabilidad": "Mismo OPERADOR, parametros distintos: 90 dias frente a 52 semanas es un factor de 4. Comparar hoy la 'posicion en rango' de BTC y de IBM compara dos ventanas de longitud distinta y nada lo advierte.",
+  "implementaciones": [
+   {
+    "metric": "posicion_rango_90d_pct",
+    "entity_id": null,
+    "parametros": {
+     "ventana": "90d"
+    },
+    "source_id": "src:dimasset-crypto"
+   },
+   {
+    "metric": "posicion_rango_52s_pct",
+    "entity_id": null,
+    "parametros": {
+     "ventana": "52w"
+    },
+    "source_id": "src:dimasset-equity"
+   },
+   {
+    "metric": "market_cap_percentile_365d",
+    "entity_id": null,
+    "parametros": {
+     "ventana": "365d"
+    },
+    "source_id": "src:dimasset-crypto"
+   },
+   {
+    "metric": "tvl_percentile_365d",
+    "entity_id": null,
+    "parametros": {
+     "ventana": "365d"
+    },
+    "source_id": "src:dimasset-crypto"
+   }
+  ]
+ }
+]

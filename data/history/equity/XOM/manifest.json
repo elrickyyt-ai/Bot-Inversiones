@@ -1,0 +1,566 @@
+{
+  "asset_id": "XOM",
+  "asset_type": "equity",
+  "particiones": [
+    {
+      "fichero": "1970.parquet",
+      "anio": 1970,
+      "revision": 1,
+      "sha256": "33a845ed68345b50cb2609bba3051228af1b830c4f64b9ab5a1f77cc7e84a125",
+      "filas": 1903,
+      "data_as_of_min": "1970-01-02",
+      "data_as_of_max": "1970-12-31",
+      "created_at": "2026-09-05T17:59:35Z"
+    },
+    {
+      "fichero": "1971.parquet",
+      "anio": 1971,
+      "revision": 1,
+      "sha256": "8b48f5e1461bfa66b094a305d4cd4413144faf34fbd615bc0c2bc6e48e656cb3",
+      "filas": 2530,
+      "data_as_of_min": "1971-01-04",
+      "data_as_of_max": "1971-12-31",
+      "created_at": "2026-09-05T17:59:35Z"
+    },
+    {
+      "fichero": "1972.parquet",
+      "anio": 1972,
+      "revision": 1,
+      "sha256": "61866ae975419d38f72a5a2cc453b9f666ef33c4cc5bfc518fc7b4f4dc5f29da",
+      "filas": 2309,
+      "data_as_of_min": "1972-01-03",
+      "data_as_of_max": "1972-12-29",
+      "created_at": "2026-09-05T17:59:35Z"
+    },
+    {
+      "fichero": "1973.parquet",
+      "anio": 1973,
+      "revision": 1,
+      "sha256": "8bfe7efdf55de5780ab3be4cfafa2e0e92a4386d3e6b54facd9247da19fa5a32",
+      "filas": 1958,
+      "data_as_of_min": "1973-01-02",
+      "data_as_of_max": "1973-12-31",
+      "created_at": "2026-09-05T17:59:35Z"
+    },
+    {
+      "fichero": "1974.parquet",
+      "anio": 1974,
+      "revision": 1,
+      "sha256": "60f0a66829b78faca2575eb95a276e79a54537187e7676398c1d9bbd4ddf4af0",
+      "filas": 2530,
+      "data_as_of_min": "1974-01-02",
+      "data_as_of_max": "1974-12-31",
+      "created_at": "2026-09-05T17:59:35Z"
+    },
+    {
+      "fichero": "1975.parquet",
+      "anio": 1975,
+      "revision": 1,
+      "sha256": "d06dcc159b73ab55a63ef341df97554fc1238e963b3e10a06b05a1234c30d29f",
+      "filas": 2530,
+      "data_as_of_min": "1975-01-02",
+      "data_as_of_max": "1975-12-31",
+      "created_at": "2026-09-05T17:59:35Z"
+    },
+    {
+      "fichero": "1976.parquet",
+      "anio": 1976,
+      "revision": 1,
+      "sha256": "f77c902aacc5664d5a2bc199ab00472e4f924f73544ac792b1d4e35e99522e61",
+      "filas": 2316,
+      "data_as_of_min": "1976-01-02",
+      "data_as_of_max": "1976-12-31",
+      "created_at": "2026-09-05T17:59:35Z"
+    },
+    {
+      "fichero": "1977.parquet",
+      "anio": 1977,
+      "revision": 1,
+      "sha256": "f467512be8a696e2d5ca58b690aa4a5405b302a2860050b552c68bc978c1ae6b",
+      "filas": 1963,
+      "data_as_of_min": "1977-01-03",
+      "data_as_of_max": "1977-12-30",
+      "created_at": "2026-09-05T17:59:35Z"
+    },
+    {
+      "fichero": "1978.parquet",
+      "anio": 1978,
+      "revision": 1,
+      "sha256": "f4e059f742afdadf382d02cca889fc3b216f344edf33f0caa08bb93df74796d9",
+      "filas": 2439,
+      "data_as_of_min": "1978-01-03",
+      "data_as_of_max": "1978-12-29",
+      "created_at": "2026-09-05T17:59:35Z"
+    },
+    {
+      "fichero": "1979.parquet",
+      "anio": 1979,
+      "revision": 1,
+      "sha256": "a2f5bcf222ede0bc484c0c3bdf92dee5ffeab5509c7c71bfb81dda83ef628782",
+      "filas": 2530,
+      "data_as_of_min": "1979-01-02",
+      "data_as_of_max": "1979-12-31",
+      "created_at": "2026-09-05T17:59:35Z"
+    },
+    {
+      "fichero": "1980.parquet",
+      "anio": 1980,
+      "revision": 1,
+      "sha256": "b12240d88902ff7cdc10422c08e936af1cbcd8f670f0873ecd8d7ea2c919ad15",
+      "filas": 2322,
+      "data_as_of_min": "1980-01-02",
+      "data_as_of_max": "1980-12-31",
+      "created_at": "2026-09-05T17:59:35Z"
+    },
+    {
+      "fichero": "1981.parquet",
+      "anio": 1981,
+      "revision": 1,
+      "sha256": "bc3de29c81849fefb96b24da37d50286089e15e59c1ead54c7f921e70614234e",
+      "filas": 2300,
+      "data_as_of_min": "1981-01-02",
+      "data_as_of_max": "1981-12-31",
+      "created_at": "2026-09-05T17:59:35Z"
+    },
+    {
+      "fichero": "1982.parquet",
+      "anio": 1982,
+      "revision": 1,
+      "sha256": "2bfe7b3c090f9e6c6ef821abb6c031ec365ec8677e732342e7b6fa0ec5880b90",
+      "filas": 2530,
+      "data_as_of_min": "1982-01-04",
+      "data_as_of_max": "1982-12-31",
+      "created_at": "2026-09-05T17:59:35Z"
+    },
+    {
+      "fichero": "1983.parquet",
+      "anio": 1983,
+      "revision": 1,
+      "sha256": "1cfe1e35d66ad328b939990e45a9234da68969bb2ea4bde4b572b5dd989c136f",
+      "filas": 2530,
+      "data_as_of_min": "1983-01-03",
+      "data_as_of_max": "1983-12-30",
+      "created_at": "2026-09-05T17:59:35Z"
+    },
+    {
+      "fichero": "1984.parquet",
+      "anio": 1984,
+      "revision": 1,
+      "sha256": "b056b22e89e5f531104fc354ddd00cb04bf3af5349c8564b628c8de3388cc8c9",
+      "filas": 2530,
+      "data_as_of_min": "1984-01-03",
+      "data_as_of_max": "1984-12-31",
+      "created_at": "2026-09-05T17:59:35Z"
+    },
+    {
+      "fichero": "1985.parquet",
+      "anio": 1985,
+      "revision": 1,
+      "sha256": "072ac7848f3a12ee5bfb2fe3e042d11de94d8d5db8cbe0e4aaed1c2fbabc6f4a",
+      "filas": 2250,
+      "data_as_of_min": "1985-01-02",
+      "data_as_of_max": "1985-12-31",
+      "created_at": "2026-09-05T17:59:35Z"
+    },
+    {
+      "fichero": "1986.parquet",
+      "anio": 1986,
+      "revision": 1,
+      "sha256": "b311008947f32bd153c6af99d5f61f5b2edfb1533a6cc9572edd486e7925addb",
+      "filas": 2362,
+      "data_as_of_min": "1986-01-02",
+      "data_as_of_max": "1986-12-31",
+      "created_at": "2026-09-05T17:59:35Z"
+    },
+    {
+      "fichero": "1987.parquet",
+      "anio": 1987,
+      "revision": 1,
+      "sha256": "6174305b9d4c6e94ff9827bbbd02047f2caad00acc6b4033b2710c7d55ec6298",
+      "filas": 2530,
+      "data_as_of_min": "1987-01-02",
+      "data_as_of_max": "1987-12-31",
+      "created_at": "2026-09-05T17:59:35Z"
+    },
+    {
+      "fichero": "1988.parquet",
+      "anio": 1988,
+      "revision": 1,
+      "sha256": "fd9776addaf466a9b952b498a357e4c1dcfcc6db963797a3ade0cd7cad902d8e",
+      "filas": 2530,
+      "data_as_of_min": "1988-01-04",
+      "data_as_of_max": "1988-12-30",
+      "created_at": "2026-09-05T17:59:35Z"
+    },
+    {
+      "fichero": "1989.parquet",
+      "anio": 1989,
+      "revision": 1,
+      "sha256": "5fa8da84e46d2aaa6f69eff06e9b552c66839c1d3ec9372c2edf63fee9e6b87b",
+      "filas": 2520,
+      "data_as_of_min": "1989-01-03",
+      "data_as_of_max": "1989-12-29",
+      "created_at": "2026-09-05T17:59:35Z"
+    },
+    {
+      "fichero": "1990.parquet",
+      "anio": 1990,
+      "revision": 1,
+      "sha256": "d5cea6164821def231074971cf4c3e1e65f90189e5148f2a49e6100db9fa2a4c",
+      "filas": 2530,
+      "data_as_of_min": "1990-01-02",
+      "data_as_of_max": "1990-12-31",
+      "created_at": "2026-09-05T17:59:35Z"
+    },
+    {
+      "fichero": "1991.parquet",
+      "anio": 1991,
+      "revision": 1,
+      "sha256": "a9747183efe2be2c444efee91502d596c9564d3a499a15639b1bab81cdb80d2a",
+      "filas": 2530,
+      "data_as_of_min": "1991-01-02",
+      "data_as_of_max": "1991-12-31",
+      "created_at": "2026-09-05T17:59:35Z"
+    },
+    {
+      "fichero": "1992.parquet",
+      "anio": 1992,
+      "revision": 1,
+      "sha256": "3cf1f513cac17fdb98654f79607cb59436654d7a15777b88000bd98cac5c3d20",
+      "filas": 2540,
+      "data_as_of_min": "1992-01-02",
+      "data_as_of_max": "1992-12-31",
+      "created_at": "2026-09-05T17:59:35Z"
+    },
+    {
+      "fichero": "1993.parquet",
+      "anio": 1993,
+      "revision": 1,
+      "sha256": "ed4d449893d4c39383fe879ecf18e07c8ef519ed58b08e2e36878e0b9c17ff03",
+      "filas": 2530,
+      "data_as_of_min": "1993-01-04",
+      "data_as_of_max": "1993-12-31",
+      "created_at": "2026-09-05T17:59:35Z"
+    },
+    {
+      "fichero": "1994.parquet",
+      "anio": 1994,
+      "revision": 1,
+      "sha256": "d92215cc676092a492d0bfb406955ce91c8deadb89c9cff6bf8971c2506b0703",
+      "filas": 2109,
+      "data_as_of_min": "1994-01-03",
+      "data_as_of_max": "1994-12-30",
+      "created_at": "2026-09-05T17:59:35Z"
+    },
+    {
+      "fichero": "1995.parquet",
+      "anio": 1995,
+      "revision": 1,
+      "sha256": "b416d348335d99b0fb5b25d1eace9595d458a030aa49e4be00ce5b55e4c71469",
+      "filas": 2493,
+      "data_as_of_min": "1995-01-03",
+      "data_as_of_max": "1995-12-29",
+      "created_at": "2026-09-05T17:59:35Z"
+    },
+    {
+      "fichero": "1996.parquet",
+      "anio": 1996,
+      "revision": 1,
+      "sha256": "55c140ae8455c3ac5da2b58b09aca0b95525a89c4285a7f627fe2e0a21bcdccc",
+      "filas": 2540,
+      "data_as_of_min": "1996-01-02",
+      "data_as_of_max": "1996-12-31",
+      "created_at": "2026-09-05T17:59:35Z"
+    },
+    {
+      "fichero": "1997.parquet",
+      "anio": 1997,
+      "revision": 1,
+      "sha256": "0eec7a3e72c5ce4e87ea2c4d93dba1283e9c87ea54040a13d358a6804f4af306",
+      "filas": 2530,
+      "data_as_of_min": "1997-01-02",
+      "data_as_of_max": "1997-12-31",
+      "created_at": "2026-09-05T17:59:35Z"
+    },
+    {
+      "fichero": "1998.parquet",
+      "anio": 1998,
+      "revision": 1,
+      "sha256": "44c67c95ae78a90499e4631fca4ad18d8d28b4ebb48b28e1b8d7f5a7361de1c1",
+      "filas": 2520,
+      "data_as_of_min": "1998-01-02",
+      "data_as_of_max": "1998-12-31",
+      "created_at": "2026-09-05T17:59:35Z"
+    },
+    {
+      "fichero": "1999.parquet",
+      "anio": 1999,
+      "revision": 1,
+      "sha256": "cda2d2cde95d98d69cab52e45c877b3dbe906b0d6fae4bd4845506aa42972a08",
+      "filas": 2520,
+      "data_as_of_min": "1999-01-04",
+      "data_as_of_max": "1999-12-31",
+      "created_at": "2026-09-05T17:59:35Z"
+    },
+    {
+      "fichero": "2000.parquet",
+      "anio": 2000,
+      "revision": 1,
+      "sha256": "6e5e1f24ad7e90a702ec5678366427b6a63664b65c8fb4e6e9dee9a3ef55555b",
+      "filas": 2520,
+      "data_as_of_min": "2000-01-03",
+      "data_as_of_max": "2000-12-29",
+      "created_at": "2026-09-05T17:59:35Z"
+    },
+    {
+      "fichero": "2001.parquet",
+      "anio": 2001,
+      "revision": 1,
+      "sha256": "e57cd1ee5f1d2f6ee0c9ddfda7348f33a2cb6429b767e7c41f73de6029b416c6",
+      "filas": 2192,
+      "data_as_of_min": "2001-01-02",
+      "data_as_of_max": "2001-12-31",
+      "created_at": "2026-09-05T17:59:35Z"
+    },
+    {
+      "fichero": "2002.parquet",
+      "anio": 2002,
+      "revision": 1,
+      "sha256": "35bf099ca7eef7f605b52dc3af6238b1a40c9d7d05b1eaff57486ad8007beafb",
+      "filas": 2370,
+      "data_as_of_min": "2002-01-02",
+      "data_as_of_max": "2002-12-31",
+      "created_at": "2026-09-05T17:59:35Z"
+    },
+    {
+      "fichero": "2003.parquet",
+      "anio": 2003,
+      "revision": 1,
+      "sha256": "c35de990ce828311eef988bf25d4debb0226cf6861e5b7b2bc44d89f8b171e83",
+      "filas": 2520,
+      "data_as_of_min": "2003-01-02",
+      "data_as_of_max": "2003-12-31",
+      "created_at": "2026-09-05T17:59:35Z"
+    },
+    {
+      "fichero": "2004.parquet",
+      "anio": 2004,
+      "revision": 1,
+      "sha256": "13678e39d4ee053ffbe26fe21a775ddb79e98e75f1261c9333afab882b3a6abd",
+      "filas": 2140,
+      "data_as_of_min": "2004-01-02",
+      "data_as_of_max": "2004-12-31",
+      "created_at": "2026-09-05T17:59:35Z"
+    },
+    {
+      "fichero": "2005.parquet",
+      "anio": 2005,
+      "revision": 1,
+      "sha256": "6068854f332bd03fd419e9b49a4ff6b3c10f820d58a8fb56337a4be8ed17d157",
+      "filas": 2462,
+      "data_as_of_min": "2005-01-03",
+      "data_as_of_max": "2005-12-30",
+      "created_at": "2026-09-05T17:59:35Z"
+    },
+    {
+      "fichero": "2006.parquet",
+      "anio": 2006,
+      "revision": 1,
+      "sha256": "6ced3ce7c1b2036d3eb0af6a68a07fda53cd90ea77da0570204ce0666969b487",
+      "filas": 2510,
+      "data_as_of_min": "2006-01-03",
+      "data_as_of_max": "2006-12-29",
+      "created_at": "2026-09-05T17:59:35Z"
+    },
+    {
+      "fichero": "2007.parquet",
+      "anio": 2007,
+      "revision": 1,
+      "sha256": "c4d72a6e4ad2d312fb46946834a62dce67dfeff6dfe93ec0b70480fdf7a1262c",
+      "filas": 2072,
+      "data_as_of_min": "2007-01-03",
+      "data_as_of_max": "2007-12-31",
+      "created_at": "2026-09-05T17:59:35Z"
+    },
+    {
+      "fichero": "2008.parquet",
+      "anio": 2008,
+      "revision": 1,
+      "sha256": "3708bf708075dd5b7123661015d68870e5535a0ea8144775015fcd5d80545e76",
+      "filas": 2530,
+      "data_as_of_min": "2008-01-02",
+      "data_as_of_max": "2008-12-31",
+      "created_at": "2026-09-05T17:59:35Z"
+    },
+    {
+      "fichero": "2009.parquet",
+      "anio": 2009,
+      "revision": 1,
+      "sha256": "7285677f9e07768b406fabe5098dda0970808ebeadbc73b43730d76cb476c42f",
+      "filas": 2520,
+      "data_as_of_min": "2009-01-02",
+      "data_as_of_max": "2009-12-31",
+      "created_at": "2026-09-05T17:59:35Z"
+    },
+    {
+      "fichero": "2010.parquet",
+      "anio": 2010,
+      "revision": 1,
+      "sha256": "2b2b298291b8e9ef00cb333f7417a9962017d2cf855fce421246748206be9bc5",
+      "filas": 2520,
+      "data_as_of_min": "2010-01-04",
+      "data_as_of_max": "2010-12-31",
+      "created_at": "2026-09-05T17:59:35Z"
+    },
+    {
+      "fichero": "2011.parquet",
+      "anio": 2011,
+      "revision": 1,
+      "sha256": "bd440e062170160a116b11f47c84ab13597ff6960fb02982ecea9e6f150b7af3",
+      "filas": 2520,
+      "data_as_of_min": "2011-01-03",
+      "data_as_of_max": "2011-12-30",
+      "created_at": "2026-09-05T17:59:35Z"
+    },
+    {
+      "fichero": "2012.parquet",
+      "anio": 2012,
+      "revision": 1,
+      "sha256": "3d6d6ffe0197b680f13d025ffedc283b03952eb895e371d323be22fc620ebb24",
+      "filas": 2283,
+      "data_as_of_min": "2012-01-03",
+      "data_as_of_max": "2012-12-31",
+      "created_at": "2026-09-05T17:59:35Z"
+    },
+    {
+      "fichero": "2013.parquet",
+      "anio": 2013,
+      "revision": 1,
+      "sha256": "6713ec4299a3352739b85c1629e28e1536b77ee43c907843728152a7f9d75d1f",
+      "filas": 2299,
+      "data_as_of_min": "2013-01-02",
+      "data_as_of_max": "2013-12-31",
+      "created_at": "2026-09-05T17:59:35Z"
+    },
+    {
+      "fichero": "2014.parquet",
+      "anio": 2014,
+      "revision": 1,
+      "sha256": "90276f90b962342dc7a8489c400f71b59adac29e5c82d367749b859e2012499c",
+      "filas": 2520,
+      "data_as_of_min": "2014-01-02",
+      "data_as_of_max": "2014-12-31",
+      "created_at": "2026-09-05T17:59:35Z"
+    },
+    {
+      "fichero": "2015.parquet",
+      "anio": 2015,
+      "revision": 1,
+      "sha256": "3a8dde05d487791b99bf69ce0bfe59bb030297e498b197f103b45360f3cad583",
+      "filas": 2520,
+      "data_as_of_min": "2015-01-02",
+      "data_as_of_max": "2015-12-31",
+      "created_at": "2026-09-05T17:59:35Z"
+    },
+    {
+      "fichero": "2016.parquet",
+      "anio": 2016,
+      "revision": 1,
+      "sha256": "fd2824dfd8507fd1c319d7115d4353e82c3c7236a7b1e1860e591a2f4b19a15b",
+      "filas": 2520,
+      "data_as_of_min": "2016-01-04",
+      "data_as_of_max": "2016-12-30",
+      "created_at": "2026-09-05T17:59:35Z"
+    },
+    {
+      "fichero": "2017.parquet",
+      "anio": 2017,
+      "revision": 1,
+      "sha256": "82497d789bb1fe1f666efba58f1ccaceb2e6b3684739335517923ee2eb393af1",
+      "filas": 2510,
+      "data_as_of_min": "2017-01-03",
+      "data_as_of_max": "2017-12-29",
+      "created_at": "2026-09-05T17:59:35Z"
+    },
+    {
+      "fichero": "2018.parquet",
+      "anio": 2018,
+      "revision": 1,
+      "sha256": "ce3073be1d727f18e7eff375443548ac3213b599a370413f38e90466acdcc39c",
+      "filas": 2383,
+      "data_as_of_min": "2018-01-02",
+      "data_as_of_max": "2018-12-31",
+      "created_at": "2026-09-05T17:59:35Z"
+    },
+    {
+      "fichero": "2019.parquet",
+      "anio": 2019,
+      "revision": 1,
+      "sha256": "4c329ef2edbf69941f73a72b952dabff5be3d6557d53369bf611d1e722a7378c",
+      "filas": 2209,
+      "data_as_of_min": "2019-01-02",
+      "data_as_of_max": "2019-12-31",
+      "created_at": "2026-09-05T17:59:35Z"
+    },
+    {
+      "fichero": "2020.parquet",
+      "anio": 2020,
+      "revision": 1,
+      "sha256": "e789c9eb1551cb80942eaa8ef2774a7352087f6de46669ad8435261dc997be2d",
+      "filas": 2530,
+      "data_as_of_min": "2020-01-02",
+      "data_as_of_max": "2020-12-31",
+      "created_at": "2026-09-05T17:59:35Z"
+    },
+    {
+      "fichero": "2021.parquet",
+      "anio": 2021,
+      "revision": 1,
+      "sha256": "a1f22d41ab1c150cabc456439d30c5bfc9559264638e5f42f76e3f01a8baf354",
+      "filas": 2520,
+      "data_as_of_min": "2021-01-04",
+      "data_as_of_max": "2021-12-31",
+      "created_at": "2026-09-05T17:59:35Z"
+    },
+    {
+      "fichero": "2022.parquet",
+      "anio": 2022,
+      "revision": 1,
+      "sha256": "ec855339ad6dd5ac7490d2478b477e87aeb10a43ab06ec1a4c7aab3da032e950",
+      "filas": 2510,
+      "data_as_of_min": "2022-01-03",
+      "data_as_of_max": "2022-12-30",
+      "created_at": "2026-09-05T17:59:35Z"
+    },
+    {
+      "fichero": "2023.parquet",
+      "anio": 2023,
+      "revision": 1,
+      "sha256": "29386f3acb5330aa9fe29f24e6d2233a688833e359ae79266d16189cab18cc67",
+      "filas": 2500,
+      "data_as_of_min": "2023-01-03",
+      "data_as_of_max": "2023-12-29",
+      "created_at": "2026-09-05T17:59:35Z"
+    },
+    {
+      "fichero": "2024.parquet",
+      "anio": 2024,
+      "revision": 1,
+      "sha256": "c6e9b866f99db35dcc28a8f06c1cb4fa929eb524a711d48b5df29df678991d2f",
+      "filas": 2520,
+      "data_as_of_min": "2024-01-02",
+      "data_as_of_max": "2024-12-31",
+      "created_at": "2026-09-05T17:59:35Z"
+    },
+    {
+      "fichero": "2025.parquet",
+      "anio": 2025,
+      "revision": 1,
+      "sha256": "f33d52d964200e7e0bf79d8c5bc40d8941257c26637d58154da1bbb79e5e4df7",
+      "filas": 2062,
+      "data_as_of_min": "2025-01-02",
+      "data_as_of_max": "2025-12-31",
+      "created_at": "2026-09-05T17:59:36Z"
+    }
+  ]
+}

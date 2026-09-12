@@ -1,0 +1,281 @@
+{
+  "_nota": "Universo DECLARADO y CONGELADO. Ningun motor lo escribe: se cura a mano con su criterio escrito, igual que episodios.json y knowledge/ (D-04). La seleccion es anterior a cualquier medicion de resultados -- ese es su unico proposito.",
+  "_version": "Universe_v1 (auditoria de poblacion, 2026-09-07)",
+  "universe_id": "universe:v1:djia-2019",
+  "as_of_date": "2019-01-01",
+  "asset_type": "equity",
+  "mercado": "Estados Unidos",
+  "criterio_de_seleccion": {
+    "regla": "Los 30 componentes del Dow Jones Industrial Average tal y como estaba compuesto el 2019-01-01, MAS los activos ya presentes en la cohorte de HistoricalReactionProfile v1 que no estuvieran en ese indice.",
+    "por_que_un_indice_y_no_una_lista_propia": "La pertenencia al indice en una fecha pasada es un hecho publico, verificable y ANTERIOR a cualquier resultado que este proyecto vaya a medir. Una lista elegida por mi seria una seleccion, y una seleccion hecha despues de haber visto reaccionar a IBM/NVDA/XOM seria exactamente el sesgo que esta auditoria existe para evitar.",
+    "por_que_congelado_en_2019-01-01": "Congelar la composicion en una fecha pasada evita el sesgo de superviviencia: el universo incluye a proposito companias que despues dejaron de cotizar con ese ticker (DWDP, UTX). Tomar la composicion de HOY excluiria justo a las que peor acabaron, que es la forma mas comun de este sesgo.",
+    "por_que_no_se_amplia_ya_a_300": "El objetivo de esta iteracion es medir si la POBLACION es viable, no acumular datos. Ver las condiciones para 300+ en el informe.",
+    "no_se_ha_usado": "ningun resultado historico, ninguna reaccion pasada, ninguna rentabilidad, ninguna metrica de calidad de dato. La regla se escribio ANTES de la primera llamada de medicion."
+  },
+  "limitaciones_declaradas": [
+    {
+      "limitacion": "SOLO GRAN CAPITALIZACION",
+      "detalle": "El DJIA es un indice de 30 grandes companias. El usuario pidio diversidad de tamano incluyendo mid cap, y Universe_v1 NO la tiene.",
+      "por_que_no_se_ha_resuelto": "No dispongo de una composicion historica verificable de un indice mid cap (S&P MidCap 400) congelada a 2019-01-01 desde una fuente que este proyecto acepte. Construir la lista de memoria seria inventarla, y elegir yo las companias seria una seleccion. Queda como condicion explicita para Universe_v2."
+    },
+    {
+      "limitacion": "PONDERACION IRRELEVANTE",
+      "detalle": "El DJIA es ponderado por precio. Aqui no se usa como indice sino como LISTA de companias, asi que su ponderacion no interviene en nada."
+    },
+    {
+      "limitacion": "SOLO EE.UU.",
+      "detalle": "Un unico mercado y un unico calendario bursatil (NYSE/NASDAQ). Coherente con el unico benchmark formal declarado (bm:sp500, D-25)."
+    }
+  ],
+  "included_assets": [
+    {
+      "symbol": "AAPL",
+      "nombre": "Apple",
+      "sector": "Tecnologia",
+      "origen": "DJIA 2019-01-01"
+    },
+    {
+      "symbol": "AXP",
+      "nombre": "American Express",
+      "sector": "Financiero",
+      "origen": "DJIA 2019-01-01"
+    },
+    {
+      "symbol": "BA",
+      "nombre": "Boeing",
+      "sector": "Industrial",
+      "origen": "DJIA 2019-01-01"
+    },
+    {
+      "symbol": "CAT",
+      "nombre": "Caterpillar",
+      "sector": "Industrial",
+      "origen": "DJIA 2019-01-01"
+    },
+    {
+      "symbol": "CSCO",
+      "nombre": "Cisco Systems",
+      "sector": "Tecnologia",
+      "origen": "DJIA 2019-01-01"
+    },
+    {
+      "symbol": "CVX",
+      "nombre": "Chevron",
+      "sector": "Energia",
+      "origen": "DJIA 2019-01-01"
+    },
+    {
+      "symbol": "DIS",
+      "nombre": "Walt Disney",
+      "sector": "Comunicacion",
+      "origen": "DJIA 2019-01-01"
+    },
+    {
+      "symbol": "DWDP",
+      "nombre": "DowDuPont",
+      "sector": "Materiales",
+      "origen": "DJIA 2019-01-01",
+      "accion_corporativa_posterior": "escindida en 2019 (Dow / DuPont); el ticker DWDP dejo de existir"
+    },
+    {
+      "symbol": "GS",
+      "nombre": "Goldman Sachs",
+      "sector": "Financiero",
+      "origen": "DJIA 2019-01-01"
+    },
+    {
+      "symbol": "HD",
+      "nombre": "Home Depot",
+      "sector": "Consumo discrecional",
+      "origen": "DJIA 2019-01-01"
+    },
+    {
+      "symbol": "IBM",
+      "nombre": "IBM",
+      "sector": "Tecnologia",
+      "origen": "DJIA 2019-01-01 · cohorte HRP v1"
+    },
+    {
+      "symbol": "INTC",
+      "nombre": "Intel",
+      "sector": "Tecnologia",
+      "origen": "DJIA 2019-01-01"
+    },
+    {
+      "symbol": "JNJ",
+      "nombre": "Johnson & Johnson",
+      "sector": "Salud",
+      "origen": "DJIA 2019-01-01"
+    },
+    {
+      "symbol": "JPM",
+      "nombre": "JPMorgan Chase",
+      "sector": "Financiero",
+      "origen": "DJIA 2019-01-01"
+    },
+    {
+      "symbol": "KO",
+      "nombre": "Coca-Cola",
+      "sector": "Consumo basico",
+      "origen": "DJIA 2019-01-01"
+    },
+    {
+      "symbol": "MCD",
+      "nombre": "McDonald's",
+      "sector": "Consumo discrecional",
+      "origen": "DJIA 2019-01-01"
+    },
+    {
+      "symbol": "MMM",
+      "nombre": "3M",
+      "sector": "Industrial",
+      "origen": "DJIA 2019-01-01"
+    },
+    {
+      "symbol": "MRK",
+      "nombre": "Merck",
+      "sector": "Salud",
+      "origen": "DJIA 2019-01-01"
+    },
+    {
+      "symbol": "MSFT",
+      "nombre": "Microsoft",
+      "sector": "Tecnologia",
+      "origen": "DJIA 2019-01-01"
+    },
+    {
+      "symbol": "NKE",
+      "nombre": "Nike",
+      "sector": "Consumo discrecional",
+      "origen": "DJIA 2019-01-01"
+    },
+    {
+      "symbol": "NVDA",
+      "nombre": "NVIDIA",
+      "sector": "Tecnologia",
+      "origen": "cohorte HRP v1 (NO estaba en el DJIA de 2019; entro en noviembre de 2024)"
+    },
+    {
+      "symbol": "PFE",
+      "nombre": "Pfizer",
+      "sector": "Salud",
+      "origen": "DJIA 2019-01-01"
+    },
+    {
+      "symbol": "PG",
+      "nombre": "Procter & Gamble",
+      "sector": "Consumo basico",
+      "origen": "DJIA 2019-01-01"
+    },
+    {
+      "symbol": "TRV",
+      "nombre": "Travelers",
+      "sector": "Financiero",
+      "origen": "DJIA 2019-01-01"
+    },
+    {
+      "symbol": "UNH",
+      "nombre": "UnitedHealth",
+      "sector": "Salud",
+      "origen": "DJIA 2019-01-01"
+    },
+    {
+      "symbol": "UTX",
+      "nombre": "United Technologies",
+      "sector": "Industrial",
+      "origen": "DJIA 2019-01-01",
+      "accion_corporativa_posterior": "fusionada con Raytheon en 2020; el ticker UTX dejo de existir (paso a RTX)"
+    },
+    {
+      "symbol": "V",
+      "nombre": "Visa",
+      "sector": "Financiero",
+      "origen": "DJIA 2019-01-01"
+    },
+    {
+      "symbol": "VZ",
+      "nombre": "Verizon",
+      "sector": "Comunicacion",
+      "origen": "DJIA 2019-01-01"
+    },
+    {
+      "symbol": "WBA",
+      "nombre": "Walgreens Boots Alliance",
+      "sector": "Consumo basico",
+      "origen": "DJIA 2019-01-01"
+    },
+    {
+      "symbol": "WMT",
+      "nombre": "Walmart",
+      "sector": "Consumo basico",
+      "origen": "DJIA 2019-01-01"
+    },
+    {
+      "symbol": "XOM",
+      "nombre": "Exxon Mobil",
+      "sector": "Energia",
+      "origen": "DJIA 2019-01-01 · cohorte HRP v1"
+    }
+  ],
+  "excluded_assets": [
+    {
+      "symbol": "GE",
+      "nombre": "General Electric",
+      "exclusion_reason": "Salio del DJIA en junio de 2018, ANTES de la fecha de congelacion. Se excluye por la regla, no por su comportamiento: es el caso que mas tienta a incluir a posteriori y por eso se deja fuera explicitamente."
+    },
+    {
+      "symbol": "RTX",
+      "nombre": "RTX (ex-Raytheon)",
+      "exclusion_reason": "No existia como componente en 2019-01-01. Su predecesor UTX SI esta incluido: el universo mira desde 2019, no desde hoy."
+    },
+    {
+      "symbol": "DOW",
+      "nombre": "Dow Inc.",
+      "exclusion_reason": "Nacio de la escision de DWDP en abril de 2019, posterior a la fecha de congelacion."
+    },
+    {
+      "symbol": "DD",
+      "nombre": "DuPont de Nemours",
+      "exclusion_reason": "Mismo motivo que DOW: producto de una escision posterior a la congelacion."
+    },
+    {
+      "symbol": "BTC/ETH/ADA/SOL/DOT/XRP",
+      "nombre": "cripto de CARTERA_A",
+      "exclusion_reason": "asset_type distinto y SIN benchmark formal declarado (D-21/D-25). Mezclarlas en un universo de equities romperia la homogeneidad que el perfil exige."
+    },
+    {
+      "symbol": "TSM",
+      "nombre": "TSMC",
+      "exclusion_reason": "Emisor extranjero: presenta 20-F, no 10-Q trimestral, y su calendario de resultados no es comparable. Ya esta registrado como deuda aparte (P6)."
+    }
+  ],
+  "muestra_de_medicion": {
+    "por_que_una_muestra": "Alpha Vantage gratuito da 25 llamadas/dia. Medir los 31 activos no cabe en un dia. La muestra se declara ANTES de medir para que no pueda elegirse en funcion de lo que salga.",
+    "regla": "Recorrido alfabetico del universo con paso 3 (indices 0,3,6,...,30), MAS los dos tickers con accion corporativa posterior (DWDP, UTX) para medir explicitamente el caso de superviviencia, MAS IBM y NVDA por continuidad con la cohorte de HRP v1.",
+    "simbolos": [
+      "AAPL",
+      "CAT",
+      "DIS",
+      "DWDP",
+      "HD",
+      "IBM",
+      "JNJ",
+      "MCD",
+      "MSFT",
+      "NVDA",
+      "PFE",
+      "UNH",
+      "UTX",
+      "VZ",
+      "XOM"
+    ],
+    "no_medidos": "el resto del universo queda NOT_MEASURED, nunca estimado ni rellenado."
+  },
+  "semantica": {
+    "_version": "revisada 2026-09-08 (auditoria de autoridad de datos)",
+    "significado": "empresas que DEBEN AUDITARSE",
+    "significado_anterior": "activos consultables",
+    "por_que_cambio": "Bajo la semantica anterior, DWDP y UTX habrian sido bajas del universo por no ser consultables en Alpha Vantage -- es decir, el proveedor habria decidido quien existio en nuestro pasado. Bajo la nueva son dos filas con sec=AVAILABLE y expectation=UNAVAILABLE, que es la informacion verdadera. La pertenencia al universo la fija el criterio de seleccion; la cobertura de cada fuente es un dato SOBRE el activo, nunca una condicion para estar en la lista.",
+    "consecuencia": "ningun activo sale del universo por falta de cobertura. La matriz de cobertura (autoridad_datos.json) registra que falta y en que fuente."
+  }
+}

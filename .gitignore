@@ -3,3 +3,30 @@
 engine/*/_data/
 __pycache__/
 *.pyc
+
+# current/ es un artefacto DERIVADO de history/ + incoming/, no una fuente
+# de verdad: se regenera con engine/contract/materializar.py y por eso no se
+# versiona. Medido: versionarlo costaria 65,1 KB/dia de historial de git por
+# activo (255 MB/anio con 11 activos), frente a 0,84 KB/dia sin el.
+data/current/
+
+# coverage.json es un artefacto DERIVADO igual que current/: se recalcula
+# entero desde incoming/ + history/ con engine/contract/cobertura.py. No se
+# versiona porque cambia cada dia aunque no haya ningun dato nuevo -- la
+# frescura envejece sola -- y versionarlo produciria un commit diario que no
+# corresponde a ningun cambio real (mismo motivo por el que _write_asset_row
+# dejo de reescribir DimAsset por solo retrieved_at).
+data/coverage.json
+
+# requirements.json (P5D) es derivado por partida doble: de coverage.json,
+# que ya no se versiona, y de los caminos de P5A, que se recalculan. Y
+# envejece solo igual que la frescura. Se regenera con
+# engine/requirements/resolver.py <entidad> --json.
+data/requirements.json
+
+# Evidence es una VISTA DERIVADA del Data Contract y de data/news/: se
+# regenera entera con engine/evidence/construir.py y por defecto ni
+# siquiera se escribe. Materializarla es opcional (--materializar) y su
+# sitio es este, sin versionar: un artefacto derivado que se versiona
+# deja de ser derivado. Medido: 507.430 filas.
+data/evidence/

@@ -1,0 +1,2177 @@
+{
+ "_nota": "Medicion de preparacion para backfill sobre universe:v1:djia-2019. TODO medido en vivo el 2026-09-08 contra data.sec.gov, www.sec.gov y la fuente de precios. Alpha Vantage NO se uso para decidir que activos existen (D-36).",
+ "_version": "backfill readiness v1 (2026-09-08)",
+ "universe_id": "universe:v1:djia-2019",
+ "fecha_medicion": "2026-09-08",
+ "fuentes": {
+  "identidad_y_eventos": "data.sec.gov/submissions (formerNames, 8-K Item 2.02, acceptanceDateTime)",
+  "resultado_real": "data.sec.gov/api/xbrl/companyconcept y companyfacts (EarningsPerShareDiluted y NetIncomeLoss)",
+  "precio_y_acciones": "fuente de mercado (chart + events=split)",
+  "directorio_de_tickers": "www.sec.gov/files/company_tickers.json -- SOLO SUPERVIVIENTES"
+ },
+ "columnas": [
+  "historical_identity",
+  "CIK",
+  "historical_ticker",
+  "SEC_event",
+  "actual_financials",
+  "AV_enrichment",
+  "expectation",
+  "price",
+  "corporate_actions",
+  "successor_mapping",
+  "benchmark",
+  "event_study_eligibility"
+ ],
+ "matriz": {
+  "AAPL": {
+   "historical_identity": "AVAILABLE",
+   "CIK": "AVAILABLE",
+   "historical_ticker": "AMBIGUOUS",
+   "SEC_event": "AVAILABLE",
+   "actual_financials": "AVAILABLE",
+   "AV_enrichment": "AVAILABLE",
+   "expectation": "AVAILABLE",
+   "price": "AVAILABLE",
+   "corporate_actions": "AMBIGUOUS",
+   "successor_mapping": "AVAILABLE",
+   "benchmark": "AVAILABLE",
+   "event_study_eligibility": "AVAILABLE"
+  },
+  "AXP": {
+   "historical_identity": "AVAILABLE",
+   "CIK": "AVAILABLE",
+   "historical_ticker": "AMBIGUOUS",
+   "SEC_event": "AVAILABLE",
+   "actual_financials": "AVAILABLE",
+   "AV_enrichment": "NOT_MEASURED",
+   "expectation": "NOT_MEASURED",
+   "price": "AVAILABLE",
+   "corporate_actions": "AMBIGUOUS",
+   "successor_mapping": "AVAILABLE",
+   "benchmark": "AVAILABLE",
+   "event_study_eligibility": "AMBIGUOUS"
+  },
+  "BA": {
+   "historical_identity": "AVAILABLE",
+   "CIK": "AVAILABLE",
+   "historical_ticker": "AMBIGUOUS",
+   "SEC_event": "AVAILABLE",
+   "actual_financials": "AVAILABLE",
+   "AV_enrichment": "NOT_MEASURED",
+   "expectation": "NOT_MEASURED",
+   "price": "AVAILABLE",
+   "corporate_actions": "AMBIGUOUS",
+   "successor_mapping": "AVAILABLE",
+   "benchmark": "AVAILABLE",
+   "event_study_eligibility": "AMBIGUOUS"
+  },
+  "CAT": {
+   "historical_identity": "AVAILABLE",
+   "CIK": "AVAILABLE",
+   "historical_ticker": "AMBIGUOUS",
+   "SEC_event": "AVAILABLE",
+   "actual_financials": "AVAILABLE",
+   "AV_enrichment": "AVAILABLE",
+   "expectation": "AVAILABLE",
+   "price": "AVAILABLE",
+   "corporate_actions": "AMBIGUOUS",
+   "successor_mapping": "AVAILABLE",
+   "benchmark": "AVAILABLE",
+   "event_study_eligibility": "AMBIGUOUS"
+  },
+  "CSCO": {
+   "historical_identity": "AVAILABLE",
+   "CIK": "AVAILABLE",
+   "historical_ticker": "AMBIGUOUS",
+   "SEC_event": "AVAILABLE",
+   "actual_financials": "AVAILABLE",
+   "AV_enrichment": "NOT_MEASURED",
+   "expectation": "NOT_MEASURED",
+   "price": "AVAILABLE",
+   "corporate_actions": "AMBIGUOUS",
+   "successor_mapping": "AVAILABLE",
+   "benchmark": "AVAILABLE",
+   "event_study_eligibility": "AMBIGUOUS"
+  },
+  "CVX": {
+   "historical_identity": "AVAILABLE",
+   "CIK": "AVAILABLE",
+   "historical_ticker": "AMBIGUOUS",
+   "SEC_event": "AVAILABLE",
+   "actual_financials": "AVAILABLE",
+   "AV_enrichment": "NOT_MEASURED",
+   "expectation": "NOT_MEASURED",
+   "price": "AVAILABLE",
+   "corporate_actions": "AMBIGUOUS",
+   "successor_mapping": "AVAILABLE",
+   "benchmark": "AVAILABLE",
+   "event_study_eligibility": "AVAILABLE"
+  },
+  "DIS": {
+   "historical_identity": "AVAILABLE",
+   "CIK": "AVAILABLE",
+   "historical_ticker": "AMBIGUOUS",
+   "SEC_event": "AVAILABLE",
+   "actual_financials": "AVAILABLE",
+   "AV_enrichment": "NOT_MEASURED",
+   "expectation": "NOT_MEASURED",
+   "price": "AVAILABLE",
+   "corporate_actions": "AMBIGUOUS",
+   "successor_mapping": "AVAILABLE",
+   "benchmark": "AVAILABLE",
+   "event_study_eligibility": "AMBIGUOUS"
+  },
+  "DWDP": {
+   "historical_identity": "AVAILABLE",
+   "CIK": "AVAILABLE",
+   "historical_ticker": "AMBIGUOUS",
+   "SEC_event": "AVAILABLE",
+   "actual_financials": "AVAILABLE",
+   "AV_enrichment": "UNAVAILABLE",
+   "expectation": "UNAVAILABLE",
+   "price": "UNAVAILABLE",
+   "corporate_actions": "UNAVAILABLE",
+   "successor_mapping": "AVAILABLE",
+   "benchmark": "AVAILABLE",
+   "event_study_eligibility": "UNAVAILABLE"
+  },
+  "GS": {
+   "historical_identity": "AVAILABLE",
+   "CIK": "AVAILABLE",
+   "historical_ticker": "AMBIGUOUS",
+   "SEC_event": "AVAILABLE",
+   "actual_financials": "AVAILABLE",
+   "AV_enrichment": "NOT_MEASURED",
+   "expectation": "NOT_MEASURED",
+   "price": "AVAILABLE",
+   "corporate_actions": "AMBIGUOUS",
+   "successor_mapping": "AVAILABLE",
+   "benchmark": "AVAILABLE",
+   "event_study_eligibility": "AVAILABLE"
+  },
+  "HD": {
+   "historical_identity": "AVAILABLE",
+   "CIK": "AVAILABLE",
+   "historical_ticker": "AMBIGUOUS",
+   "SEC_event": "AVAILABLE",
+   "actual_financials": "AVAILABLE",
+   "AV_enrichment": "NOT_MEASURED",
+   "expectation": "NOT_MEASURED",
+   "price": "AVAILABLE",
+   "corporate_actions": "AMBIGUOUS",
+   "successor_mapping": "AVAILABLE",
+   "benchmark": "AVAILABLE",
+   "event_study_eligibility": "AMBIGUOUS"
+  },
+  "IBM": {
+   "historical_identity": "AVAILABLE",
+   "CIK": "AVAILABLE",
+   "historical_ticker": "AMBIGUOUS",
+   "SEC_event": "AVAILABLE",
+   "actual_financials": "AVAILABLE",
+   "AV_enrichment": "AVAILABLE",
+   "expectation": "AVAILABLE",
+   "price": "AVAILABLE",
+   "corporate_actions": "AMBIGUOUS",
+   "successor_mapping": "AVAILABLE",
+   "benchmark": "AVAILABLE",
+   "event_study_eligibility": "AMBIGUOUS"
+  },
+  "INTC": {
+   "historical_identity": "AVAILABLE",
+   "CIK": "AVAILABLE",
+   "historical_ticker": "AMBIGUOUS",
+   "SEC_event": "AVAILABLE",
+   "actual_financials": "AVAILABLE",
+   "AV_enrichment": "NOT_MEASURED",
+   "expectation": "NOT_MEASURED",
+   "price": "AVAILABLE",
+   "corporate_actions": "AMBIGUOUS",
+   "successor_mapping": "AVAILABLE",
+   "benchmark": "AVAILABLE",
+   "event_study_eligibility": "AMBIGUOUS"
+  },
+  "JNJ": {
+   "historical_identity": "AVAILABLE",
+   "CIK": "AVAILABLE",
+   "historical_ticker": "AMBIGUOUS",
+   "SEC_event": "AVAILABLE",
+   "actual_financials": "AVAILABLE",
+   "AV_enrichment": "NOT_MEASURED",
+   "expectation": "NOT_MEASURED",
+   "price": "AVAILABLE",
+   "corporate_actions": "AMBIGUOUS",
+   "successor_mapping": "AVAILABLE",
+   "benchmark": "AVAILABLE",
+   "event_study_eligibility": "AVAILABLE"
+  },
+  "JPM": {
+   "historical_identity": "AVAILABLE",
+   "CIK": "AVAILABLE",
+   "historical_ticker": "AMBIGUOUS",
+   "SEC_event": "AVAILABLE",
+   "actual_financials": "AVAILABLE",
+   "AV_enrichment": "NOT_MEASURED",
+   "expectation": "NOT_MEASURED",
+   "price": "AVAILABLE",
+   "corporate_actions": "AMBIGUOUS",
+   "successor_mapping": "AVAILABLE",
+   "benchmark": "AVAILABLE",
+   "event_study_eligibility": "AMBIGUOUS"
+  },
+  "KO": {
+   "historical_identity": "AVAILABLE",
+   "CIK": "AVAILABLE",
+   "historical_ticker": "AMBIGUOUS",
+   "SEC_event": "AVAILABLE",
+   "actual_financials": "AVAILABLE",
+   "AV_enrichment": "NOT_MEASURED",
+   "expectation": "NOT_MEASURED",
+   "price": "AVAILABLE",
+   "corporate_actions": "AMBIGUOUS",
+   "successor_mapping": "AVAILABLE",
+   "benchmark": "AVAILABLE",
+   "event_study_eligibility": "AVAILABLE"
+  },
+  "MCD": {
+   "historical_identity": "AVAILABLE",
+   "CIK": "AVAILABLE",
+   "historical_ticker": "AMBIGUOUS",
+   "SEC_event": "AVAILABLE",
+   "actual_financials": "AVAILABLE",
+   "AV_enrichment": "NOT_MEASURED",
+   "expectation": "NOT_MEASURED",
+   "price": "AVAILABLE",
+   "corporate_actions": "AMBIGUOUS",
+   "successor_mapping": "AVAILABLE",
+   "benchmark": "AVAILABLE",
+   "event_study_eligibility": "AMBIGUOUS"
+  },
+  "MMM": {
+   "historical_identity": "AVAILABLE",
+   "CIK": "AVAILABLE",
+   "historical_ticker": "AMBIGUOUS",
+   "SEC_event": "AVAILABLE",
+   "actual_financials": "AVAILABLE",
+   "AV_enrichment": "NOT_MEASURED",
+   "expectation": "NOT_MEASURED",
+   "price": "AVAILABLE",
+   "corporate_actions": "AMBIGUOUS",
+   "successor_mapping": "AVAILABLE",
+   "benchmark": "AVAILABLE",
+   "event_study_eligibility": "AMBIGUOUS"
+  },
+  "MRK": {
+   "historical_identity": "AVAILABLE",
+   "CIK": "AVAILABLE",
+   "historical_ticker": "AMBIGUOUS",
+   "SEC_event": "AVAILABLE",
+   "actual_financials": "AVAILABLE",
+   "AV_enrichment": "NOT_MEASURED",
+   "expectation": "NOT_MEASURED",
+   "price": "AVAILABLE",
+   "corporate_actions": "AMBIGUOUS",
+   "successor_mapping": "AVAILABLE",
+   "benchmark": "AVAILABLE",
+   "event_study_eligibility": "AMBIGUOUS"
+  },
+  "MSFT": {
+   "historical_identity": "AVAILABLE",
+   "CIK": "AVAILABLE",
+   "historical_ticker": "AMBIGUOUS",
+   "SEC_event": "AVAILABLE",
+   "actual_financials": "AVAILABLE",
+   "AV_enrichment": "AVAILABLE",
+   "expectation": "AVAILABLE",
+   "price": "AVAILABLE",
+   "corporate_actions": "AMBIGUOUS",
+   "successor_mapping": "AVAILABLE",
+   "benchmark": "AVAILABLE",
+   "event_study_eligibility": "AMBIGUOUS"
+  },
+  "NKE": {
+   "historical_identity": "AVAILABLE",
+   "CIK": "AVAILABLE",
+   "historical_ticker": "AMBIGUOUS",
+   "SEC_event": "AVAILABLE",
+   "actual_financials": "AVAILABLE",
+   "AV_enrichment": "NOT_MEASURED",
+   "expectation": "NOT_MEASURED",
+   "price": "AVAILABLE",
+   "corporate_actions": "AMBIGUOUS",
+   "successor_mapping": "AVAILABLE",
+   "benchmark": "AVAILABLE",
+   "event_study_eligibility": "AVAILABLE"
+  },
+  "NVDA": {
+   "historical_identity": "AVAILABLE",
+   "CIK": "AVAILABLE",
+   "historical_ticker": "AMBIGUOUS",
+   "SEC_event": "AVAILABLE",
+   "actual_financials": "AVAILABLE",
+   "AV_enrichment": "AVAILABLE",
+   "expectation": "AVAILABLE",
+   "price": "AVAILABLE",
+   "corporate_actions": "AMBIGUOUS",
+   "successor_mapping": "AVAILABLE",
+   "benchmark": "AVAILABLE",
+   "event_study_eligibility": "AMBIGUOUS"
+  },
+  "PFE": {
+   "historical_identity": "AVAILABLE",
+   "CIK": "AVAILABLE",
+   "historical_ticker": "AMBIGUOUS",
+   "SEC_event": "AVAILABLE",
+   "actual_financials": "AVAILABLE",
+   "AV_enrichment": "NOT_MEASURED",
+   "expectation": "NOT_MEASURED",
+   "price": "AVAILABLE",
+   "corporate_actions": "AMBIGUOUS",
+   "successor_mapping": "AVAILABLE",
+   "benchmark": "AVAILABLE",
+   "event_study_eligibility": "AMBIGUOUS"
+  },
+  "PG": {
+   "historical_identity": "AVAILABLE",
+   "CIK": "AVAILABLE",
+   "historical_ticker": "AMBIGUOUS",
+   "SEC_event": "AVAILABLE",
+   "actual_financials": "AVAILABLE",
+   "AV_enrichment": "NOT_MEASURED",
+   "expectation": "NOT_MEASURED",
+   "price": "AVAILABLE",
+   "corporate_actions": "AMBIGUOUS",
+   "successor_mapping": "AVAILABLE",
+   "benchmark": "AVAILABLE",
+   "event_study_eligibility": "AVAILABLE"
+  },
+  "TRV": {
+   "historical_identity": "AVAILABLE",
+   "CIK": "AVAILABLE",
+   "historical_ticker": "AMBIGUOUS",
+   "SEC_event": "AVAILABLE",
+   "actual_financials": "AVAILABLE",
+   "AV_enrichment": "NOT_MEASURED",
+   "expectation": "NOT_MEASURED",
+   "price": "AVAILABLE",
+   "corporate_actions": "AMBIGUOUS",
+   "successor_mapping": "AVAILABLE",
+   "benchmark": "AVAILABLE",
+   "event_study_eligibility": "AVAILABLE"
+  },
+  "UNH": {
+   "historical_identity": "AVAILABLE",
+   "CIK": "AVAILABLE",
+   "historical_ticker": "AMBIGUOUS",
+   "SEC_event": "AVAILABLE",
+   "actual_financials": "AVAILABLE",
+   "AV_enrichment": "NOT_MEASURED",
+   "expectation": "NOT_MEASURED",
+   "price": "AVAILABLE",
+   "corporate_actions": "AMBIGUOUS",
+   "successor_mapping": "AVAILABLE",
+   "benchmark": "AVAILABLE",
+   "event_study_eligibility": "AVAILABLE"
+  },
+  "UTX": {
+   "historical_identity": "AVAILABLE",
+   "CIK": "AVAILABLE",
+   "historical_ticker": "AMBIGUOUS",
+   "SEC_event": "AVAILABLE",
+   "actual_financials": "AVAILABLE",
+   "AV_enrichment": "UNAVAILABLE",
+   "expectation": "UNAVAILABLE",
+   "price": "UNAVAILABLE",
+   "corporate_actions": "UNAVAILABLE",
+   "successor_mapping": "AVAILABLE",
+   "benchmark": "AVAILABLE",
+   "event_study_eligibility": "UNAVAILABLE"
+  },
+  "V": {
+   "historical_identity": "AVAILABLE",
+   "CIK": "AVAILABLE",
+   "historical_ticker": "AMBIGUOUS",
+   "SEC_event": "AVAILABLE",
+   "actual_financials": "AVAILABLE",
+   "AV_enrichment": "NOT_MEASURED",
+   "expectation": "NOT_MEASURED",
+   "price": "AVAILABLE",
+   "corporate_actions": "AMBIGUOUS",
+   "successor_mapping": "AVAILABLE",
+   "benchmark": "AVAILABLE",
+   "event_study_eligibility": "AVAILABLE"
+  },
+  "VZ": {
+   "historical_identity": "AVAILABLE",
+   "CIK": "AVAILABLE",
+   "historical_ticker": "AMBIGUOUS",
+   "SEC_event": "AVAILABLE",
+   "actual_financials": "AVAILABLE",
+   "AV_enrichment": "AVAILABLE",
+   "expectation": "AVAILABLE",
+   "price": "AVAILABLE",
+   "corporate_actions": "AMBIGUOUS",
+   "successor_mapping": "AVAILABLE",
+   "benchmark": "AVAILABLE",
+   "event_study_eligibility": "AMBIGUOUS"
+  },
+  "WBA": {
+   "historical_identity": "AVAILABLE",
+   "CIK": "AMBIGUOUS",
+   "historical_ticker": "AMBIGUOUS",
+   "SEC_event": "AVAILABLE",
+   "actual_financials": "AVAILABLE",
+   "AV_enrichment": "NOT_MEASURED",
+   "expectation": "NOT_MEASURED",
+   "price": "UNAVAILABLE",
+   "corporate_actions": "UNAVAILABLE",
+   "successor_mapping": "AVAILABLE",
+   "benchmark": "AVAILABLE",
+   "event_study_eligibility": "UNAVAILABLE"
+  },
+  "WMT": {
+   "historical_identity": "AVAILABLE",
+   "CIK": "AVAILABLE",
+   "historical_ticker": "AMBIGUOUS",
+   "SEC_event": "AVAILABLE",
+   "actual_financials": "AVAILABLE",
+   "AV_enrichment": "NOT_MEASURED",
+   "expectation": "NOT_MEASURED",
+   "price": "AVAILABLE",
+   "corporate_actions": "AMBIGUOUS",
+   "successor_mapping": "AVAILABLE",
+   "benchmark": "AVAILABLE",
+   "event_study_eligibility": "AVAILABLE"
+  },
+  "XOM": {
+   "historical_identity": "AVAILABLE",
+   "CIK": "AMBIGUOUS",
+   "historical_ticker": "AMBIGUOUS",
+   "SEC_event": "AVAILABLE",
+   "actual_financials": "AVAILABLE",
+   "AV_enrichment": "AVAILABLE",
+   "expectation": "AVAILABLE",
+   "price": "AVAILABLE",
+   "corporate_actions": "AMBIGUOUS",
+   "successor_mapping": "AVAILABLE",
+   "benchmark": "AVAILABLE",
+   "event_study_eligibility": "AVAILABLE"
+  }
+ },
+ "medicion_por_activo": {
+  "AAPL": {
+   "cik": "0000320193",
+   "cik_origen": "company_tickers.json",
+   "en_directorio_actual": true,
+   "sec_name": "Apple Inc.",
+   "sec_tickers": [
+    "AAPL"
+   ],
+   "former_names": [
+    {
+     "name": "APPLE INC",
+     "from": "2007-01-10",
+     "to": "2019-08-05"
+    },
+    {
+     "name": "APPLE COMPUTER INC",
+     "from": "1994-01-26",
+     "to": "2007-01-04"
+    },
+    {
+     "name": "APPLE COMPUTER INC/ FA",
+     "from": "1997-07-28",
+     "to": "1997-07-28"
+    }
+   ],
+   "n_filings": 1000,
+   "filings_desde": "2015-07-22",
+   "acceptance_completo": true,
+   "n_8k_202": 45,
+   "8k_202_desde": "2015-10-27",
+   "n_xbrl_eps": 338,
+   "xbrl_desde": "2007-09-29",
+   "n_xbrl_ni": 338,
+   "xbrl_ni_desde": "2007-09-29",
+   "price_ok": true,
+   "n_sesiones": 11525,
+   "precio_desde": "1980-12-12",
+   "price_longname": "Apple Inc.",
+   "n_factores": 5,
+   "n_factores_no_redondos": 0,
+   "factores": [
+    [
+     "1987-06-16",
+     "2:1"
+    ],
+    [
+     "2000-06-21",
+     "2:1"
+    ],
+    [
+     "2005-02-28",
+     "2:1"
+    ],
+    [
+     "2014-06-09",
+     "7:1"
+    ],
+    [
+     "2020-08-31",
+     "4:1"
+    ]
+   ],
+   "nota": null
+  },
+  "AXP": {
+   "cik": "0000004962",
+   "cik_origen": "company_tickers.json",
+   "en_directorio_actual": true,
+   "sec_name": "AMERICAN EXPRESS CO",
+   "sec_tickers": [
+    "AXP"
+   ],
+   "former_names": [],
+   "n_filings": 1001,
+   "filings_desde": "2019-10-02",
+   "acceptance_completo": true,
+   "n_8k_202": 28,
+   "8k_202_desde": "2019-10-18",
+   "n_xbrl_eps": 252,
+   "xbrl_desde": "2007-12-31",
+   "n_xbrl_ni": 311,
+   "xbrl_ni_desde": "2007-12-31",
+   "price_ok": true,
+   "n_sesiones": 13679,
+   "precio_desde": "1972-06-01",
+   "price_longname": "American Express Company",
+   "n_factores": 6,
+   "n_factores_no_redondos": 4,
+   "factores": [
+    [
+     "1983-02-11",
+     "4:3"
+    ],
+    [
+     "1983-08-11",
+     "3:2"
+    ],
+    [
+     "1987-05-11",
+     "2:1"
+    ],
+    [
+     "1994-05-31",
+     "10000:8825"
+    ],
+    [
+     "2000-05-11",
+     "3:1"
+    ],
+    [
+     "2005-10-03",
+     "10000:8753"
+    ]
+   ],
+   "nota": null
+  },
+  "BA": {
+   "cik": "0000012927",
+   "cik_origen": "company_tickers.json",
+   "en_directorio_actual": true,
+   "sec_name": "BOEING CO",
+   "sec_tickers": [
+    "BA",
+    "BA-PA"
+   ],
+   "former_names": [],
+   "n_filings": 1006,
+   "filings_desde": "2019-03-05",
+   "acceptance_completo": true,
+   "n_8k_202": 32,
+   "8k_202_desde": "2019-04-24",
+   "n_xbrl_eps": 313,
+   "xbrl_desde": "2007-12-31",
+   "n_xbrl_ni": 313,
+   "xbrl_ni_desde": "2007-12-31",
+   "price_ok": true,
+   "n_sesiones": 14291,
+   "precio_desde": "1970-01-02",
+   "price_longname": "The Boeing Company",
+   "n_factores": 7,
+   "n_factores_no_redondos": 5,
+   "factores": [
+    [
+     "1977-09-13",
+     "2:1"
+    ],
+    [
+     "1979-04-16",
+     "3:2"
+    ],
+    [
+     "1980-04-15",
+     "3:2"
+    ],
+    [
+     "1985-06-10",
+     "3:2"
+    ],
+    [
+     "1989-06-12",
+     "3:2"
+    ],
+    [
+     "1990-06-11",
+     "3:2"
+    ],
+    [
+     "1997-06-09",
+     "2:1"
+    ]
+   ],
+   "nota": null
+  },
+  "CAT": {
+   "cik": "0000018230",
+   "cik_origen": "company_tickers.json",
+   "en_directorio_actual": true,
+   "sec_name": "CATERPILLAR INC",
+   "sec_tickers": [
+    "CAT"
+   ],
+   "former_names": [],
+   "n_filings": 1002,
+   "filings_desde": "2019-03-12",
+   "acceptance_completo": true,
+   "n_8k_202": 31,
+   "8k_202_desde": "2019-04-24",
+   "n_xbrl_eps": 335,
+   "xbrl_desde": "2007-12-31",
+   "n_xbrl_ni": 58,
+   "xbrl_ni_desde": "2007-12-31",
+   "price_ok": true,
+   "n_sesiones": 14291,
+   "precio_desde": "1970-01-02",
+   "price_longname": "Caterpillar Inc.",
+   "n_factores": 4,
+   "n_factores_no_redondos": 1,
+   "factores": [
+    [
+     "1976-07-26",
+     "3:2"
+    ],
+    [
+     "1994-09-06",
+     "2:1"
+    ],
+    [
+     "1997-07-14",
+     "2:1"
+    ],
+    [
+     "2005-07-14",
+     "2:1"
+    ]
+   ],
+   "nota": null
+  },
+  "CSCO": {
+   "cik": "0000858877",
+   "cik_origen": "company_tickers.json",
+   "en_directorio_actual": true,
+   "sec_name": "CISCO SYSTEMS, INC.",
+   "sec_tickers": [
+    "CSCO"
+   ],
+   "former_names": [
+    {
+     "name": "CISCO SYSTEMS, INC.",
+     "from": "2011-10-18",
+     "to": "2026-09-02"
+    },
+    {
+     "name": "CISCO SYSTEMS INC",
+     "from": "1995-02-13",
+     "to": "2011-11-22"
+    }
+   ],
+   "n_filings": 1006,
+   "filings_desde": "2020-05-12",
+   "acceptance_completo": true,
+   "n_8k_202": 26,
+   "8k_202_desde": "2020-05-13",
+   "n_xbrl_eps": 279,
+   "xbrl_desde": "2008-07-26",
+   "n_xbrl_ni": 280,
+   "xbrl_ni_desde": "2008-07-26",
+   "price_ok": true,
+   "n_sesiones": 9204,
+   "precio_desde": "1990-02-16",
+   "price_longname": "Cisco Systems, Inc.",
+   "n_factores": 9,
+   "n_factores_no_redondos": 2,
+   "factores": [
+    [
+     "1991-03-18",
+     "2:1"
+    ],
+    [
+     "1992-03-23",
+     "2:1"
+    ],
+    [
+     "1993-03-22",
+     "2:1"
+    ],
+    [
+     "1994-03-21",
+     "2:1"
+    ],
+    [
+     "1996-02-20",
+     "2:1"
+    ],
+    [
+     "1997-12-17",
+     "3:2"
+    ],
+    [
+     "1998-09-16",
+     "3:2"
+    ],
+    [
+     "1999-06-22",
+     "2:1"
+    ],
+    [
+     "2000-03-23",
+     "2:1"
+    ]
+   ],
+   "nota": null
+  },
+  "CVX": {
+   "cik": "0000093410",
+   "cik_origen": "company_tickers.json",
+   "en_directorio_actual": true,
+   "sec_name": "CHEVRON CORP",
+   "sec_tickers": [
+    "CVX"
+   ],
+   "former_names": [
+    {
+     "name": "CHEVRONTEXACO CORP",
+     "from": "2001-11-01",
+     "to": "2005-05-04"
+    }
+   ],
+   "n_filings": 1003,
+   "filings_desde": "2019-04-16",
+   "acceptance_completo": true,
+   "n_8k_202": 33,
+   "8k_202_desde": "2019-04-26",
+   "n_xbrl_eps": 232,
+   "xbrl_desde": "2007-12-31",
+   "n_xbrl_ni": 237,
+   "xbrl_ni_desde": "2007-12-31",
+   "price_ok": true,
+   "n_sesiones": 14291,
+   "precio_desde": "1970-01-02",
+   "price_longname": "Chevron Corporation",
+   "n_factores": 4,
+   "n_factores_no_redondos": 0,
+   "factores": [
+    [
+     "1973-12-11",
+     "2:1"
+    ],
+    [
+     "1981-03-11",
+     "2:1"
+    ],
+    [
+     "1994-06-13",
+     "2:1"
+    ],
+    [
+     "2004-09-13",
+     "2:1"
+    ]
+   ],
+   "nota": null
+  },
+  "DIS": {
+   "cik": "0001744489",
+   "cik_origen": "company_tickers.json",
+   "en_directorio_actual": true,
+   "sec_name": "Walt Disney Co",
+   "sec_tickers": [
+    "DIS"
+   ],
+   "former_names": [
+    {
+     "name": "TWDC Holdco 613 Corp",
+     "from": "2018-06-25",
+     "to": "2018-06-28"
+    },
+    {
+     "name": "TWDC Holdco 613 Corp.",
+     "from": "2018-06-27",
+     "to": "2018-06-27"
+    }
+   ],
+   "n_filings": 1006,
+   "filings_desde": "2020-01-03",
+   "acceptance_completo": true,
+   "n_8k_202": 27,
+   "8k_202_desde": "2020-02-04",
+   "n_xbrl_eps": 138,
+   "xbrl_desde": "2016-10-01",
+   "n_xbrl_ni": 141,
+   "xbrl_ni_desde": "2016-10-01",
+   "price_ok": true,
+   "n_sesiones": 14291,
+   "precio_desde": "1970-01-02",
+   "price_longname": "The Walt Disney Company",
+   "n_factores": 6,
+   "n_factores_no_redondos": 1,
+   "factores": [
+    [
+     "1971-03-01",
+     "2:1"
+    ],
+    [
+     "1973-01-16",
+     "2:1"
+    ],
+    [
+     "1986-03-06",
+     "4:1"
+    ],
+    [
+     "1992-05-18",
+     "4:1"
+    ],
+    [
+     "1998-07-10",
+     "3:1"
+    ],
+    [
+     "2007-06-13",
+     "10000:9865"
+    ]
+   ],
+   "nota": null
+  },
+  "DWDP": {
+   "cik": "0001666700",
+   "cik_origen": "declarado_por_medicion",
+   "en_directorio_actual": false,
+   "sec_name": "DuPont de Nemours, Inc.",
+   "sec_tickers": [
+    "DD"
+   ],
+   "former_names": [
+    {
+     "name": "DowDuPont Inc.",
+     "from": "2016-03-01",
+     "to": "2019-05-31"
+    }
+   ],
+   "n_filings": 1009,
+   "filings_desde": "2018-09-18",
+   "acceptance_completo": true,
+   "n_8k_202": 37,
+   "8k_202_desde": "2018-11-01",
+   "n_xbrl_eps": 131,
+   "xbrl_desde": "2015-12-31",
+   "n_xbrl_ni": 170,
+   "xbrl_ni_desde": "2015-12-31",
+   "price_ok": false,
+   "n_sesiones": null,
+   "precio_desde": null,
+   "price_longname": null,
+   "n_factores": null,
+   "n_factores_no_redondos": null,
+   "factores": null,
+   "nota": null
+  },
+  "GS": {
+   "cik": "0000886982",
+   "cik_origen": "company_tickers.json",
+   "en_directorio_actual": true,
+   "sec_name": "GOLDMAN SACHS GROUP INC",
+   "sec_tickers": [
+    "GS",
+    "GSCE",
+    "GS-PA",
+    "GS-PC",
+    "GS-PD"
+   ],
+   "former_names": [
+    {
+     "name": "GOLDMAN SACHS GROUP INC/",
+     "from": "2001-02-07",
+     "to": "2008-03-04"
+    }
+   ],
+   "n_filings": 16108,
+   "filings_desde": "2025-09-05",
+   "acceptance_completo": true,
+   "n_8k_202": 5,
+   "8k_202_desde": "2025-10-14",
+   "n_xbrl_eps": 230,
+   "xbrl_desde": "2007-11-30",
+   "n_xbrl_ni": 231,
+   "xbrl_ni_desde": "2007-11-30",
+   "price_ok": true,
+   "n_sesiones": 6878,
+   "precio_desde": "1999-05-04",
+   "price_longname": "The Goldman Sachs Group, Inc.",
+   "n_factores": 0,
+   "n_factores_no_redondos": 0,
+   "factores": [],
+   "nota": null
+  },
+  "HD": {
+   "cik": "0000354950",
+   "cik_origen": "company_tickers.json",
+   "en_directorio_actual": true,
+   "sec_name": "HOME DEPOT, INC.",
+   "sec_tickers": [
+    "HD"
+   ],
+   "former_names": [
+    {
+     "name": "HOME DEPOT INC",
+     "from": "1994-06-06",
+     "to": "2019-07-01"
+    }
+   ],
+   "n_filings": 1008,
+   "filings_desde": "2018-02-02",
+   "acceptance_completo": true,
+   "n_8k_202": 35,
+   "8k_202_desde": "2018-02-20",
+   "n_xbrl_eps": 300,
+   "xbrl_desde": "2008-02-03",
+   "n_xbrl_ni": 305,
+   "xbrl_ni_desde": "2008-02-03",
+   "price_ok": true,
+   "n_sesiones": 11330,
+   "precio_desde": "1981-09-22",
+   "price_longname": "The Home Depot, Inc.",
+   "n_factores": 13,
+   "n_factores_no_redondos": 10,
+   "factores": [
+    [
+     "1982-01-20",
+     "3:2"
+    ],
+    [
+     "1982-05-11",
+     "5:4"
+    ],
+    [
+     "1982-12-08",
+     "2:1"
+    ],
+    [
+     "1983-06-09",
+     "2:1"
+    ],
+    [
+     "1987-09-22",
+     "3:2"
+    ],
+    [
+     "1989-07-03",
+     "3:2"
+    ],
+    [
+     "1990-07-06",
+     "3:2"
+    ],
+    [
+     "1991-06-26",
+     "3:2"
+    ],
+    [
+     "1992-07-02",
+     "3:2"
+    ],
+    [
+     "1993-04-14",
+     "4:3"
+    ],
+    [
+     "1997-07-07",
+     "3:2"
+    ],
+    [
+     "1998-07-06",
+     "2:1"
+    ],
+    [
+     "1999-12-31",
+     "3:2"
+    ]
+   ],
+   "nota": null
+  },
+  "IBM": {
+   "cik": "0000051143",
+   "cik_origen": "company_tickers.json",
+   "en_directorio_actual": true,
+   "sec_name": "INTERNATIONAL BUSINESS MACHINES CORP",
+   "sec_tickers": [
+    "IBM"
+   ],
+   "former_names": [],
+   "n_filings": 1002,
+   "filings_desde": "2020-01-16",
+   "acceptance_completo": true,
+   "n_8k_202": 30,
+   "8k_202_desde": "2020-01-21",
+   "n_xbrl_eps": 228,
+   "xbrl_desde": "2007-12-31",
+   "n_xbrl_ni": 123,
+   "xbrl_ni_desde": "2015-12-31",
+   "price_ok": true,
+   "n_sesiones": 14291,
+   "precio_desde": "1970-01-02",
+   "price_longname": "International Business Machines Corporation",
+   "n_factores": 5,
+   "n_factores_no_redondos": 2,
+   "factores": [
+    [
+     "1973-05-29",
+     "5:4"
+    ],
+    [
+     "1979-06-01",
+     "4:1"
+    ],
+    [
+     "1997-05-28",
+     "2:1"
+    ],
+    [
+     "1999-05-27",
+     "2:1"
+    ],
+    [
+     "2021-11-04",
+     "1046:1000"
+    ]
+   ],
+   "nota": null
+  },
+  "INTC": {
+   "cik": "0000050863",
+   "cik_origen": "company_tickers.json",
+   "en_directorio_actual": true,
+   "sec_name": "INTEL CORP",
+   "sec_tickers": [
+    "INTC"
+   ],
+   "former_names": [],
+   "n_filings": 1001,
+   "filings_desde": "2019-03-01",
+   "acceptance_completo": true,
+   "n_8k_202": 31,
+   "8k_202_desde": "2019-04-25",
+   "n_xbrl_eps": 228,
+   "xbrl_desde": "2007-12-29",
+   "n_xbrl_ni": 228,
+   "xbrl_ni_desde": "2007-12-29",
+   "price_ok": true,
+   "n_sesiones": 11713,
+   "precio_desde": "1980-03-17",
+   "price_longname": "Intel Corporation",
+   "n_factores": 8,
+   "n_factores_no_redondos": 1,
+   "factores": [
+    [
+     "1980-10-09",
+     "2:1"
+    ],
+    [
+     "1983-07-01",
+     "2:1"
+    ],
+    [
+     "1987-10-29",
+     "3:2"
+    ],
+    [
+     "1993-06-07",
+     "2:1"
+    ],
+    [
+     "1995-06-19",
+     "2:1"
+    ],
+    [
+     "1997-07-14",
+     "2:1"
+    ],
+    [
+     "1999-04-12",
+     "2:1"
+    ],
+    [
+     "2000-07-31",
+     "2:1"
+    ]
+   ],
+   "nota": null
+  },
+  "JNJ": {
+   "cik": "0000200406",
+   "cik_origen": "company_tickers.json",
+   "en_directorio_actual": true,
+   "sec_name": "JOHNSON & JOHNSON",
+   "sec_tickers": [
+    "JNJ"
+   ],
+   "former_names": [
+    {
+     "name": "JOHNSON & JOHNSON ET AL",
+     "from": "1995-10-06",
+     "to": "1996-01-23"
+    }
+   ],
+   "n_filings": 1001,
+   "filings_desde": "2018-07-11",
+   "acceptance_completo": true,
+   "n_8k_202": 36,
+   "8k_202_desde": "2018-07-17",
+   "n_xbrl_eps": 313,
+   "xbrl_desde": "2007-12-30",
+   "n_xbrl_ni": 270,
+   "xbrl_ni_desde": "2009-03-29",
+   "price_ok": true,
+   "n_sesiones": 14291,
+   "precio_desde": "1970-01-02",
+   "price_longname": "Johnson & Johnson",
+   "n_factores": 6,
+   "n_factores_no_redondos": 0,
+   "factores": [
+    [
+     "1970-05-18",
+     "3:1"
+    ],
+    [
+     "1981-05-19",
+     "3:1"
+    ],
+    [
+     "1989-05-11",
+     "2:1"
+    ],
+    [
+     "1992-06-10",
+     "2:1"
+    ],
+    [
+     "1996-06-12",
+     "2:1"
+    ],
+    [
+     "2001-06-13",
+     "2:1"
+    ]
+   ],
+   "nota": null
+  },
+  "JPM": {
+   "cik": "0000019617",
+   "cik_origen": "company_tickers.json",
+   "en_directorio_actual": true,
+   "sec_name": "JPMORGAN CHASE & CO",
+   "sec_tickers": [
+    "JPM",
+    "JPM-PC",
+    "AMJB",
+    "JPM-PD",
+    "JPM-PJ",
+    "JPM-PK",
+    "JPM-PL",
+    "JPM-PM",
+    "VYLD"
+   ],
+   "former_names": [
+    {
+     "name": "JPMORGAN CHASE & CO",
+     "from": "2009-02-02",
+     "to": "2026-09-04"
+    },
+    {
+     "name": "J P MORGAN CHASE & CO",
+     "from": "2001-02-08",
+     "to": "2011-10-06"
+    },
+    {
+     "name": "CHASE MANHATTAN CORP /DE/",
+     "from": "1996-10-17",
+     "to": "2000-11-21"
+    },
+    {
+     "name": "CHEMICAL BANKING CORP",
+     "from": "1994-02-02",
+     "to": "1996-03-28"
+    }
+   ],
+   "n_filings": 26022,
+   "filings_desde": "2025-09-05",
+   "acceptance_completo": true,
+   "n_8k_202": 4,
+   "8k_202_desde": "2025-10-14",
+   "n_xbrl_eps": 236,
+   "xbrl_desde": "2007-12-31",
+   "n_xbrl_ni": 241,
+   "xbrl_ni_desde": "2007-12-31",
+   "price_ok": true,
+   "n_sesiones": 11713,
+   "precio_desde": "1980-03-17",
+   "price_longname": "JPMorgan Chase & Co.",
+   "n_factores": 4,
+   "n_factores_no_redondos": 3,
+   "factores": [
+    [
+     "1982-04-16",
+     "3:2"
+    ],
+    [
+     "1984-04-16",
+     "3:2"
+    ],
+    [
+     "1998-06-15",
+     "2:1"
+    ],
+    [
+     "2000-06-12",
+     "3:2"
+    ]
+   ],
+   "nota": null
+  },
+  "KO": {
+   "cik": "0000021344",
+   "cik_origen": "company_tickers.json",
+   "en_directorio_actual": true,
+   "sec_name": "COCA COLA CO",
+   "sec_tickers": [
+    "KO"
+   ],
+   "former_names": [],
+   "n_filings": 1000,
+   "filings_desde": "2018-05-01",
+   "acceptance_completo": true,
+   "n_8k_202": 33,
+   "8k_202_desde": "2018-07-25",
+   "n_xbrl_eps": 0,
+   "xbrl_desde": null,
+   "n_xbrl_ni": 233,
+   "xbrl_ni_desde": null,
+   "price_ok": true,
+   "n_sesiones": 14291,
+   "precio_desde": "1970-01-02",
+   "price_longname": "The Coca-Cola Company",
+   "n_factores": 6,
+   "n_factores_no_redondos": 0,
+   "factores": [
+    [
+     "1977-06-01",
+     "2:1"
+    ],
+    [
+     "1986-07-01",
+     "3:1"
+    ],
+    [
+     "1990-05-14",
+     "2:1"
+    ],
+    [
+     "1992-05-12",
+     "2:1"
+    ],
+    [
+     "1996-05-13",
+     "2:1"
+    ],
+    [
+     "2012-08-13",
+     "2:1"
+    ]
+   ],
+   "nota": "EarningsPerShareDiluted con solo 4 observaciones (2008-2009) en companyfacts"
+  },
+  "MCD": {
+   "cik": "0000063908",
+   "cik_origen": "company_tickers.json",
+   "en_directorio_actual": true,
+   "sec_name": "MCDONALDS CORP",
+   "sec_tickers": [
+    "MCD"
+   ],
+   "former_names": [],
+   "n_filings": 1001,
+   "filings_desde": "2017-01-04",
+   "acceptance_completo": true,
+   "n_8k_202": 41,
+   "8k_202_desde": "2017-01-23",
+   "n_xbrl_eps": 305,
+   "xbrl_desde": "2007-12-31",
+   "n_xbrl_ni": 310,
+   "xbrl_ni_desde": "2007-12-31",
+   "price_ok": true,
+   "n_sesiones": 14291,
+   "precio_desde": "1970-01-02",
+   "price_longname": "McDonald's Corporation",
+   "n_factores": 9,
+   "n_factores_no_redondos": 5,
+   "factores": [
+    [
+     "1971-06-14",
+     "3:2"
+    ],
+    [
+     "1972-06-06",
+     "2:1"
+    ],
+    [
+     "1982-10-07",
+     "3:2"
+    ],
+    [
+     "1984-09-25",
+     "3:2"
+    ],
+    [
+     "1986-06-26",
+     "3:2"
+    ],
+    [
+     "1987-06-23",
+     "3:2"
+    ],
+    [
+     "1989-06-19",
+     "2:1"
+    ],
+    [
+     "1994-06-27",
+     "2:1"
+    ],
+    [
+     "1999-03-08",
+     "2:1"
+    ]
+   ],
+   "nota": null
+  },
+  "MMM": {
+   "cik": "0000066740",
+   "cik_origen": "company_tickers.json",
+   "en_directorio_actual": true,
+   "sec_name": "3M CO",
+   "sec_tickers": [
+    "MMM"
+   ],
+   "former_names": [
+    {
+     "name": "MINNESOTA MINING & MANUFACTURING CO",
+     "from": "1993-08-13",
+     "to": "2002-02-06"
+    }
+   ],
+   "n_filings": 1000,
+   "filings_desde": "2018-07-26",
+   "acceptance_completo": true,
+   "n_8k_202": 38,
+   "8k_202_desde": "2018-10-23",
+   "n_xbrl_eps": 393,
+   "xbrl_desde": "2007-12-31",
+   "n_xbrl_ni": 378,
+   "xbrl_ni_desde": "2007-12-31",
+   "price_ok": true,
+   "n_sesiones": 14291,
+   "precio_desde": "1970-01-02",
+   "price_longname": "3M Company",
+   "n_factores": 5,
+   "n_factores_no_redondos": 1,
+   "factores": [
+    [
+     "1972-06-16",
+     "2:1"
+    ],
+    [
+     "1987-06-16",
+     "2:1"
+    ],
+    [
+     "1994-04-11",
+     "2:1"
+    ],
+    [
+     "2003-09-30",
+     "2:1"
+    ],
+    [
+     "2024-04-01",
+     "1196:1000"
+    ]
+   ],
+   "nota": null
+  },
+  "MRK": {
+   "cik": "0000310158",
+   "cik_origen": "company_tickers.json",
+   "en_directorio_actual": true,
+   "sec_name": "Merck & Co., Inc.",
+   "sec_tickers": [
+    "MRK"
+   ],
+   "former_names": [
+    {
+     "name": "Merck & Co. Inc.",
+     "from": "2009-11-04",
+     "to": "2014-12-09"
+    },
+    {
+     "name": "SCHERING PLOUGH CORP",
+     "from": "1994-12-29",
+     "to": "2009-10-29"
+    }
+   ],
+   "n_filings": 1011,
+   "filings_desde": "2018-05-08",
+   "acceptance_completo": true,
+   "n_8k_202": 34,
+   "8k_202_desde": "2018-07-27",
+   "n_xbrl_eps": 225,
+   "xbrl_desde": "2007-12-31",
+   "n_xbrl_ni": 230,
+   "xbrl_ni_desde": "2007-12-31",
+   "price_ok": true,
+   "n_sesiones": 14291,
+   "precio_desde": "1970-01-02",
+   "price_longname": "Merck & Co., Inc.",
+   "n_factores": 6,
+   "n_factores_no_redondos": 1,
+   "factores": [
+    [
+     "1972-06-01",
+     "2:1"
+    ],
+    [
+     "1986-05-27",
+     "2:1"
+    ],
+    [
+     "1988-05-26",
+     "3:1"
+    ],
+    [
+     "1992-05-26",
+     "3:1"
+    ],
+    [
+     "1999-02-17",
+     "2:1"
+    ],
+    [
+     "2021-06-03",
+     "1048:1000"
+    ]
+   ],
+   "nota": null
+  },
+  "MSFT": {
+   "cik": "0000789019",
+   "cik_origen": "company_tickers.json",
+   "en_directorio_actual": true,
+   "sec_name": "MICROSOFT CORP",
+   "sec_tickers": [
+    "MSFT"
+   ],
+   "former_names": [],
+   "n_filings": 1000,
+   "filings_desde": "2020-06-08",
+   "acceptance_completo": true,
+   "n_8k_202": 25,
+   "8k_202_desde": "2020-07-22",
+   "n_xbrl_eps": 340,
+   "xbrl_desde": "2007-09-30",
+   "n_xbrl_ni": 340,
+   "xbrl_ni_desde": "2007-09-30",
+   "price_ok": true,
+   "n_sesiones": 10199,
+   "precio_desde": "1986-03-13",
+   "price_longname": "Microsoft Corporation",
+   "n_factores": 9,
+   "n_factores_no_redondos": 2,
+   "factores": [
+    [
+     "1987-09-21",
+     "2:1"
+    ],
+    [
+     "1990-04-16",
+     "2:1"
+    ],
+    [
+     "1991-06-27",
+     "3:2"
+    ],
+    [
+     "1992-06-15",
+     "3:2"
+    ],
+    [
+     "1994-05-23",
+     "2:1"
+    ],
+    [
+     "1996-12-09",
+     "2:1"
+    ],
+    [
+     "1998-02-23",
+     "2:1"
+    ],
+    [
+     "1999-03-29",
+     "2:1"
+    ],
+    [
+     "2003-02-18",
+     "2:1"
+    ]
+   ],
+   "nota": null
+  },
+  "NKE": {
+   "cik": "0000320187",
+   "cik_origen": "company_tickers.json",
+   "en_directorio_actual": true,
+   "sec_name": "NIKE, Inc.",
+   "sec_tickers": [
+    "NKE"
+   ],
+   "former_names": [
+    {
+     "name": "NIKE INC",
+     "from": "1995-01-20",
+     "to": "2019-08-05"
+    }
+   ],
+   "n_filings": 1006,
+   "filings_desde": "2015-07-28",
+   "acceptance_completo": true,
+   "n_8k_202": 57,
+   "8k_202_desde": "2015-09-24",
+   "n_xbrl_eps": 221,
+   "xbrl_desde": "2008-05-31",
+   "n_xbrl_ni": 234,
+   "xbrl_ni_desde": "2008-05-31",
+   "price_ok": true,
+   "n_sesiones": 11533,
+   "precio_desde": "1980-12-02",
+   "price_longname": "NIKE, Inc.",
+   "n_factores": 6,
+   "n_factores_no_redondos": 0,
+   "factores": [
+    [
+     "1990-10-08",
+     "2:1"
+    ],
+    [
+     "1995-10-31",
+     "2:1"
+    ],
+    [
+     "1996-10-24",
+     "2:1"
+    ],
+    [
+     "2007-04-03",
+     "2:1"
+    ],
+    [
+     "2012-12-26",
+     "2:1"
+    ],
+    [
+     "2015-12-24",
+     "2:1"
+    ]
+   ],
+   "nota": null
+  },
+  "NVDA": {
+   "cik": "0001045810",
+   "cik_origen": "company_tickers.json",
+   "en_directorio_actual": true,
+   "sec_name": "NVIDIA CORP",
+   "sec_tickers": [
+    "NVDA"
+   ],
+   "former_names": [
+    {
+     "name": "NVIDIA CORP/CA",
+     "from": "1998-05-07",
+     "to": "2002-06-04"
+    }
+   ],
+   "n_filings": 1000,
+   "filings_desde": "2020-07-06",
+   "acceptance_completo": true,
+   "n_8k_202": 26,
+   "8k_202_desde": "2020-08-19",
+   "n_xbrl_eps": 309,
+   "xbrl_desde": "2008-01-27",
+   "n_xbrl_ni": 314,
+   "xbrl_ni_desde": "2008-01-27",
+   "price_ok": true,
+   "n_sesiones": 6948,
+   "precio_desde": "1999-01-22",
+   "price_longname": "NVIDIA Corporation",
+   "n_factores": 6,
+   "n_factores_no_redondos": 1,
+   "factores": [
+    [
+     "2000-06-27",
+     "2:1"
+    ],
+    [
+     "2001-09-12",
+     "2:1"
+    ],
+    [
+     "2006-04-07",
+     "2:1"
+    ],
+    [
+     "2007-09-11",
+     "3:2"
+    ],
+    [
+     "2021-07-20",
+     "4:1"
+    ],
+    [
+     "2024-06-10",
+     "10:1"
+    ]
+   ],
+   "nota": null
+  },
+  "PFE": {
+   "cik": "0000078003",
+   "cik_origen": "company_tickers.json",
+   "en_directorio_actual": true,
+   "sec_name": "PFIZER INC",
+   "sec_tickers": [
+    "PFE"
+   ],
+   "former_names": [
+    {
+     "name": "PFIZER INC",
+     "from": "1994-03-18",
+     "to": "2026-09-01"
+    }
+   ],
+   "n_filings": 1001,
+   "filings_desde": "2021-02-12",
+   "acceptance_completo": true,
+   "n_8k_202": 25,
+   "8k_202_desde": "2021-05-04",
+   "n_xbrl_eps": 225,
+   "xbrl_desde": "2007-12-31",
+   "n_xbrl_ni": 225,
+   "xbrl_ni_desde": "2007-12-31",
+   "price_ok": true,
+   "n_sesiones": 13679,
+   "precio_desde": "1972-06-01",
+   "price_longname": "Pfizer Inc.",
+   "n_factores": 6,
+   "n_factores_no_redondos": 1,
+   "factores": [
+    [
+     "1983-07-01",
+     "2:1"
+    ],
+    [
+     "1991-04-01",
+     "2:1"
+    ],
+    [
+     "1995-07-03",
+     "2:1"
+    ],
+    [
+     "1997-07-01",
+     "2:1"
+    ],
+    [
+     "1999-07-01",
+     "3:1"
+    ],
+    [
+     "2020-11-17",
+     "1054:1000"
+    ]
+   ],
+   "nota": null
+  },
+  "PG": {
+   "cik": "0000080424",
+   "cik_origen": "company_tickers.json",
+   "en_directorio_actual": true,
+   "sec_name": "PROCTER & GAMBLE Co",
+   "sec_tickers": [
+    "PG"
+   ],
+   "former_names": [],
+   "n_filings": 1002,
+   "filings_desde": "2022-02-01",
+   "acceptance_completo": true,
+   "n_8k_202": 18,
+   "8k_202_desde": "2022-04-20",
+   "n_xbrl_eps": 357,
+   "xbrl_desde": "2007-06-30",
+   "n_xbrl_ni": 354,
+   "xbrl_ni_desde": "2007-06-30",
+   "price_ok": true,
+   "n_sesiones": 14291,
+   "precio_desde": "1970-01-02",
+   "price_longname": "The Procter & Gamble Company",
+   "n_factores": 6,
+   "n_factores_no_redondos": 0,
+   "factores": [
+    [
+     "1970-05-19",
+     "2:1"
+    ],
+    [
+     "1983-02-22",
+     "2:1"
+    ],
+    [
+     "1989-11-20",
+     "2:1"
+    ],
+    [
+     "1992-06-15",
+     "2:1"
+    ],
+    [
+     "1997-09-22",
+     "2:1"
+    ],
+    [
+     "2004-06-21",
+     "2:1"
+    ]
+   ],
+   "nota": null
+  },
+  "TRV": {
+   "cik": "0000086312",
+   "cik_origen": "company_tickers.json",
+   "en_directorio_actual": true,
+   "sec_name": "TRAVELERS COMPANIES, INC.",
+   "sec_tickers": [
+    "TRV"
+   ],
+   "former_names": [
+    {
+     "name": "ST PAUL TRAVELERS COMPANIES INC",
+     "from": "2004-04-01",
+     "to": "2007-02-23"
+    },
+    {
+     "name": "ST PAUL COMPANIES INC /MN/",
+     "from": "1994-01-10",
+     "to": "2004-03-31"
+    },
+    {
+     "name": "ST PAUL FIRE & MARINE INSURANCE CO/MD",
+     "from": "1999-02-19",
+     "to": "1999-02-19"
+    }
+   ],
+   "n_filings": 1001,
+   "filings_desde": "2018-07-19",
+   "acceptance_completo": true,
+   "n_8k_202": 35,
+   "8k_202_desde": "2018-07-19",
+   "n_xbrl_eps": 324,
+   "xbrl_desde": "2007-12-31",
+   "n_xbrl_ni": 209,
+   "xbrl_ni_desde": "2008-06-30",
+   "price_ok": true,
+   "n_sesiones": 12806,
+   "precio_desde": "1975-11-17",
+   "price_longname": "The Travelers Companies, Inc.",
+   "n_factores": 2,
+   "n_factores_no_redondos": 0,
+   "factores": [
+    [
+     "1994-06-07",
+     "2:1"
+    ],
+    [
+     "1998-05-12",
+     "2:1"
+    ]
+   ],
+   "nota": null
+  },
+  "UNH": {
+   "cik": "0000731766",
+   "cik_origen": "company_tickers.json",
+   "en_directorio_actual": true,
+   "sec_name": "UNITEDHEALTH GROUP INC",
+   "sec_tickers": [
+    "UNH"
+   ],
+   "former_names": [
+    {
+     "name": "UNITED HEALTHCARE CORP",
+     "from": "1995-04-04",
+     "to": "2000-02-14"
+    }
+   ],
+   "n_filings": 1008,
+   "filings_desde": "2020-12-17",
+   "acceptance_completo": true,
+   "n_8k_202": 23,
+   "8k_202_desde": "2021-01-20",
+   "n_xbrl_eps": 268,
+   "xbrl_desde": "2007-12-31",
+   "n_xbrl_ni": 266,
+   "xbrl_ni_desde": "2007-12-31",
+   "price_ok": true,
+   "n_sesiones": 10552,
+   "precio_desde": "1984-10-17",
+   "price_longname": "UnitedHealth Group Incorporated",
+   "n_factores": 5,
+   "n_factores_no_redondos": 0,
+   "factores": [
+    [
+     "1992-09-16",
+     "2:1"
+    ],
+    [
+     "1994-03-11",
+     "2:1"
+    ],
+    [
+     "2000-12-26",
+     "2:1"
+    ],
+    [
+     "2003-06-19",
+     "2:1"
+    ],
+    [
+     "2005-05-31",
+     "2:1"
+    ]
+   ],
+   "nota": null
+  },
+  "UTX": {
+   "cik": "0000101829",
+   "cik_origen": "declarado_por_medicion",
+   "en_directorio_actual": false,
+   "sec_name": "RTX Corp",
+   "sec_tickers": [
+    "RTX"
+   ],
+   "former_names": [
+    {
+     "name": "RAYTHEON TECHNOLOGIES CORP",
+     "from": "2020-04-07",
+     "to": "2023-06-29"
+    },
+    {
+     "name": "UNITED TECHNOLOGIES CORP /DE/",
+     "from": "1994-01-24",
+     "to": "2020-04-06"
+    }
+   ],
+   "n_filings": 1002,
+   "filings_desde": "2017-09-05",
+   "acceptance_completo": true,
+   "n_8k_202": 35,
+   "8k_202_desde": "2018-01-24",
+   "n_xbrl_eps": 324,
+   "xbrl_desde": "2007-12-31",
+   "n_xbrl_ni": 324,
+   "xbrl_ni_desde": "2007-12-31",
+   "price_ok": false,
+   "n_sesiones": null,
+   "precio_desde": null,
+   "price_longname": null,
+   "n_factores": null,
+   "n_factores_no_redondos": null,
+   "factores": null,
+   "nota": null
+  },
+  "V": {
+   "cik": "0001403161",
+   "cik_origen": "company_tickers.json",
+   "en_directorio_actual": true,
+   "sec_name": "VISA INC.",
+   "sec_tickers": [
+    "V"
+   ],
+   "former_names": [],
+   "n_filings": 1000,
+   "filings_desde": "2015-01-29",
+   "acceptance_completo": true,
+   "n_8k_202": 47,
+   "8k_202_desde": "2015-01-29",
+   "n_xbrl_eps": 0,
+   "xbrl_desde": null,
+   "n_xbrl_ni": 227,
+   "xbrl_ni_desde": null,
+   "price_ok": true,
+   "n_sesiones": 4646,
+   "precio_desde": "2008-03-19",
+   "price_longname": "Visa Inc.",
+   "n_factores": 1,
+   "n_factores_no_redondos": 0,
+   "factores": [
+    [
+     "2015-03-19",
+     "4:1"
+    ]
+   ],
+   "nota": "sin concepto us-gaap EarningsPerShare estandar; solo NetIncomeLoss y Revenues"
+  },
+  "VZ": {
+   "cik": "0000732712",
+   "cik_origen": "company_tickers.json",
+   "en_directorio_actual": true,
+   "sec_name": "VERIZON COMMUNICATIONS INC",
+   "sec_tickers": [
+    "VZ"
+   ],
+   "former_names": [
+    {
+     "name": "BELL ATLANTIC CORP",
+     "from": "1994-06-30",
+     "to": "2000-09-13"
+    }
+   ],
+   "n_filings": 1000,
+   "filings_desde": "2023-11-22",
+   "acceptance_completo": true,
+   "n_8k_202": 11,
+   "8k_202_desde": "2024-01-23",
+   "n_xbrl_eps": 343,
+   "xbrl_desde": "2007-12-31",
+   "n_xbrl_ni": 348,
+   "xbrl_ni_desde": "2007-12-31",
+   "price_ok": true,
+   "n_sesiones": 10781,
+   "precio_desde": "1983-11-21",
+   "price_longname": "Verizon Communications Inc.",
+   "n_factores": 6,
+   "n_factores_no_redondos": 3,
+   "factores": [
+    [
+     "1986-04-18",
+     "2:1"
+    ],
+    [
+     "1990-05-02",
+     "2:1"
+    ],
+    [
+     "1998-06-30",
+     "2:1"
+    ],
+    [
+     "2006-11-20",
+     "100000:96334"
+    ],
+    [
+     "2008-04-01",
+     "100000:99537"
+    ],
+    [
+     "2010-07-02",
+     "1000000:937889"
+    ]
+   ],
+   "nota": null
+  },
+  "WBA": {
+   "cik": "0001618921",
+   "cik_origen": "EDGAR full-text (ausente de company_tickers.json)",
+   "en_directorio_actual": false,
+   "sec_name": "Walgreens Boots Alliance, Inc.",
+   "sec_tickers": [],
+   "former_names": [],
+   "n_filings": 1000,
+   "filings_desde": "2015-05-01",
+   "acceptance_completo": true,
+   "n_8k_202": 42,
+   "8k_202_desde": null,
+   "n_xbrl_eps": 158,
+   "xbrl_desde": "2013-08-31",
+   "n_xbrl_ni": 211,
+   "xbrl_ni_desde": "2013-08-31",
+   "price_ok": false,
+   "n_sesiones": null,
+   "precio_desde": null,
+   "price_longname": null,
+   "n_factores": null,
+   "n_factores_no_redondos": null,
+   "factores": null,
+   "nota": null
+  },
+  "WMT": {
+   "cik": "0000104169",
+   "cik_origen": "company_tickers.json",
+   "en_directorio_actual": true,
+   "sec_name": "Walmart Inc.",
+   "sec_tickers": [
+    "WMT"
+   ],
+   "former_names": [
+    {
+     "name": "Walmart Inc.",
+     "from": "2018-01-31",
+     "to": "2026-09-02"
+    },
+    {
+     "name": "WAL MART STORES INC",
+     "from": "1994-02-14",
+     "to": "2018-01-30"
+    }
+   ],
+   "n_filings": 1001,
+   "filings_desde": "2023-04-20",
+   "acceptance_completo": true,
+   "n_8k_202": 14,
+   "8k_202_desde": "2023-05-18",
+   "n_xbrl_eps": 307,
+   "xbrl_desde": "2008-01-31",
+   "n_xbrl_ni": 319,
+   "xbrl_ni_desde": "2008-01-31",
+   "price_ok": true,
+   "n_sesiones": 13619,
+   "precio_desde": "1972-08-25",
+   "price_longname": "Walmart Inc.",
+   "n_factores": 10,
+   "n_factores_no_redondos": 0,
+   "factores": [
+    [
+     "1975-08-25",
+     "2:1"
+    ],
+    [
+     "1980-12-17",
+     "2:1"
+    ],
+    [
+     "1982-07-12",
+     "2:1"
+    ],
+    [
+     "1983-07-11",
+     "2:1"
+    ],
+    [
+     "1985-10-07",
+     "2:1"
+    ],
+    [
+     "1987-07-13",
+     "2:1"
+    ],
+    [
+     "1990-07-09",
+     "2:1"
+    ],
+    [
+     "1993-02-26",
+     "2:1"
+    ],
+    [
+     "1999-04-20",
+     "2:1"
+    ],
+    [
+     "2024-02-26",
+     "3:1"
+    ]
+   ],
+   "nota": null
+  },
+  "XOM": {
+   "cik": "0000034088",
+   "cik_origen": "declarado_por_medicion",
+   "en_directorio_actual": true,
+   "sec_name": "EXXON MOBIL CORP",
+   "sec_tickers": [],
+   "former_names": [
+    {
+     "name": "EXXON CORP",
+     "from": "1994-05-11",
+     "to": "1999-11-30"
+    }
+   ],
+   "n_filings": 1000,
+   "filings_desde": "2019-12-18",
+   "acceptance_completo": true,
+   "n_8k_202": 26,
+   "8k_202_desde": "2020-01-31",
+   "n_xbrl_eps": 224,
+   "xbrl_desde": "2007-12-31",
+   "n_xbrl_ni": 229,
+   "xbrl_ni_desde": "2007-12-31",
+   "price_ok": true,
+   "n_sesiones": 14291,
+   "precio_desde": "1970-01-02",
+   "price_longname": "ExxonMobil Holdings Corporation",
+   "n_factores": 5,
+   "n_factores_no_redondos": 0,
+   "factores": [
+    [
+     "1976-07-26",
+     "2:1"
+    ],
+    [
+     "1981-06-12",
+     "2:1"
+    ],
+    [
+     "1987-09-15",
+     "2:1"
+    ],
+    [
+     "1997-04-14",
+     "2:1"
+    ],
+    [
+     "2001-07-19",
+     "2:1"
+    ]
+   ],
+   "nota": null
+  }
+ }
+}

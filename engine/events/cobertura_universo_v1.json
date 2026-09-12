@@ -1,0 +1,93 @@
+{
+  "_nota": "Medicion de cobertura de Alpha Vantage EARNINGS sobre la muestra declarada de Universe_v1. NO es un backfill: no hay ni un solo evento cargado en data/. Cada registro se transcribio a mano desde la respuesta del conector MCP, que no puede escribir a disco -- esa limitacion es en si misma un hallazgo de esta auditoria (ver informe, seccion 3).",
+  "_version": "auditoria de poblacion v1 (2026-09-07/08)",
+  "universe_id": "universe:v1:djia-2019",
+  "endpoint": "Alpha Vantage EARNINGS (plan gratuito, conector MCP)",
+  "fechas_de_medicion": ["2026-09-07", "2026-09-08"],
+
+  "_campos": {
+    "registro": "transcripcion_completa = cada trimestre esta en _cobertura/{SYM}.txt; resumen_transcrito = solo los agregados y las excepciones enumeradas",
+    "quarters_available": "trimestres devueltos por el endpoint",
+    "quarters_expected_contiguous": "trimestres que HABRIA entre oldest y newest si la serie fuese trimestral contigua; si no coincide con quarters_available, hay hueco o duplicado",
+    "missing_reportTime": "trimestres sin el campo reportTime -- sin el, first_tradable_at no es derivable (D-18)",
+    "missing_estimatedEPS": "trimestres sin estimacion: la SORPRESA no es computable, aunque la reaccion si"
+  },
+
+  "medidos": [
+    {
+      "symbol": "AAPL", "registro": "transcripcion_completa",
+      "quarters_available": 122, "quarters_expected_contiguous": 122,
+      "oldest_reportedDate": "1996-04-17", "newest_reportedDate": "2026-07-30",
+      "missing_reportTime": 0, "pre_market_count": 25, "post_market_count": 97, "unknown_reportTime_count": 0,
+      "missing_estimatedEPS": 8, "missing_reportedEPS": 0,
+      "nota": "estimatedEPS ausente en 8 trimestres, todos anteriores a 2004."
+    },
+    {
+      "symbol": "CAT", "registro": "transcripcion_completa",
+      "quarters_available": 122, "quarters_expected_contiguous": 122,
+      "oldest_reportedDate": "1996-04-16", "newest_reportedDate": "2026-08-04",
+      "missing_reportTime": 0, "pre_market_count": 122, "post_market_count": 0, "unknown_reportTime_count": 0,
+      "missing_estimatedEPS": 0, "missing_reportedEPS": 0,
+      "nota": "reportTime uniforme pre-market en toda la serie."
+    },
+    {
+      "symbol": "VZ", "registro": "resumen_transcrito",
+      "quarters_available": 122, "quarters_expected_contiguous": 122,
+      "oldest_reportedDate": "1996-04-18", "newest_reportedDate": "2026-07-24",
+      "missing_reportTime": 0, "pre_market_count": 121, "post_market_count": 1, "unknown_reportTime_count": 0,
+      "missing_estimatedEPS": 0, "missing_reportedEPS": 0,
+      "nota": "una unica excepcion post-market (2001-04-24), enumerada en _cobertura/VZ.txt."
+    },
+    {
+      "symbol": "MSFT", "registro": "resumen_transcrito",
+      "quarters_available": 122, "quarters_expected_contiguous": 122,
+      "oldest_reportedDate": "1996-04-18", "newest_reportedDate": "2026-07-29",
+      "missing_reportTime": 0, "pre_market_count": 26, "post_market_count": 96, "unknown_reportTime_count": 0,
+      "missing_estimatedEPS": 0, "missing_reportedEPS": 0,
+      "nota": "reportTime MIXTO dentro de la misma compania: bloque pre-market 1996-2001 y 5 excepciones pre-market posteriores. Desmiente que reportTime pueda asumirse constante por activo."
+    },
+    {
+      "symbol": "DWDP", "registro": "resumen_transcrito",
+      "quarters_available": 0, "quarters_expected_contiguous": null,
+      "oldest_reportedDate": null, "newest_reportedDate": null,
+      "missing_reportTime": null, "pre_market_count": null, "post_market_count": null, "unknown_reportTime_count": null,
+      "missing_estimatedEPS": null, "missing_reportedEPS": null,
+      "estado": "TICKER_AUSENTE_DEL_PROVEEDOR",
+      "nota": "EARNINGS devuelve {}. SYMBOL_SEARCH 'DowDuPont' devuelve conjunto vacio."
+    },
+    {
+      "symbol": "UTX", "registro": "resumen_transcrito",
+      "quarters_available": 0, "quarters_expected_contiguous": null,
+      "oldest_reportedDate": null, "newest_reportedDate": null,
+      "missing_reportTime": null, "pre_market_count": null, "post_market_count": null, "unknown_reportTime_count": null,
+      "missing_estimatedEPS": null, "missing_reportedEPS": null,
+      "estado": "TICKER_AUSENTE_DEL_PROVEEDOR",
+      "nota": "EARNINGS devuelve {}. SYMBOL_SEARCH 'United Technologies' devuelve conjunto vacio."
+    }
+  ],
+
+  "medidos_en_sesion_anterior": [
+    {
+      "symbol": "IBM", "quarters_available": 123, "oldest_reportedDate": "1996-03-31",
+      "fecha_de_medicion": "2026-09-04",
+      "discrepancia": "123 observados frente a 122 que daria una serie trimestral contigua 1996Q1..2026Q2. NO re-verificado en esta auditoria: o hay un trimestre extra o la serie no es contigua. Queda como comprobacion pendiente, no como dato bueno."
+    },
+    {
+      "symbol": "NVDA", "quarters_available": 111, "oldest_reportedDate": "1999-04-30",
+      "fecha_de_medicion": "2026-09-04",
+      "discrepancia": "coherente con una serie desde su OPV (1999) hasta hoy; no re-verificado aqui."
+    },
+    {
+      "symbol": "XOM", "quarters_available": 122, "oldest_reportedDate": "1996-03-31",
+      "fecha_de_medicion": "2026-09-04",
+      "discrepancia": "coincide con los 122 esperados; no re-verificado aqui."
+    }
+  ],
+
+  "no_medidos": {
+    "simbolos_declarados_sin_medir": ["DIS", "HD", "JNJ", "MCD", "PFE", "UNH"],
+    "resto_del_universo_sin_medir": ["AXP","BA","CSCO","CVX","GS","INTC","JPM","KO","MMM","MRK","NKE","PG","TRV","V","WBA","WMT"],
+    "motivo": "Coste de contexto de la transcripcion manual, no cuota: la cuota diaria (25) daba margen. Cada respuesta de EARNINGS ocupa ~10k tokens y el conector MCP no puede escribir a disco, asi que cada activo exige una transcripcion a mano. NUNCA se han estimado ni rellenado: quedan NOT_MEASURED.",
+    "estado": "NOT_MEASURED"
+  }
+}

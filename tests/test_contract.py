@@ -96,6 +96,42 @@ class TestSchema(unittest.TestCase):
             schema.validate_news_row(self._news_row(summary="ver CARTERA_A_posicion.csv"))
 
 
+def _redirigir_storage(test, tmpdir, modulo=None):
+    """Reapunta las carpetas de storage a un tmpdir y las restaura al salir.
+
+    Migracion 2026-09-05: el origen de las metricas dejo de ser
+    data/metrics/{ID}.json y paso a ser history/ + incoming/. Estos tests
+    montaban su fixture escribiendo el JSON a mano; ahora lo montan por la
+    misma via que el codigo real. Lo que cada test COMPRUEBA no cambia.
+    """
+    # Debe reapuntarse el MISMO objeto de modulo que usa el codigo bajo
+    # prueba: _import_contract_module() borra de sys.modules y reimporta,
+    # asi que pedir "storage" por separado daria una instancia distinta y
+    # el reapuntado no tendria ningun efecto.
+    storage = modulo.storage if modulo is not None else _import_contract_module("storage")
+    previo = (storage.HISTORY_DIR, storage.INCOMING_DIR, storage.CURRENT_DIR)
+
+    def restaurar():
+        storage.HISTORY_DIR, storage.INCOMING_DIR, storage.CURRENT_DIR = previo
+
+    test.addCleanup(restaurar)
+    storage.HISTORY_DIR = os.path.join(tmpdir, "history")
+    storage.INCOMING_DIR = os.path.join(tmpdir, "incoming")
+    storage.CURRENT_DIR = os.path.join(tmpdir, "current")
+    return storage
+
+
+def _sembrar_metricas(storage, asset_id, rows):
+    """Escribe filas de metrica en incoming/, que es donde el codigo las
+    busca ahora. Sustituye al antiguo json.dump en metrics/{ID}.json."""
+    internas = [storage.from_json_row(r) for r in rows]
+    por_anio = {}
+    for r in internas:
+        por_anio.setdefault(r["data_as_of"].year, []).append(r)
+    for anio, rs in por_anio.items():
+        storage.append_incoming(storage.incoming_path(asset_id, anio), rs)
+
+
 class TestAdapters(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -158,7 +194,7 @@ class TestAdapters(unittest.TestCase):
         import tempfile
         tmpdir = tempfile.mkdtemp()
         self.addCleanup(shutil.rmtree, tmpdir, ignore_errors=True)
-        os.makedirs(os.path.join(tmpdir, "metrics"))
+        storage = _redirigir_storage(self, tmpdir, self.mod)
         ya_cubiertas = ["2024-07-10", "2024-07-20"]
         existing_rows = [
             {"asset_id": "BTC", "asset_type": "crypto", "domain": "tecnico", "metric": "precio",
@@ -167,8 +203,7 @@ class TestAdapters(unittest.TestCase):
              "calculation_method": None, "source_url": None}
             for f in ya_cubiertas
         ]
-        with open(os.path.join(tmpdir, "metrics", "BTC.json"), "w") as f:
-            json.dump(existing_rows, f)
+        _sembrar_metricas(storage, "BTC", existing_rows)
 
         original_dir = self.mod.DATA_CONTRACT_DIR
         self.mod.DATA_CONTRACT_DIR = tmpdir
@@ -318,9 +353,23 @@ class TestAdapters(unittest.TestCase):
         self.assertIn("earnings_beats_8q", by_metric)
         self.assertIn("earnings_misses_8q", by_metric)
         self.assertIn("analyst_target_price", by_metric)
-        # todas las metricas nuevas comparten fundamental_as_of con pe_ratio,
-        # no con el precio -- vienen del mismo overview, no de la cotizacion
-        self.assertEqual(by_metric["eps"]["data_as_of"], by_metric["pe_ratio"]["data_as_of"])
+        # REESCRITO EN P6.2a (2026-09-07). Este test afirmaba que eps y
+        # pe_ratio compartian fecha ("vienen del mismo overview"). Era
+        # cierto y era justo el defecto: venir del mismo overview no los
+        # hace conocibles el mismo dia. eps es un hecho del trimestre,
+        # publicado en reportedDate; pe_ratio se calcula con el precio de
+        # hoy. La propiedad que sigue siendo cierta -- y la que ahora
+        # importa -- es que son DOS RELOJES DISTINTOS y no deben coincidir.
+        self.assertNotEqual(by_metric["eps"]["data_as_of"], by_metric["pe_ratio"]["data_as_of"])
+        # ...y que las nueve del GRUPO A si comparten la suya entre ellas.
+        grupo_a = ["eps", "roe_pct", "revenue_growth_yoy_pct", "profit_margin_pct",
+                   "operating_margin_pct", "earnings_beats_8q", "earnings_misses_8q",
+                   "earnings_surprise_avg_pct", "earnings_surprise_last_pct"]
+        fechas_a = {by_metric[m]["data_as_of"] for m in grupo_a}
+        self.assertEqual(len(fechas_a), 1, f"el grupo A no comparte fecha: {fechas_a}")
+        # la fecha del grupo A es la de PUBLICACION, posterior al cierre del
+        # trimestre con el que se fecha el grupo B
+        self.assertGreater(by_metric["eps"]["data_as_of"], by_metric["pe_ratio"]["data_as_of"])
 
     def test_adapt_news_filas_validas_una_por_articulo(self):
         """Paso 4 (2026-09-03): fixture congelada de 3 articulos reales de
@@ -382,8 +431,17 @@ class TestQA(unittest.TestCase):
         with open(os.path.join(self.tmpdir, subdir, fname), "w") as f:
             json.dump(content, f)
 
+    def _qa_con_tmpdir(self):
+        """qa.py lee las metricas de history/+incoming/ desde la migracion,
+        asi que hay que reapuntar tambien esas carpetas, no solo DATA_DIR."""
+        qa = _import_contract_module("qa")
+        qa.DATA_DIR = self.tmpdir
+        _redirigir_storage(self, self.tmpdir, qa)
+        return qa
+
     def test_diagnostico_limpio_da_pass(self):
-        self._write("metrics", "BTC.json", [{
+        qa = self._qa_con_tmpdir()
+        _sembrar_metricas(qa.storage, "BTC", [{
             "asset_id": "BTC", "asset_type": "crypto", "domain": "tecnico",
             "metric": "precio", "value": 100.0, "unit": "EUR",
             "data_as_of": "2026-09-01", "retrieved_at": "2026-09-01T10:00:00Z",
@@ -391,14 +449,13 @@ class TestQA(unittest.TestCase):
             "confidence_pct": 80, "data_quality_pct": 90,
             "calculation_method": None, "source_url": None,
         }])
-        qa = _import_contract_module("qa")
-        qa.DATA_DIR = self.tmpdir
         report, ok = qa.run_qa()
         self.assertTrue(ok)
         self.assertIn("PASS", report)
 
     def test_diagnostico_detecta_incidencia_de_privacidad(self):
-        self._write("metrics", "BTC.json", [{
+        qa = self._qa_con_tmpdir()
+        _sembrar_metricas(qa.storage, "BTC", [{
             "asset_id": "BTC", "asset_type": "crypto", "domain": "tecnico",
             "metric": "precio", "value": 100.0, "unit": "EUR",
             "data_as_of": "2026-09-01", "retrieved_at": "2026-09-01T10:00:00Z",
@@ -406,8 +463,6 @@ class TestQA(unittest.TestCase):
             "confidence_pct": 80, "data_quality_pct": 90,
             "calculation_method": None, "source_url": "ver CARTERA_A_posicion_neta_cripto.csv",
         }])
-        qa = _import_contract_module("qa")
-        qa.DATA_DIR = self.tmpdir
         report, ok = qa.run_qa()
         self.assertFalse(ok, "una fila con hint de cartera privada debe hacer fallar el diagnóstico")
 
@@ -423,6 +478,7 @@ class TestBuildHistorizacion(unittest.TestCase):
         self.addCleanup(shutil.rmtree, self.tmpdir, ignore_errors=True)
         self.build = _import_contract_module("build")
         self.build.DATA_DIR = self.tmpdir
+        _redirigir_storage(self, self.tmpdir, self.build)
 
     def _metric_row(self, data_as_of):
         return {
@@ -545,6 +601,7 @@ class TestDetectTechnicalGaps(unittest.TestCase):
         os.makedirs(os.path.join(self.tmpdir, "metrics"))
         self.backfill = _import_contract_module("backfill")
         self.backfill.DATA_DIR = self.tmpdir
+        self.storage = _redirigir_storage(self, self.tmpdir, self.backfill)
 
     def _write_precio_dates(self, symbol, fechas):
         rows = [
@@ -554,8 +611,7 @@ class TestDetectTechnicalGaps(unittest.TestCase):
              "calculation_method": None, "source_url": None}
             for f in fechas
         ]
-        with open(os.path.join(self.tmpdir, "metrics", f"{symbol}.json"), "w") as f:
-            json.dump(rows, f)
+        _sembrar_metricas(self.storage, symbol, rows)
 
     def test_sin_fichero_no_da_huecos(self):
         self.assertEqual(self.backfill.detect_technical_gaps("BTC"), [])

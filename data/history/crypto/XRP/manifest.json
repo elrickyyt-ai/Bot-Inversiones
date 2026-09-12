@@ -1,0 +1,66 @@
+{
+  "asset_id": "XRP",
+  "asset_type": "crypto",
+  "particiones": [
+    {
+      "fichero": "2019.parquet",
+      "anio": 2019,
+      "revision": 1,
+      "sha256": "54226b2ccf705395012673715c20ea53e9037b9af21f0188c5b08663ef45cb63",
+      "filas": 2652,
+      "data_as_of_min": "2019-02-26",
+      "data_as_of_max": "2019-12-31",
+      "created_at": "2026-09-05T17:59:36Z"
+    },
+    {
+      "fichero": "2020.parquet",
+      "anio": 2020,
+      "revision": 1,
+      "sha256": "08c0de23c4f94db63e12e24f9349b3f00a763e282cf14472a073c04f4bb423df",
+      "filas": 3660,
+      "data_as_of_min": "2020-01-01",
+      "data_as_of_max": "2020-12-31",
+      "created_at": "2026-09-05T17:59:36Z"
+    },
+    {
+      "fichero": "2021.parquet",
+      "anio": 2021,
+      "revision": 1,
+      "sha256": "959f8dbe533313118b6310dc5975561d29789d626882c626b9764043093a01a0",
+      "filas": 190,
+      "data_as_of_min": "2021-01-01",
+      "data_as_of_max": "2021-01-19",
+      "created_at": "2026-09-05T17:59:36Z"
+    },
+    {
+      "fichero": "2023.parquet",
+      "anio": 2023,
+      "revision": 1,
+      "sha256": "5435d250eb8614781a7a8698bf28eaee5687d36c5650275e81f6968c049be9fc",
+      "filas": 1309,
+      "data_as_of_min": "2023-07-13",
+      "data_as_of_max": "2023-12-31",
+      "created_at": "2026-09-05T17:59:36Z"
+    },
+    {
+      "fichero": "2024.parquet",
+      "anio": 2024,
+      "revision": 1,
+      "sha256": "65c1e6f17a4afd0926885d7087b56fc8715437c421b49b811d2279e185cc0dc5",
+      "filas": 3633,
+      "data_as_of_min": "2024-01-01",
+      "data_as_of_max": "2024-12-31",
+      "created_at": "2026-09-05T17:59:36Z"
+    },
+    {
+      "fichero": "2025.parquet",
+      "anio": 2025,
+      "revision": 1,
+      "sha256": "52b3a0a76206153e2ada35ee517157bf7795b2248f17420174e3e60a5dafba55",
+      "filas": 3650,
+      "data_as_of_min": "2025-01-01",
+      "data_as_of_max": "2025-12-31",
+      "created_at": "2026-09-05T17:59:36Z"
+    }
+  ]
+}

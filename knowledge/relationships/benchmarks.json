@@ -1,0 +1,53 @@
+[
+ {
+  "relationship_id": "rel:0049",
+  "subject": "sec:IBM.NYSE",
+  "predicate": "BENCHMARKED_BY",
+  "object": "bm:sp500",
+  "role": "MARKET",
+  "polarity": "AFFIRMS",
+  "nature": "ASSERTED",
+  "status": "PROVISIONAL",
+  "support_level": "MEDIO",
+  "source_id": "src:yahoo-gspc",
+  "statement": "Asignacion declarada de benchmark de mercado (D-21). La serie de precios de este activo en el Data Contract empieza el 1970-01-02; el nivel del S&P 500 cubre desde 1970-01-02, asi que la vigencia la fija el activo, no el benchmark. Rol MARKET: habilita ABNORMAL_RETURN.",
+  "valid_from": "1970-01-02",
+  "valid_to": null,
+  "last_verified": "2026-09-07",
+  "verification_method": "elegibilidad comprobada con estudio_resultados.benchmark_elegible() sobre las cuatro condiciones de D-21; primera sesion del activo verificada contra storage.technical_dates()"
+ },
+ {
+  "relationship_id": "rel:0050",
+  "subject": "sec:NVDA.NASDAQ",
+  "predicate": "BENCHMARKED_BY",
+  "object": "bm:sp500",
+  "role": "MARKET",
+  "polarity": "AFFIRMS",
+  "nature": "ASSERTED",
+  "status": "PROVISIONAL",
+  "support_level": "MEDIO",
+  "source_id": "src:yahoo-gspc",
+  "statement": "Asignacion declarada de benchmark de mercado (D-21). La serie de precios de este activo en el Data Contract empieza el 1999-01-22; el nivel del S&P 500 cubre desde 1970-01-02, asi que la vigencia la fija el activo, no el benchmark. Rol MARKET: habilita ABNORMAL_RETURN.",
+  "valid_from": "1999-01-22",
+  "valid_to": null,
+  "last_verified": "2026-09-07",
+  "verification_method": "elegibilidad comprobada con estudio_resultados.benchmark_elegible() sobre las cuatro condiciones de D-21; primera sesion del activo verificada contra storage.technical_dates()"
+ },
+ {
+  "relationship_id": "rel:0051",
+  "subject": "sec:XOM.NYSE",
+  "predicate": "BENCHMARKED_BY",
+  "object": "bm:sp500",
+  "role": "MARKET",
+  "polarity": "AFFIRMS",
+  "nature": "ASSERTED",
+  "status": "PROVISIONAL",
+  "support_level": "MEDIO",
+  "source_id": "src:yahoo-gspc",
+  "statement": "Asignacion declarada de benchmark de mercado (D-21). La serie de precios de este activo en el Data Contract empieza el 1970-01-02; el nivel del S&P 500 cubre desde 1970-01-02, asi que la vigencia la fija el activo, no el benchmark. Rol MARKET: habilita ABNORMAL_RETURN.",
+  "valid_from": "1970-01-02",
+  "valid_to": null,
+  "last_verified": "2026-09-07",
+  "verification_method": "elegibilidad comprobada con estudio_resultados.benchmark_elegible() sobre las cuatro condiciones de D-21; primera sesion del activo verificada contra storage.technical_dates()"
+ }
+]

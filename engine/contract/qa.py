@@ -1,18 +1,35 @@
 """Herramienta de diagnostico del Data Contract -- Fase A de la
 preparacion de Power BI (docs/03-arquitectura-visualizacion-y-acceso.md).
 
-Lee data/metrics/*.json y data/thesis/*.json, valida cada fila contra
+Lee el Data Contract (history/ + incoming/ resueltos, y data/thesis/,
+data/assets/, data/news/), valida cada fila contra
 schema.py, y produce un informe legible por una persona -- nada de JSON
 crudo. No modifica ningun motor ni el propio data/, solo lo inspecciona.
 
+Dos niveles, con estados explicitos:
+
+    QA-CORE     siempre, solo biblioteca estandar, obligatorio.
+                Valida las filas de incoming/ y la integridad de history/
+                por hash del manifiesto, sin abrir ningun parquet.
+
+    QA-PARQUET  solo si PyArrow esta disponible. Abre cada particion y
+                comprueba schema, filas, rango y duplicados logicos.
+
+El resultado global es VERIFIED, UNVERIFIED o FAIL -- nunca un PASS cuando
+una comprobacion no se ha podido ejecutar. "No se pudo verificar" no es
+"verificado correctamente", y el informe lo dice con esas palabras.
+
 Uso:
-    python3 engine/contract/qa.py
+    python3 engine/contract/qa.py                     ingesta (CORE obligatorio)
+    python3 engine/contract/qa.py --require-parquet   mantenimiento/CI (exige ambos)
 """
 import datetime
 import json
 import os
 import re
 
+import storage
+import temporal
 from schema import (
     validate_metric_row, validate_thesis_row, validate_asset_row, validate_news_row, ContractError,
     METRIC_FIELDS, THESIS_FIELDS, ASSET_FIELDS, NEWS_FIELDS,
@@ -45,19 +62,112 @@ def _fmt_pass_fail(ok):
     return "PASS" if ok else "FAIL"
 
 
-def run_qa():
+def _assets_en_contract():
+    """Activos presentes en la estructura nueva (history/ o incoming/)."""
+    ids = set()
+    if os.path.isdir(storage.HISTORY_DIR):
+        for t in os.listdir(storage.HISTORY_DIR):
+            d = os.path.join(storage.HISTORY_DIR, t)
+            if os.path.isdir(d):
+                ids.update(os.listdir(d))
+    if os.path.isdir(storage.INCOMING_DIR):
+        for f in os.listdir(storage.INCOMING_DIR):
+            if f.endswith(".csv"):
+                ids.add(f.rsplit("_", 1)[0])
+    return sorted(ids)
+
+
+def _validar_manifiestos():
+    """Septimo bloque: la inmutabilidad de history/ como propiedad
+    verificada, no como convencion de nombres.
+
+    Seis comprobaciones, cada una con un diagnostico distinto:
+    hash (la particion cambio), filas (truncamiento), rango temporal (una
+    fila archivada en el anio equivocado), schema (columnas o tipos que ya
+    no son los del contrato), duplicado logico (la resolucion de revisiones
+    esta rota) y secuencia de revisiones (manifiesto y disco divergen).
+    """
+    fallos = []
+    revisado = 0
+    if not os.path.isdir(storage.HISTORY_DIR):
+        return fallos, revisado
+    for tipo in sorted(os.listdir(storage.HISTORY_DIR)):
+        tdir = os.path.join(storage.HISTORY_DIR, tipo)
+        if not os.path.isdir(tdir):
+            continue
+        for asset_id in sorted(os.listdir(tdir)):
+            d = os.path.join(tdir, asset_id)
+            man = storage.read_manifest(tipo, asset_id)
+            registrados = {e["fichero"] for e in man["particiones"]}
+            en_disco = {f for f in os.listdir(d) if f.endswith(".parquet")}
+            for f in sorted(en_disco - registrados):
+                fallos.append(f"  [{asset_id}] {f}: en disco pero NO en el manifiesto")
+            for f in sorted(registrados - en_disco):
+                fallos.append(f"  [{asset_id}] {f}: en el manifiesto pero NO en disco")
+
+            claves = set()
+            for e in man["particiones"]:
+                path = os.path.join(d, e["fichero"])
+                if not os.path.exists(path):
+                    continue
+                revisado += 1
+                if storage.sha256_file(path) != e["sha256"]:
+                    fallos.append(f"  [{asset_id}] {e['fichero']}: HASH DISTINTO — "
+                                  f"una particion cerrada ha cambiado")
+                    continue
+                rows = storage.read_parquet(path)
+                if len(rows) != e["filas"]:
+                    fallos.append(f"  [{asset_id}] {e['fichero']}: {len(rows)} filas, "
+                                  f"el manifiesto dice {e['filas']}")
+                fuera = [r for r in rows if r["data_as_of"].year != e["anio"]]
+                if fuera:
+                    fallos.append(f"  [{asset_id}] {e['fichero']}: {len(fuera)} filas "
+                                  f"fuera del anio {e['anio']}")
+                for r in rows:
+                    if set(r.keys()) != set(storage.COLUMNS):
+                        fallos.append(f"  [{asset_id}] {e['fichero']}: schema distinto del contrato")
+                        break
+                if e["revision"] == 1:
+                    claves |= {storage.logical_key(r) for r in rows}
+
+            revisiones = sorted((e["anio"], e["revision"]) for e in man["particiones"])
+            por_anio = {}
+            for anio, rev in revisiones:
+                por_anio.setdefault(anio, []).append(rev)
+            for anio, revs in sorted(por_anio.items()):
+                if revs != list(range(1, len(revs) + 1)):
+                    fallos.append(f"  [{asset_id}] anio {anio}: secuencia de revisiones "
+                                  f"con huecos o repeticiones: {revs}")
+
+            resueltas = storage.read_asset(asset_id, tipo)
+            if len({storage.logical_key(r) for r in resueltas}) != len(resueltas):
+                fallos.append(f"  [{asset_id}] DUPLICADO LOGICO tras resolver revisiones")
+    return fallos, revisado
+
+
+def run_qa(require_parquet=False):
     lines = []
     p = lines.append
 
-    metrics_files = _load_json_files("metrics")
     thesis_files = _load_json_files("thesis")
     assets_files = _load_json_files("assets")
     news_files = _load_json_files("news")
 
+    # Metricas. CON PyArrow se valida el ESTADO LOGICO completo (history/ +
+    # incoming/ resueltos por clave logica). SIN PyArrow solo se validan las
+    # filas de incoming/ -- las recien ingeridas, que son las unicas que el
+    # cron acaba de escribir. Lo que NO se puede comprobar queda declarado
+    # como tal en el informe, nunca como PASS.
+    hay_parquet = storage.hay_pyarrow()
+    metrics_files = {}
     all_metric_rows = []
-    for fname, rows in metrics_files.items():
+    for asset_id in _assets_en_contract():
+        rows = storage.read_asset(asset_id) if hay_parquet else storage.read_incoming_rows(asset_id)
+        if not rows:
+            continue
+        metrics_files[asset_id] = rows
         for row in rows:
-            all_metric_rows.append((fname, row))
+            all_metric_rows.append((asset_id, storage.to_contract_row(row)))
 
     all_thesis_rows = []
     for fname, content in thesis_files.items():
@@ -182,6 +292,74 @@ def run_qa():
     p(f"Filas donde coinciden (normal para datos en vivo: precio, técnico cripto): {len(same_examples)}")
     p("")
 
+    # --- INTEGRIDAD TEMPORAL (available_at) ---
+    # El bloque de arriba comprueba que data_as_of y retrieved_at son
+    # independientes. Eso NO detecta un look-ahead: una fila puede cumplir
+    # data_as_of <= retrieved_at y aun asi estar fechada ANTES de que su
+    # valor fuese conocible. Es lo que pasaba con las nueve metricas del
+    # trimestre de acciones hasta 2026-09-07 (22-31 dias de adelanto) y lo
+    # que este bloque si ve. Ver engine/contract/temporal.py.
+    p("## INTEGRIDAD TEMPORAL (¿cuándo fue CONOCIBLE cada fila?)")
+    por_clase = {"SAFE": 0, "LOOK_AHEAD": 0, "STALE": 0, "AMBIGUOUS": 0}
+    look_ahead_detalle, ambiguas_detalle = {}, {}
+    for _fname, row in all_metric_rows:
+        clase = temporal.clasificar(row["domain"], row["metric"])
+        por_clase[clase] += 1
+        if clase == "LOOK_AHEAD":
+            look_ahead_detalle.setdefault((row["domain"], row["metric"]), 0)
+            look_ahead_detalle[(row["domain"], row["metric"])] += 1
+        elif clase == "AMBIGUOUS":
+            ambiguas_detalle.setdefault((row["domain"], row["metric"]), 0)
+            ambiguas_detalle[(row["domain"], row["metric"])] += 1
+    for clase in ("SAFE", "LOOK_AHEAD", "STALE", "AMBIGUOUS"):
+        p(f"  {clase:11} {por_clase[clase]:>7} filas")
+
+    # Un LOOK_AHEAD declarado no es un fallo silencioso: esta reconocido,
+    # acotado y con su razon escrita. Lo que si es un fallo es uno NUEVO,
+    # que aparezca en una metrica sin declaracion (AMBIGUOUS).
+    temporal_ok = not ambiguas_detalle
+    if look_ahead_detalle:
+        p("  LOOK_AHEAD declarados y acotados (no bloquean; deuda registrada):")
+        for (d, m), n in sorted(look_ahead_detalle.items()):
+            p(f"    {d}/{m}: {n} filas — {temporal.semantica(d, m)[2]}")
+    if ambiguas_detalle:
+        p("  SIN DECLARACIÓN TEMPORAL (bloquea — ninguna métrica puede quedar sin reloj):")
+        for (d, m), n in sorted(ambiguas_detalle.items()):
+            p(f"    {d}/{m}: {n} filas")
+
+    # Invariante que habria cazado el defecto corregido en P6.2a: los dos
+    # grupos de fundamentales de acciones llevan relojes distintos, asi que
+    # no pueden compartir data_as_of. Si vuelven a compartirlo, alguien ha
+    # vuelto a fechar el grupo A con el fin del trimestre.
+    choques = []
+    for asset in {r["asset_id"] for _f, r in all_metric_rows if r["asset_type"] == "equity"}:
+        fechas = {"SAFE": set(), "STALE": set()}
+        for _f, r in all_metric_rows:
+            if r["asset_id"] != asset or r["domain"] != "fundamental":
+                continue
+            clase = temporal.clasificar(r["domain"], r["metric"])
+            if clase in fechas:
+                fechas[clase].add(r["data_as_of"])
+        comun = fechas["SAFE"] & fechas["STALE"]
+        if comun:
+            choques.append((asset, sorted(comun)))
+    if choques:
+        temporal_ok = False
+        p("  COLISIÓN DE RELOJES (bloquea):")
+        for asset, fechas_comunes in choques:
+            p(f"    {asset}: el grupo del trimestre y el de valores vivos comparten {fechas_comunes}")
+    else:
+        p("  Sin colisión de relojes en fundamentales de acciones.")
+
+    try:
+        temporal.comprobar_coherencia_con_cadencias()
+        p("  cadencias.DEFECTO_DE_FECHADO y temporal.SEMANTICA_DATA_AS_OF: coherentes.")
+    except temporal.TemporalError as e:
+        temporal_ok = False
+        p(f"  INCOHERENCIA ENTRE TABLAS (bloquea): {e}")
+    p(f"RESULTADO: {_fmt_pass_fail(temporal_ok)}")
+    p("")
+
     # --- VALIDACIÓN DE FUENTES ---
     p("## VALIDACIÓN DE FUENTES (asset → metric → source)")
     no_source = [row for _, row in all_metric_rows if not row.get("source")]
@@ -291,19 +469,102 @@ def run_qa():
     p(f"RESULTADO: {_fmt_pass_fail(not news_schema_errors and not news_privacy_issues and not news_duplicates and not news_no_source)}")
     p("")
 
-    p("=" * 70)
-    overall = (
+    # --- QA-CORE: integridad de history/ por hash, SIN abrir los parquet ---
+    p("## INTEGRIDAD DE history/ — nivel CORE (hash, sin abrir los parquet)")
+    hash_errors, particiones_hasheadas = storage.verificar_hashes_manifiesto()
+    p(f"Particiones comprobadas por hash: {particiones_hasheadas}")
+    p("Detecta que una partición cerrada ha cambiado, que falta un fichero o que")
+    p("sobra uno sin registrar. NO demuestra que su contenido sea correcto.")
+    p(f"Incidencias: {len(hash_errors)}")
+    for e in hash_errors[:20]:
+        p(e)
+    p(f"RESULTADO: {_fmt_pass_fail(not hash_errors)}")
+    p("")
+
+    # --- COBERTURA Y FRESCURA: informativo, nunca falla ---
+    # No es una puerta y no debe serlo: que el IPC envejezca hasta su
+    # cadencia normal de publicacion es correcto, y convertirlo en FAIL
+    # pararia el cron un dia de cada dos por un comportamiento esperado.
+    # Aqui se declara el estado; quien decida bloquear con el es el motor
+    # de razonamiento, no la ingesta.
+    p("## COBERTURA Y FRESCURA (informativo — no condiciona el resultado)")
+    try:
+        import cobertura
+        cob = cobertura.evaluar()
+        por_cobertura, por_frescura = {}, {}
+        for f in cob["por_dominio"]:
+            por_cobertura[f["cobertura"]] = por_cobertura.get(f["cobertura"], 0) + 1
+            por_frescura[f["estado_frescura"]] = por_frescura.get(f["estado_frescura"], 0) + 1
+        p(f"Dominios evaluados: {len(cob['por_dominio'])} (solo incoming/, sin PyArrow)")
+        p("Cobertura:  " + " · ".join(f"{v} {k}" for k, v in sorted(por_cobertura.items())))
+        p("Frescura:   " + " · ".join(f"{v} {k}" for k, v in sorted(por_frescura.items())))
+        peores = [f for f in cob["por_dominio"] if f["estado_frescura"] in ("STALE", "UNKNOWN")]
+        for f in sorted(peores, key=lambda x: -(x["retraso"] or 0))[:8]:
+            p(f"  {f['asset_id']}.{f['domain']}: {f['estado_frescura']} "
+              f"{f['retraso']} {f['unidad'] or ''} — manda {f['metrica_que_manda']} "
+              f"(último dato {f['data_as_of_peor']})")
+        incompletos = [f for f in cob["por_dominio"] if f["faltan"]]
+        for f in incompletos:
+            p(f"  {f['asset_id']}.{f['domain']}: {f['cobertura']} — faltan {', '.join(f['faltan'])}")
+        p("Detalle completo: python3 engine/contract/cobertura.py")
+    except Exception as e:  # noqa: BLE001 -- bloque informativo
+        p(f"NO EVALUADO ({type(e).__name__}: {e})")
+    p("")
+
+    core_ok = (
         not schema_errors and not duplicates and not incompatible and not privacy_issues and not no_source
         and not asset_schema_errors and not asset_privacy_issues and not no_currency
         and not news_schema_errors and not news_privacy_issues and not news_duplicates and not news_no_source
+        and not hash_errors
+        and temporal_ok
     )
-    p(f"DIAGNÓSTICO GENERAL: {_fmt_pass_fail(overall)}")
+
+    # --- QA-PARQUET: contenido real de las particiones. Solo con PyArrow. ---
+    p("## CONTENIDO DE history/ — nivel PARQUET (abre cada partición)")
+    if not hay_parquet:
+        manifest_errors = []
+        parquet_estado = "NOT RUN"
+        p("NO EJECUTADO — PyArrow no está disponible en este entorno.")
+        p("Sin abrir los parquet NO se ha comprobado: schema, número real de filas,")
+        p("rango temporal de cada partición ni duplicados lógicos tras resolver")
+        p("revisiones. El hash del nivel CORE detecta que los bytes cambiaron, pero")
+        p("no sustituye a esta comprobación.")
+        p(f"Alcance de las métricas validadas arriba: solo incoming/ ({len(all_metric_rows)} filas).")
+    else:
+        manifest_errors, particiones_revisadas = _validar_manifiestos()
+        parquet_estado = "PASS" if not manifest_errors else "FAIL"
+        p(f"Particiones abiertas y verificadas: {particiones_revisadas}")
+        p("Comprueba schema, número real de filas, rango temporal y ausencia de")
+        p("duplicados lógicos tras resolver revisiones.")
+        p(f"Incidencias: {len(manifest_errors)}")
+        for e in manifest_errors[:20]:
+            p(e)
+    p(f"RESULTADO: {parquet_estado}")
+    p("")
+
+    # Tres estados, nunca dos. "No se pudo verificar" no es "verificado".
+    if not core_ok or parquet_estado == "FAIL":
+        estado = "FAIL"
+    elif parquet_estado == "NOT RUN":
+        estado = "UNVERIFIED"
+    else:
+        estado = "VERIFIED"
+
+    p("=" * 70)
+    p(f"QA CORE:    {_fmt_pass_fail(core_ok)}")
+    p(f"QA PARQUET: {parquet_estado}" + ("" if hay_parquet else "   (REASON: PyArrow unavailable)"))
+    p(f"STATUS:     {estado}")
     p("=" * 70)
 
-    return "\n".join(lines), overall
+    # ok=False solo bloquea. UNVERIFIED no bloquea la ingesta -- sus filas
+    # (incoming/) SI se han validado por completo -- pero tampoco se declara
+    # verificada. Con require_parquet=True (CI de mantenimiento) tambien falla.
+    ok = estado == "VERIFIED" or (estado == "UNVERIFIED" and not require_parquet)
+    return "\n".join(lines), ok
 
 
 if __name__ == "__main__":
-    report, ok = run_qa()
+    import sys
+    report, ok = run_qa(require_parquet="--require-parquet" in sys.argv)
     print(report)
     raise SystemExit(0 if ok else 1)
