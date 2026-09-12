@@ -1,0 +1,28 @@
+{
+ "contrato": "contexto/v1",
+ "_estado": "T2-SLICE — NO es T2 completo. Solo declara la clase CODE-ANCHORED, lo minimo que la bala trazadora de BLOCK 1A necesita. T2 completo exige ademas AMBIGUOUS, HUMAN-ASSERTED y DECLARED/UNDECLARED, y sigue pendiente.",
+ "clases_declaradas_en_este_slice": {
+  "CODE-ANCHORED": "existe UNA fuente canonica en codigo. El valor NO se almacena: se resuelve al validar y se compara. Duplicarlo en la superficie es duplicar como verdad, y falla."
+ },
+ "clases_pendientes_de_T2_completo": [
+  "AMBIGUOUS",
+  "HUMAN-ASSERTED"
+ ],
+ "estados_de_respuesta_pendientes_de_T2_completo": [
+  "DECLARED",
+  "UNDECLARED"
+ ],
+ "superficie": "contexto/ESTADO_VIGENTE.md",
+ "bloque_de_referencias": "CANONICAL REFERENCES",
+ "state_queries": [
+  {
+   "query_id": "predicados_no_causales",
+   "question": "¿Qué predicados son no causales?",
+   "class": "CODE-ANCHORED",
+   "canonical_source": "engine/knowledge/modelo.py::PREDICADOS_NO_CAUSALES",
+   "_nota": "NO se almacena el valor: se resuelve al validar y se compara. Almacenarlo seria duplicar como verdad.",
+   "canonical_fingerprint": "f5d1ca60118498826528e476d706a8c48e9105cc6bd30a88d78022a3dd8a2d03"
+  }
+ ],
+ "_sello_de_deriva": "canonical_fingerprint es la huella del valor normalizado en el momento de declarar la consulta. NO es el valor almacenado y NO se usa para responder la pregunta -- eso se hace SIEMPRE resolviendo la fuente viva. Existe para detectar que el contexto durable se declaro contra otro estado del codigo y nadie volvio a mirarlo."
+}
