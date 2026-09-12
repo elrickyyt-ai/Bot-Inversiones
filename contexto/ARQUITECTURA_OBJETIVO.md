@@ -21,6 +21,53 @@ Ver el estado real: `python3 contexto/validar.py`
 
 ---
 
+## 0. System Operating Model
+
+Este proyecto tiene **dos dimensiones de arquitectura superpuestas**, y
+confundirlas es un error que ya se ha cometido una vez:
+
+| Dimensión | Qué responde | Cómo se representa |
+|---|---|---|
+| **A · Arquitectura de producto/decisión** | *qué produce el sistema* | los componentes de `contrato.json::arquitectura_objetivo`, con estado y ancla |
+| **B · System Operating Model** | *cómo decide el sistema qué trabajo hacer, qué cargar y qué flujo seguir* | **solo este flujo conceptual**, sin componentes, sin estados y sin maquinaria |
+
+```
+   PROJECT
+      │
+      ▼
+    TASK
+      │
+      ▼
+   COMPLEXITY GATE            ¿cuánto trabajo pide esto de verdad?
+      │
+      ▼
+   CONTEXT / RESOURCE         qué contexto y qué fuentes hacen falta,
+   RESOLUTION                 y ninguna más
+      │
+      ▼
+   WORKFLOW
+      │
+      ├──► RESEARCH
+      ├──► ANALYSIS
+      └──► VERIFICATION
+```
+
+**B NO está en el registro de componentes, y es deliberado.** No recibe
+`IMPLEMENTED`, `PARTIAL`, `PLANNED` ni `NOT_AUTHORIZED`: es un modelo
+operativo, no una capacidad de producto, y darle estados lo convertiría en
+una hoja de ruta de implementación que nadie ha autorizado.
+
+Lo que sigue prohibido es la **maquinaria**, no el concepto: sin Task Router,
+sin agentes ni subagentes, sin skills, sin hooks, sin framework de
+orquestación. B describe cómo se trabaja; no manda construir nada que lo
+ejecute.
+
+F1 y S0 son, de hecho, las primeras piezas reales de B: el presupuesto de
+`contexto:L0`, el cierre efectivo y el alcance por bloque **son** resolución
+de contexto y recursos, hecha a mano y verificada en CI.
+
+---
+
 ## La regla que sostiene este documento
 
 ```
@@ -59,6 +106,28 @@ cierto aunque existiese una ejecución autorizada y supervisada.
 
 `INVESTMENT_PROPOSAL` es `PLANNED`, no `NOT_AUTHORIZED`: se va a construir.
 `BROKER_ORDER` es `NOT_AUTHORIZED`: hoy no se va a construir.
+
+---
+
+## Granularidad: 29 componentes no son 29 capacidades nuevas
+
+El registro descompone la arquitectura objetivo en **29 componentes**. Ese
+número es una **descomposición normativa** de este documento, elegida para que
+cada pieza tenga un ancla comprobable — **no una afirmación de que se hayan
+añadido capacidades** respecto de esquemas anteriores.
+
+Los diseños previos contaban con otra granularidad: la cadena conceptual de
+origen enumeraba 26 eslabones, y `docs/00-arquitectura-conceptual.md` (Fase 0)
+describía 10 capas. Los tres describen el mismo sistema con cortes distintos.
+Si dentro de seis meses aparece «arquitectura v1 = 26 / v2 = 29», la respuesta
+es que **cambió el corte, no el alcance**.
+
+Cambiar el número exige decirlo aquí. Añadir una capacidad exige una decisión
+registrada en `docs/DECISIONES.md`, que es otra cosa.
+
+Los `id` son cadenas estables (`DATA`, `EVIDENCE`, `INVESTMENT_PROPOSAL`…) y
+son la clave por la que el validador resuelve cada ancla: renombrarlos rompe
+la trazabilidad, así que no se renombran por estética.
 
 ---
 
@@ -121,6 +190,21 @@ dibujo.
    ⛔  = NOT_AUTHORIZED
 ```
 
+### La frontera económica del sistema
+
+```
+   THESIS               interpreta y EXPLICA una oportunidad
+      │
+      ▼                 ←── aquí el sistema deja de analizar
+   INVESTMENT PROPOSAL  transforma la tesis en una DECISIÓN CANDIDATA
+      │
+      ▼
+   EXECUTION + FEEDBACK
+```
+
+Todo P1-P6.2 no fue «construir más analytics»: es el núcleo que hace que esa
+decisión candidata sea auditable en vez de una recomendación arbitraria.
+
 ### `INVESTMENT PROPOSAL` es el puente, no una capa más
 
 ```
@@ -158,6 +242,14 @@ tiene una regla dura:
 > **`learning` nunca modifica una política activa de forma directa.**
 > Un cambio aprendido recorre `candidate → validación → OOS → shadow →
 > aprobación → versión nueva`.
+
+**Y el bucle de aprendizaje NO existe todavía.** `BACKTEST` está `PARTIAL`
+porque hay *event study* y `HistoricalReactionProfile v1` sobre 52 eventos
+reales, descriptivos — **eso no es backtesting de política**. El ciclo
+`candidate → backtest → risk test → OOS → shadow → promotion` no está
+construido en ninguna de sus etapas. Que exista análisis histórico no debe
+leerse como que exista validación de políticas: son cosas distintas y el
+`PARTIAL` solo cubre la primera.
 
 Y `RUN` no es decoración: es la infraestructura epistemológica de la propia
 decisión. **Cada RUN conserva la `policy_version` exacta** con la que se
@@ -203,13 +295,13 @@ acomodar al ausente. La coincidencia léxica queda registrada como deuda
 - `Mispricing` no existe todavía: exige magnitud económica real y no puede
   calcularse sobre `UNKNOWN`.
 - No calibrar pesos con `n=0` predicciones evaluadas.
-- Sin agentes, skills, router ni hooks. **Nota deliberada**: el diseño
-  conceptual del que procede esta cadena incluía piezas de orquestación
-  (`TASK`, `COMPLEXITY GATE`, `WORKFLOW`, `CONTEXT/RESOURCE RESOLUTION`). **No
-  se recogen aquí**: son infraestructura de agente, no arquitectura de
-  producto, y este proyecto las tiene explícitamente excluidas. Registrarlas
-  como componentes habría introducido por la puerta de atrás lo que los
-  invariantes prohíben.
+- **Sin Task Router, agentes, subagentes, skills, hooks ni framework de
+  orquestación.** Lo prohibido es la maquinaria, no el concepto: el System
+  Operating Model del §0 se conserva como flujo —define cómo trabaja el
+  sistema— y precisamente por eso no aparece en el registro de componentes ni
+  recibe estados. Convertir `TASK` o `WORKFLOW` en componentes con estado
+  habría sido introducir una hoja de ruta de orquestación por la puerta de
+  atrás.
 
 ---
 

@@ -432,7 +432,7 @@
    "nivel": "3-aprender",
    "estado_declarado": "PARTIAL",
    "ancla": "engine/events/estudio_resultados.py",
-   "_nota": "existe event study y HistoricalReactionProfile v1 sobre 52 eventos reales, DESCRIPTIVO. Backtest de POLITICA no existe"
+   "_nota": "PARTIAL cubre SOLO analisis historico de eventos: event study y HistoricalReactionProfile v1 sobre 52 eventos reales, DESCRIPTIVO, sin ninguna senal. NO es backtesting de politica. El ciclo candidate -> backtest -> risk test -> OOS -> shadow -> promotion NO existe en ninguna de sus etapas, y este PARTIAL no debe leerse como que exista."
   },
   {
    "id": "RISK_TEST",

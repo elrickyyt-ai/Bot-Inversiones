@@ -255,19 +255,132 @@ class TestArquitecturaReal(unittest.TestCase):
         self.assertEqual(run["nivel"], "transversal")
         self.assertEqual(run["estado_efectivo"], validar.PLANNED)
 
-    def test_ningun_componente_de_orquestacion_de_agente(self):
-        """El diseno conceptual de origen incluia TASK, COMPLEXITY GATE y
-        WORKFLOW. Registrarlos habria introducido por la puerta de atras la
-        infraestructura de agente que los invariantes prohiben."""
+    def test_el_operating_model_no_es_un_componente(self):
+        """Las DOS dimensiones no se mezclan. El System Operating Model (B) se
+        conserva como flujo conceptual en el documento, pero NO entra en el
+        registro de componentes ni recibe estados: darle IMPLEMENTED/PLANNED lo
+        convertiria en una hoja de ruta de orquestacion que nadie autorizo."""
         ids = {f["id"] for f in self.filas}
-        for prohibido in ("TASK", "COMPLEXITY_GATE", "WORKFLOW",
-                          "CONTEXT_RESOLUTION", "RESOURCE_RESOLUTION"):
-            self.assertNotIn(prohibido, ids, prohibido)
+        for concepto in ("PROJECT", "TASK", "COMPLEXITY_GATE", "WORKFLOW",
+                         "CONTEXT_RESOLUTION", "RESOURCE_RESOLUTION",
+                         "RESEARCH", "ANALYSIS", "VERIFICATION"):
+            self.assertNotIn(concepto, ids, concepto)
+
+    def test_los_ids_son_estables_y_unicos(self):
+        """Son la clave por la que el validador resuelve cada ancla."""
+        import re
+        ids = [f["id"] for f in self.filas]
+        self.assertEqual(len(ids), len(set(ids)), "ids duplicados")
+        for i in ids:
+            self.assertRegex(i, r"^[A-Z][A-Z0-9_]*$", i)
 
     def test_el_validador_incorpora_la_arquitectura_a_su_informe(self):
         informe = validar.validar()
         self.assertIn("arquitectura", informe)
         self.assertEqual(len(informe["arquitectura"]), len(self.filas))
+
+
+class TestSystemOperatingModel(unittest.TestCase):
+    """Dimension B: conservada como concepto, nunca como maquinaria."""
+
+    def setUp(self):
+        with open(os.path.join(RAIZ, OBJETIVO), encoding="utf-8") as fh:
+            self.txt = fh.read()
+
+    def test_el_flujo_operativo_esta_documentado(self):
+        """Excluirlo del documento fue un error de la primera version de S0.4:
+        define como trabaja el sistema y es parte de la arquitectura."""
+        self.assertIn("System Operating Model", self.txt)
+        for paso in ("PROJECT", "TASK", "COMPLEXITY GATE",
+                     "CONTEXT / RESOURCE", "WORKFLOW",
+                     "RESEARCH", "ANALYSIS", "VERIFICATION"):
+            self.assertIn(paso, self.txt, paso)
+
+    def test_las_dos_dimensiones_estan_declaradas_como_distintas(self):
+        self.assertIn("dos dimensiones", self.txt)
+        self.assertIn("NO está en el registro de componentes", self.txt)
+
+    def test_lo_prohibido_es_la_maquinaria_no_el_concepto(self):
+        self.assertIn("Lo que sigue prohibido es la **maquinaria**", self.txt)
+        for maquinaria in ("Task Router", "agentes", "skills", "hooks"):
+            self.assertIn(maquinaria, self.txt, maquinaria)
+
+    def test_no_existe_maquinaria_de_orquestacion_en_el_arbol(self):
+        """La comprobacion que de verdad importa: conservar el concepto no ha
+        creado ni un fichero de orquestacion."""
+        import subprocess
+        r = subprocess.run(["git", "-C", RAIZ, "ls-files"],
+                           capture_output=True, text=True)
+        for patron in ("task_router", "taskrouter", "agent_manager",
+                       "agentmanager", "subagent", "orchestrat"):
+            hits = [l for l in r.stdout.lower().splitlines() if patron in l]
+            self.assertEqual(hits, [], f"{patron}: {hits}")
+
+
+class TestGranularidadDeclarada(unittest.TestCase):
+    """29 componentes no son 29 capacidades nuevas."""
+
+    def setUp(self):
+        with open(os.path.join(RAIZ, OBJETIVO), encoding="utf-8") as fh:
+            self.txt = fh.read()
+
+    def test_el_numero_se_declara_como_descomposicion(self):
+        self.assertIn("descomposición normativa", self.txt)
+        self.assertIn("no una afirmación de que se hayan", self.txt)
+
+    def test_se_citan_las_granularidades_anteriores(self):
+        """26 eslabones de la cadena conceptual, 10 capas de la Fase 0."""
+        self.assertIn("26", self.txt)
+        self.assertIn("docs/00-arquitectura-conceptual.md", self.txt)
+
+    def test_el_numero_declarado_coincide_con_el_registro(self):
+        n = len(validar.componentes_arquitectura())
+        self.assertIn(f"**{n} componentes**", self.txt)
+
+
+class TestBacktestNoEsValidacionDePoliticas(unittest.TestCase):
+    """PARTIAL no puede leerse como que exista el ciclo de promocion."""
+
+    def setUp(self):
+        self.comp = {c["id"]: c for c in validar.componentes_arquitectura()}
+        with open(os.path.join(RAIZ, OBJETIVO), encoding="utf-8") as fh:
+            self.txt = fh.read()
+
+    def test_el_contrato_declara_que_no_es_backtesting_de_politica(self):
+        nota = self.comp["BACKTEST"]["_nota"]
+        self.assertIn("NO es backtesting de politica", nota)
+        self.assertIn("NO existe en ninguna de sus etapas", nota)
+
+    def test_el_documento_lo_dice_de_forma_visible(self):
+        self.assertIn("el bucle de aprendizaje NO existe todavía", self.txt)
+        self.assertIn("eso no es backtesting de política", self.txt)
+
+    def test_el_resto_del_ciclo_de_promocion_no_esta_implementado(self):
+        efectivo = {f["id"]: f["estado_efectivo"]
+                    for f in validar.estado_arquitectura()}
+        for cid in ("RISK_TEST", "OOS", "SHADOW", "POLICY_GATE",
+                    "POLICY_REGISTRY", "NEW_VERSION", "CANDIDATE_IMPROVEMENT"):
+            self.assertEqual(efectivo[cid], validar.PLANNED, cid)
+
+    def test_backtest_no_puede_salir_implemented(self):
+        self.assertEqual(self.comp["BACKTEST"]["estado_declarado"],
+                         validar.PARTIAL)
+
+
+class TestFronteraEconomica(unittest.TestCase):
+    """THESIS explica; INVESTMENT PROPOSAL decide."""
+
+    def setUp(self):
+        with open(os.path.join(RAIZ, OBJETIVO), encoding="utf-8") as fh:
+            self.txt = fh.read()
+
+    def test_la_frontera_es_visible(self):
+        self.assertIn("La frontera económica del sistema", self.txt)
+        self.assertIn("DECISIÓN CANDIDATA", self.txt)
+        self.assertIn("aquí el sistema deja de analizar", self.txt)
+
+    def test_dice_que_P1_P6_no_era_solo_analytics(self):
+        self.assertIn("no fue «construir más analytics»", self.txt)
 
 
 class TestNoEscribeNada(unittest.TestCase):
