@@ -96,7 +96,7 @@ valor por defecto.
 Marcadas como vigentes por `vigencia-decisiones/v1` (58 de 58). El texto,
 la evidencia y la cadena de revisiones viven en `docs/DECISIONES.md`.
 
-D-01 · D-02 · D-03 · D-04 · D-05 · D-06 · D-07 · D-08 · D-09 · D-10 · D-11 · D-12 · D-13 · D-14 · D-15 · D-16 · D-17 · D-18 · D-19 · D-20 · D-21 · D-22 · D-23 · D-24 · D-25 · D-26 · D-27 · D-28 · D-29 · D-30 · D-31 · D-32 · D-33 · D-34 · D-35 · D-36 · D-37 · D-38 · D-39 · D-40 · D-41 · D-42 · D-43 · D-44 · D-45 · D-46 · D-47 · D-48 · D-49 · D-50 · D-51 · D-52 · D-53 · D-54 · D-55 · D-56 · D-57 · D-58 · D-59
+D-01 · D-02 · D-03 · D-04 · D-05 · D-06 · D-07 · D-08 · D-09 · D-10 · D-11 · D-12 · D-13 · D-14 · D-15 · D-16 · D-17 · D-18 · D-19 · D-20 · D-21 · D-22 · D-23 · D-24 · D-25 · D-26 · D-27 · D-28 · D-29 · D-30 · D-31 · D-32 · D-33 · D-34 · D-35 · D-36 · D-37 · D-38 · D-39 · D-40 · D-41 · D-42 · D-43 · D-44 · D-45 · D-46 · D-47 · D-48 · D-49 · D-50 · D-51 · D-52 · D-53 · D-54 · D-55 · D-56 · D-57 · D-58 · D-59 · D-60
 
 **Límite declarado, y es importante**: `docs/DECISIONES.md` **no distingue
 vigente de superada de forma legible por máquina**. El protocolo prohíbe borrar

@@ -49,6 +49,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
+        # SIN fetch-depth: 0, y es DELIBERADO (D-60). El cron valida el plano
+        # de DATOS; la gobernanza -- alcance, cierre, IMPORTADO, merge-base,
+        # HUMAN-ASSERTED -- la valida el gate de PR, que si clona la historia
+        # entera. Darsela aqui haria que la adquisicion diaria dependiese de
+        # todo el historial del repositorio sin ganar nada operacional.
         uses: actions/checkout@v4
 
       - name: Configurar Python
@@ -77,8 +82,13 @@ jobs:
         # no se ha comprobado su contenido, y eso queda declarado.
         run: python3 engine/contract/qa.py
 
-      - name: Tests (los de parquet se saltan de forma explicita)
-        run: python3 -m unittest discover -s tests -v
+      - name: Suite del CRON -- plano de datos, sin dependencias
+        # NO es `discover -s tests`. Eso ejecutaba tambien los tests de
+        # gobernanza, que consultan el grafo de git y no pueden resolver
+        # commits bajo un clon de profundidad 1 -- run 34722019555: 30 fallos
+        # y 5 errores con la ingesta perfectamente sana. La seleccion vive en
+        # contrato.json::ci_cron.cron_ejecuta, nunca aqui.
+        run: python3 contexto/suite_cron.py --perfil sin-parquet
 
       - name: Comprobar si hay cambios reales en data/
         id: diff
@@ -132,5 +142,9 @@ jobs:
       - name: QA completo (CORE + PARQUET, exige ambos)
         run: python3 engine/contract/qa.py --require-parquet
 
-      - name: Suite completa, incluidos los tests de parquet
-        run: python3 -m unittest discover -s tests -v
+      - name: Suite del CRON con parquet -- aqui ningun salto es aceptable
+        # Mismo plano de datos, pero con pyarrow instalado: el perfil declara
+        # 0 saltos y la autoridad falla si aparece alguno. Asi la cobertura de
+        # parquet que el job de ingesta declara AUSENTE queda efectivamente
+        # ejercida, en vez de simplemente no comprobada.
+        run: python3 contexto/suite_cron.py --perfil con-parquet

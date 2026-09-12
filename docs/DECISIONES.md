@@ -709,3 +709,64 @@ propia decisión, no una ampliación silenciosa de ésta.
 **No se añade ningún código de fallo nuevo**, a propósito: el camino de rechazo
 sigue siendo `FUERA_DE_ALCANCE`. Las mutaciones M36–M39 comprueban que ese
 camino se recorre de verdad.
+
+## D-60 · Dos planos, dos contratos de validación: PR y CRON
+
+**Fecha**: 2026-09-12 · **Bloque**: S0 (S0.11) · **Origen**: run `34722019555`
+
+El primer ciclo real del cron posterior a la integración falló. No por los
+datos —Kraken, CoinGecko/DefiLlama, FRED, `build.py` y QA-CORE pasaron—, sino
+porque al integrarse S0 en la rama canónica el cron pasó a ejecutar la suite
+entera de F1+S0 bajo su checkout **shallow**: `FAILED (failures=30, errors=5)`,
+todos por commits que un clon de profundidad 1 no contiene.
+
+**Descartado `fetch-depth: 0` en el cron.** Habría funcionado y habría sido la
+respuesta equivocada: mezcla dos responsabilidades que son distintas y hace que
+la adquisición diaria dependa de todo el historial. El cron no necesita
+comprobar que `f784b85` sigue siendo ancestro de HEAD para saber si la ingesta
+de hoy es válida.
+
+```
+PR    gobernanza   contexto · alcance · IMPORTADO · merge-base · cierre ·
+                   HUMAN-ASSERTED · integridad histórica    → historia completa
+CRON  datos        fuentes · build · Data Contract · schema · temporalidad ·
+                   claves lógicas · duplicados · incoming ·
+                   parquet · storage · QA                   → clon depth 1
+```
+
+**Tres planos, clasificados ejecutando y no por nombre de fichero.** Se clonó
+el repositorio con `--depth 1` —idéntico al checkout del cron, mismos commits
+irresolubles— y se ejecutó la suite completa. Los 7 módulos que fallaron allí
+son exactamente los que dependen de git:
+
+| plano | módulos | dónde corre |
+|---|---|---|
+| `DATA_OPERATIONAL` | 29 | cron **y** PR |
+| `GOVERNANCE_ONLY` | 12 | sólo PR |
+| `BOTH` | 1 (`test_reconciliacion`) | PR entero; cron sólo sus clases operacionales |
+
+**Un test fuera del cron no es un test olvidado.** El riesgo real de partir una
+suite no es ejecutar menos tests: es que un módulo desaparezca en silencio.
+`tests/test_planos.py` exige que todo módulo de `tests/` esté clasificado, que
+la unión de los tres planos sea exactamente el contenido del directorio, que
+ninguna entrada `GOVERNANCE_ONLY` entre en el cron y que todo `DATA_OPERATIONAL`
+se ejecute allí. El gate de PR sigue corriendo `discover -s tests`, o sea todo.
+
+**«Pasa en shallow» no basta como criterio.** Bajo clon superficial hay tests
+que pasan **sin comprobar nada**: `git diff <commit-ausente>` devuelve stdout
+vacío y la aserción compara `'' == ''`. Por eso `TestNoSeTocoElMotor` y
+`TestIdempotencia` quedan fuera del cron pese a no fallar allí — un verde vacío
+es peor que un rojo.
+
+**Dos perfiles**, porque el cron tiene dos jobs con entornos distintos:
+`sin-parquet` (ingesta, 187 saltos declarados) y `con-parquet` (verificación,
+0 saltos). La autoridad `contexto/suite_cron.py` **no contiene ningún número ni
+la lista de módulos** —viven en `contrato.json::ci_cron`— y **no reimplementa
+la regla**: reutiliza `suite_pr.leer()` y `suite_pr.evaluar()`.
+
+El comportamiento *fail-closed* no se toca: si la suite o QA fallan, los pasos
+de diff y de commit/push quedan `skipped` y no se escribe nada. Es lo que hizo
+el run `34722019555`, y es correcto.
+
+Esta separación anticipa la que el sistema necesitará cuando exista `RUN`:
+**development/governance plane** frente a **operational data plane**.
