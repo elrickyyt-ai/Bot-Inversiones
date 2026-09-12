@@ -303,6 +303,38 @@ class TestCoherenciaYAutorreferencia(unittest.TestCase):
         self.assertEqual(decl["huella"],
                          validar.huella_cierre(dict(decl, _bloqueantes=[])))
 
+    def test_el_sello_se_toma_en_el_commit_de_cierre_no_en_el_worktree(self):
+        """La propiedad que S0.3 obligo a corregir. ESTADO_VIGENTE.md es un
+        entregable de F1 y S0.3 lo amplia con autorizacion; si el sello leyera
+        el worktree, F1 se volveria STALE por una mejora POSTERIOR. El
+        significado historico de un bloque cerrado no puede depender de HEAD --
+        el mismo defecto que S0.1 corrigio con `hasta`."""
+        decl = estado.cargar_contrato()["bloques"]["F1"]["cierre"]
+        rel = "contexto/ESTADO_VIGENTE.md"
+        self.assertIn(rel, decl["entregables"])
+
+        en_cierre = validar._contenido_en(decl["commit_de_cierre"], rel)
+        with open(os.path.join(RAIZ, rel), "rb") as fh:
+            ahora = fh.read()
+        self.assertNotEqual(en_cierre, ahora,
+                            "S0.3 tiene que haber cambiado este entregable")
+
+        e, d = validar.veredicto_cierre("F1")
+        self.assertEqual(e, validar.CLOSED,
+                         f"una mejora posterior no puede caducar el cierre: "
+                         f"{d['motivos']}")
+
+    def test_el_sello_no_depende_del_worktree(self):
+        decl = dict(estado.cargar_contrato()["bloques"]["F1"]["cierre"],
+                    _bloqueantes=[])
+        a = validar.huella_cierre(decl)
+        b = validar.huella_cierre(decl)
+        self.assertEqual(a, b)
+        # Y difiere de la que daria el worktree: son bases distintas.
+        sin_commit = dict(decl)
+        sin_commit.pop("commit_de_cierre")
+        self.assertNotEqual(a, validar.huella_cierre(sin_commit))
+
     def test_tocar_un_entregable_dejaria_F1_en_STALE(self):
         """La propiedad que hace util el sello, comprobada sin tocar nada."""
         c = estado.cargar_contrato()

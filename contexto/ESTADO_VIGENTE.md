@@ -42,6 +42,30 @@ estado de QA, número de tests— **no se copia aquí**: se obtiene ejecutando
 `engine/knowledge/consulta.py --validar`, `engine/contract/qa.py --require-parquet`
 y la suite. Copiarlas sería convertir esta superficie en una segunda fuente.
 
+## ACTIVE BLOCK
+
+Qué se está construyendo ahora, y sobre qué rama. **Es lo único de esta
+superficie que no puede deducirse de nada**: perder este bloque fue lo que
+llevó a una sesión entera a concluir, sobre la rama equivocada, que el
+proyecto no existía.
+
+| | Valor | Fuente canónica |
+|---|---|---|
+| Rama canónica | `claude/session-abz5pi` | D-57. La integración es por **merge**, nunca rebase: `validar.py::_evidencia_resoluble()` comprueba `commit:` con `git cat-file`, y un rebase rompería el propio mecanismo de trazabilidad |
+| Bloque activo | referencia | `contrato.json::bloque_activo` |
+| Qué puede escribir | referencia | `contrato.json::bloques[activo].escritura` |
+| Rango del bloque | referencia | `desde~1..hasta`; `hasta: null` = abierto, con HEAD como valor **operativo** |
+
+El veredicto de cierre de cualquier bloque **se calcula, no se lee**:
+`validar.veredicto_cierre(<bloque>)` sobre siete obligaciones (D-56). Un
+bloque no puede declararse `CLOSED` sin que el veredicto lo confirme, y
+`UNDECLARED` no es `OPEN`.
+
+**`F1` está `CLOSED`, y eso no significa que la arquitectura esté terminada.**
+Son cosas distintas: F1 cerró el contexto durable y la continuidad; los
+niveles 2 y 3 de `ARQUITECTURA_OBJETIVO.md` —`INVESTMENT_PROPOSAL` y lo que
+sigue— continúan `PLANNED`.
+
 ## CANONICAL REFERENCES
 
 Dónde vive cada verdad. Aquí va la **referencia**, nunca el valor.
@@ -79,6 +103,18 @@ vigente de superada de forma legible por máquina**. El protocolo prohíbe borra
 historia y las revisiones se añaden dentro de la misma entrada, así que las 58
 salen marcadas. Esa distinción es deuda abierta; no se inventa aquí.
 
+## OPEN DEBTS
+
+**Las deudas viven en `contrato.json::open_debt`**, con su ID, qué son y qué
+bloquean. Aquí no se copian: una lista duplicada envejece en silencio, y el
+campo `bloqueante_para:<bloque>` es lo que el contrato de cierre consulta para
+decidir si un bloque puede cerrarse.
+
+Consultar las que bloquean un bloque: `validar.deudas_bloqueantes(<bloque>)`.
+
+Una deuda **resuelta no se borra**: queda en el registro con lo que era y cómo
+se cerró. Es información sobre el dominio, no un error que convenga esconder.
+
 ## INVARIANTS
 
 Lo que no puede violarse, en ninguna capa:
@@ -106,6 +142,30 @@ Lo que no puede violarse, en ninguna capa:
   `docs/00-protocolo-privacidad.md`. No se repite aquí: repetirlo sería
   duplicar dentro del propio contexto obligatorio.
 
+## CONTINUITY RULES
+
+> La pérdida de una conversación no puede implicar pérdida del estado del
+> proyecto.
+
+Orden para una sesión nueva. **No reconstruyas el proyecto leyendo el
+histórico**: se recupera bajo demanda desde los punteros.
+
+1. Esta superficie y `CLAUDE.md` — es todo `contexto:L0`.
+2. El bloque activo y su alcance de escritura (`ACTIVE BLOCK`).
+3. Qué existe hoy: `docs/ESTADO.md` §2. Qué se construye:
+   `contexto/ARQUITECTURA_OBJETIVO.md`. **No son lo mismo y no se mezclan.**
+4. Las deudas que bloquean tu bloque.
+5. Solo los contratos que tu trabajo toque.
+6. Ejecuta las autoridades antes de tocar nada, y otra vez después.
+7. Trabaja dentro del alcance declarado. Lo no declarado no está permitido.
+8. Deja resultado verificable: lo calculable, calculado; lo declarado, con
+   fecha, autoría y evidencia resoluble.
+
+Qué **no** hacer: resolver una ambigüedad por intuición — `AMBIGUOUS` no se
+auto-resuelve y `UNDECLARED` no degrada a valor por defecto; duplicar una
+fuente canónica para tener el dato más a mano; ampliar el alcance de tu bloque
+para que algo quepa.
+
 ## HISTORICAL POINTERS
 
 El registro histórico **no se carga de entrada**. Se recupera bajo demanda.
@@ -117,6 +177,7 @@ El registro histórico **no se carga de entrada**. Se recupera bajo demanda.
 | `informes/` | Qué se midió, qué se descartó y qué supuestos quedaron invalidados en cada fase |
 | `contexto/historico/claude_md_estado_previo_a_F1.md` | El estado que `CLAUDE.md` declaraba antes de F1, íntegro |
 | `docs/07-protocolo-de-informes.md` | Qué debe dejar cada fase |
+| `docs/ESTADO.md` §7 · `informes/…trazabilidad_fases_P0_P61.md` | **Roadmap de producto vigente**: `P6.2 → P7 → P8 → P9 → P10 → P11`. Eje distinto del alcance por bloque (`F1`/`S0`/`PC-1`): `P7` dice *qué se construye*, `S0` *qué puede escribirse ahora*. La relación de `PC-1` con `P7…P11` es deuda `DD-4`, no una omisión |
 | `git log -S` | Cuándo cambió una constante concreta |
 
 Integridad del histórico: `python3 contexto/integridad.py` (manifiesto principal,

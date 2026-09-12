@@ -293,8 +293,8 @@
      "autoridades": "6/6 exit=0",
      "qa": "CORE PASS . PARQUET PASS"
     },
-    "huella": "92d54b2998fb93de8abaee3b4dc031a1d8d884c9da74fdf2e78dbd676fc35748",
-    "_huella": "canonical-fingerprint/v1 sobre los insumos del cierre. Se fija cuando el veredicto llegue a CLOSED; mientras el bloque este OPEN no hay nada que sellar."
+    "huella": "020a0642cfb4fa805d022bf936e934077e5875692234d39d70c50b77c5c66844",
+    "_huella": "canonical-fingerprint/v1 sobre los insumos del cierre, TOMADOS EN commit_de_cierre y no en el worktree. Corregido en S0.3: el valor anterior (92d54b29) se habia calculado sobre el arbol de trabajo, asi que cualquier mejora posterior autorizada a un entregable volvia el bloque STALE -- S0.3 amplia ESTADO_VIGENTE.md, que es entregable de F1, y lo disparo. Es el mismo defecto que S0.1 corrigio con hasta/HEAD: el significado historico de un bloque cerrado no puede depender de HEAD. NO cambia la decision de cierre ni su evidencia: cambia la BASE de calculo del sello, que estaba mal definida. Desde ahora es estable."
    },
    "decision": "D-54",
    "estado": "CLOSED",

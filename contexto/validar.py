@@ -13,6 +13,7 @@ import importlib
 import json
 import os
 import re
+import subprocess
 import sys
 
 import estado as _estado
@@ -255,15 +256,18 @@ def decisiones_vigentes(raiz=RAIZ):
 
 
 def guardas_superficie(texto):
-    """Anti-deriva: exactamente cinco bloques, ni uno mas."""
+    """Anti-deriva: exactamente los bloques declarados, ni uno mas.
+
+    Cuantos son vive en estado.BLOQUES_SUPERFICIE y no aqui: escribirlo seria
+    una segunda copia. La superficie crecio en S0.3 y este codigo no cambio."""
     bloques = list(_estado.bloques(texto))
     esperados = list(_estado.BLOQUES_SUPERFICIE)
     if bloques == esperados:
         return True, None
     sobra = [b for b in bloques if b not in esperados]
     if sobra:
-        return False, (f"{BLOQUE_DESCONOCIDO}: la superficie no admite un SEXTO bloque "
-                       f"(ni un septimo): {sobra}")
+        return False, (f"{BLOQUE_DESCONOCIDO}: la superficie no admite un bloque "
+                       f"NO DECLARADO (tiene {len(esperados)}): {sobra}")
     return False, f"{BLOQUE_DESCONOCIDO}: faltan bloques {set(esperados) - set(bloques)}"
 
 
@@ -401,6 +405,27 @@ def _git(args, raiz=RAIZ):
                           capture_output=True, text=True)
 
 
+def _contenido_en(commit, rel, raiz=RAIZ):
+    """Bytes de un fichero TAL COMO ESTABAN en `commit`, no en el worktree.
+
+    Sin esto, el sello de un bloque cerrado dependeria de todo el trabajo
+    POSTERIOR: cualquier mejora autorizada a un entregable lo volvia STALE.
+    Es el mismo defecto que S0.1 corrigio con `hasta`/HEAD -- el significado
+    historico de un bloque cerrado no puede depender de HEAD -- y aparecio en
+    S0.3 al ampliar ESTADO_VIGENTE.md, que es un entregable de F1."""
+    if commit:
+        r = subprocess.run(["git", "-C", raiz, "show", f"{commit}:{rel}"],
+                           capture_output=True)
+        if r.returncode == 0:
+            return r.stdout
+        return None
+    destino = os.path.join(raiz, rel)
+    if os.path.isfile(destino):
+        with open(destino, "rb") as fh:
+            return fh.read()
+    return None
+
+
 def huella_cierre(decl, raiz=RAIZ):
     """canonical-fingerprint/v1 sobre los INSUMOS del cierre.
 
@@ -415,16 +440,19 @@ def huella_cierre(decl, raiz=RAIZ):
     pasaba de 0efbe3e3 a bbbad2a2 y el veredicto de CLOSED a STALE sin que
     nada del material cerrado hubiera cambiado. Un sello no puede ser parte de
     lo que sella. La integridad del contrato la cubren sus propios mecanismos
-    -- las STATE QUERY, el presupuesto L0 y la suite -- no esta huella."""
+    -- las STATE QUERY, el presupuesto L0 y la suite -- no esta huella.
+
+    Y SE TOMA EN `commit_de_cierre`, no en el worktree: un bloque cerrado no
+    puede volverse STALE porque un bloque POSTERIOR mejore, con autorizacion,
+    uno de sus ficheros. Lo que el sello detecta es que se haya reescrito la
+    historia del commit cerrado, que es otra cosa."""
     partes = []
+    commit = decl.get("commit_de_cierre")
     for rel in sorted(r for r in (decl.get("entregables") or [])
                       if r != _CONTRATO_REL):
-        destino = os.path.join(raiz, rel)
-        if os.path.isfile(destino):
-            with open(destino, "rb") as fh:
-                partes.append(f"{rel}:{hashlib.sha256(fh.read()).hexdigest()}")
-        else:
-            partes.append(f"{rel}:AUSENTE")
+        crudo = _contenido_en(commit, rel, raiz)
+        partes.append(f"{rel}:{hashlib.sha256(crudo).hexdigest()}"
+                      if crudo is not None else f"{rel}:AUSENTE")
     partes.append(f"tests:{decl.get('tests', '')}")
     partes += [f"autoridad:{a}" for a in sorted(decl.get("validadores") or [])]
     partes += [f"bloquea:{d}" for d in sorted(decl.get("_bloqueantes") or [])]

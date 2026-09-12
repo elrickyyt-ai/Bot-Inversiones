@@ -12,8 +12,14 @@ import re
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CONTRATO = os.path.join(RAIZ, "contexto", "contrato.json")
 
-BLOQUES_SUPERFICIE = ("CURRENT STATE", "CANONICAL REFERENCES", "ACTIVE DECISIONS",
-                      "INVARIANTS", "HISTORICAL POINTERS")
+# Los bloques de la superficie, EN ORDEN. Es un contrato: el validador exige
+# estos y exactamente estos. S0.3 anade ACTIVE BLOCK, OPEN DEBTS y CONTINUITY
+# RULES -- los tres cubren lo que NO se puede deducir de nada (que bloque esta
+# activo y sobre que rama, que deuda bloquea, y en que orden se recupera el
+# estado). Los cinco anteriores no cambian.
+BLOQUES_SUPERFICIE = ("CURRENT STATE", "ACTIVE BLOCK", "CANONICAL REFERENCES",
+                      "ACTIVE DECISIONS", "OPEN DEBTS", "INVARIANTS",
+                      "CONTINUITY RULES", "HISTORICAL POINTERS")
 
 
 def cargar_contrato(path=CONTRATO):
