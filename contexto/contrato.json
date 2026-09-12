@@ -182,7 +182,7 @@
  "open_debt": [
   "Structural enforcement of no-value duplication (D-2): la deteccion es heuristica, no estructural. NO se amplia F1 para resolverla.",
   "DECISIONES.md no distingue vigente de superada de forma legible por maquina (vigencia-decisiones/v1). F1 lo REGISTRA, no lo resuelve.",
-  "alcance_bloque.vigente sigue en true: el gate de alcance de F1 bloquea engine/, data/ y knowledge/ en todo PR. Apagarlo es requisito para arrancar AssessmentContract, y exige decision registrada."
+  "DF-1 RESUELTA en S0.1: `alcance_bloque.vigente` (interruptor binario) sustituido por `bloque_activo` + `bloques[*].escritura` con cuatro veredictos, denegacion por defecto y proteccion global DERIVADA del manifiesto. Ya no existe ningun valor del contrato que desactive la guarda."
  ],
  "procedencia_historica": {
   "contexto/historico/claude_md_estado_previo_a_F1.md": {
@@ -217,18 +217,59 @@
   "metodo_cierre": "l0-closure/v1",
   "_nota": "12.000 es el limite del PROXY l0-budget/v1, no una medicion universal de tokens de ningun proveedor."
  },
- "alcance_bloque": {
-  "bloque": "F1",
-  "vigente": true,
-  "regla": "la REGLA vive en contexto/validar.py::guarda_alcance (ARBOLES_PROHIBIDOS). Aqui SOLO se declara si aplica -- duplicar la lista seria un defecto de diseno.",
-  "por_que_existe_el_interruptor": "el alcance 'no tocar engine/, data/ ni knowledge/' es del BLOQUE F1, no del repositorio para siempre. El siguiente bloque de producto (AssessmentContract) tiene que tocar engine/ por definicion; un gate permanente bloquearia el roadmap.",
-  "como_se_cierra": "poner vigente=false con una decision registrada en docs/DECISIONES.md cuando F1 se cierre. Apagarlo editando el workflow seria hacerlo a escondidas.",
-  "no_bloquea": [
-   "contexto/",
-   "tests/",
-   ".github/",
-   "docs/",
-   "informes/"
-  ]
+ "bloque_activo": "S0",
+ "_bloque_activo": "DF-1. Siempre hay un bloque activo: si esta clave falta o apunta a un bloque no declarado, la guarda devuelve ALCANCE_NO_DECLARADO y FALLA. No existe el estado 'sin guarda' -- eso era el defecto del interruptor `alcance_bloque.vigente` que este contrato sustituye.",
+ "bloques": {
+  "F1": {
+   "escritura": [
+    "contexto/",
+    "tests/",
+    ".github/",
+    "docs/",
+    "informes/"
+   ],
+   "decision": "D-54",
+   "estado": "OPEN",
+   "_nota": "F1 quedo TECNICAMENTE COMPLETADA (T1-T9 entregados, 942 tests, seis autoridades en verde). Su estado CONTRACTUAL sigue OPEN porque el cierre no estaba persistido. S0 es el trabajo que convierte esa F1 completada en una F1 cerrada; F1 no se rehace."
+  },
+  "S0": {
+   "escritura": [
+    "contexto/",
+    "tests/",
+    ".github/",
+    "docs/",
+    "informes/",
+    "engine/contract/",
+    "data/incoming/"
+   ],
+   "decision": "D-55",
+   "estado": "OPEN",
+   "_nota": "S0 declara engine/contract/ y data/incoming/ porque reconcilia las 754 filas del cron en el carril del ano abierto. Eso es exactamente lo que el mecanismo nuevo permite expresar y el interruptor anterior no: un alcance PROPIO, no la ausencia de guarda."
+  },
+  "PC-1": {
+   "escritura": [
+    "engine/",
+    "tests/",
+    "docs/",
+    "informes/",
+    "contexto/"
+   ],
+   "decision": null,
+   "estado": "UNDECLARED",
+   "_nota": "Declarado por anticipado SOLO como destino del roadmap. `decision: null` y `estado: UNDECLARED` significan que todavia no esta autorizado: activarlo exige ponerlo en bloque_activo con su decision registrada."
+  }
+ },
+ "alcance": {
+  "regla": "La REGLA vive en contexto/validar.py::veredicto_alcance. Aqui SOLO se declaran datos: que bloque esta activo y que puede escribir cada bloque. Ninguna lista de arboles protegidos se declara en este fichero ni en el validador -- se DERIVA de contexto/manifiesto.json y de contexto/extraccion.py, que son quienes ya poseen esa autoridad.",
+  "veredictos": [
+   "ALCANCE_NO_DECLARADO",
+   "PROTEGIDO_GLOBAL",
+   "PERMITIDO",
+   "FUERA_DE_ALCANCE"
+  ],
+  "precedencia": "ALCANCE_NO_DECLARADO > PROTEGIDO_GLOBAL > PERMITIDO > FUERA_DE_ALCANCE. La proteccion global gana SIEMPRE sobre la lista de escritura del bloque: ningun bloque puede autorizarse a si mismo el historico.",
+  "denegacion_por_defecto": "una ruta que no encaja en ninguna regla es FUERA_DE_ALCANCE, nunca permitida. Mismo invariante que UNDECLARED != valor por defecto.",
+  "protegido_global_es_condicional": "PROTEGIDO_GLOBAL no significa 'nunca escribible' -- eso haria inejecutable el propio protocolo de cierre de docs/07. Significa que el alcance del bloque NO BASTA: pasa solo si contexto/manifiesto.json viaja en el MISMO diff, y entonces integridad.py decide. Asi la deuda DF-2 deja de ser una costumbre documentada y pasa a ser condicion de PASS.",
+  "transicion_de_bloque": "cambiar `bloque_activo`, declarar la `escritura` del bloque nuevo y registrar su decision en docs/DECISIONES.md. El bloque anterior pasa a CLOSED por VEREDICTO CALCULADO, no por afirmacion. No hay ningun valor de este contrato que desactive la guarda entera."
  }
 }

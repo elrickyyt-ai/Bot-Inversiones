@@ -139,16 +139,28 @@ class TestGuardaDeAlcanceConectada(unittest.TestCase):
     """Conectada a un diff real, y delegando la regla."""
 
     def test_el_alcance_del_bloque_esta_declarado(self):
-        vigente, decl = alcance_pr.alcance_vigente()
-        self.assertIsNotNone(vigente,
-                             "el contrato no declara `alcance_bloque`: la guarda no "
-                             "puede saber si aplica")
-        self.assertTrue(decl.get("bloque"))
+        """REESCRITO en S0.1 (protocolo de informes, §3). Se apoyaba en
+        `alcance_vigente()` y en la clave `alcance_bloque`, que DF-1 retiro.
+        La propiedad que sigue siendo cierta -- y es mas fuerte -- es que
+        SIEMPRE hay un bloque activo declarado, con su lista de escritura."""
+        bid, decl = alcance_pr.bloque_activo()
+        self.assertIsNotNone(bid, "el contrato no declara `bloque_activo`")
+        self.assertIsNotNone(decl, f"bloque_activo {bid!r} no esta en `bloques`")
+        self.assertTrue(decl.get("escritura"), "el bloque debe declarar que escribe")
 
-    def test_un_cambio_en_engine_data_o_knowledge_produce_FAIL(self):
+    def test_una_ruta_no_declarada_por_el_bloque_produce_FAIL(self):
+        """REESCRITO en S0.1. Antes fijaba que engine/, data/ y knowledge/
+        estaban prohibidos SIEMPRE; eso era la formulacion del interruptor y
+        caduco al resolverse DF-1: el alcance es del BLOQUE (S0 declara
+        data/incoming/ y engine/contract/ legitimamente).
+
+        La propiedad que sobrevive: lo que el bloque activo NO declara no se
+        permite. Se fija con un contrato explicito en memoria, para no
+        depender de que bloque este activo hoy."""
+        c = {"bloque_activo": "X", "bloques": {"X": {"escritura": ["contexto/"]}}}
         for ruta in ("engine/knowledge/modelo.py", "data/incoming/BTC_2026.csv",
                      "knowledge/entities/securities.json"):
-            codigo, motivo = alcance_pr.verificar([ruta])
+            codigo, motivo = alcance_pr.verificar([ruta], contrato=c)
             self.assertEqual(codigo, 1, ruta)
             self.assertIn(validar.FUERA_DE_ALCANCE, motivo)
 
@@ -172,20 +184,31 @@ class TestGuardaDeAlcanceConectada(unittest.TestCase):
                          "no puede tener su propia copia de la lista")
 
     def test_sin_declaracion_no_asume_nada(self):
+        """REESCRITO en S0.1: la clave que se retira ahora es `bloque_activo`,
+        no `alcance_bloque`. La propiedad es identica -- sin declaracion la
+        guarda no asume nada y falla."""
         c = estado.cargar_contrato()
-        c.pop("alcance_bloque", None)
+        c.pop("bloque_activo", None)
         codigo, motivo = alcance_pr.verificar(["engine/x.py"], contrato=c)
         self.assertEqual(codigo, 1)
         self.assertIn(alcance_pr.ALCANCE_NO_DECLARADO, motivo)
 
-    def test_el_interruptor_existe_y_esta_documentado(self):
-        """El alcance es del BLOQUE, no del repositorio para siempre: el
-        siguiente bloque de producto tiene que tocar engine/."""
-        _v, decl = alcance_pr.alcance_vigente()
-        self.assertIsNotNone(decl, "sin declaracion no hay interruptor")
-        self.assertIn("vigente", decl)
-        self.assertTrue(decl.get("como_se_cierra"),
-                        "la declaracion tiene que decir como se apaga")
+    def test_no_queda_ningun_interruptor_que_apagar(self):
+        """REESCRITO en S0.1, y la propiedad se INVIERTE a proposito.
+
+        El test anterior EXIGIA que existiese un interruptor (`vigente` +
+        `como_se_cierra`). DF-1 demostro que ese interruptor era el defecto:
+        apagarlo dejaba proteccion cero. La transicion correcta entre bloques
+        es SUSTITUIR el alcance, no desactivarlo, asi que ahora se exige lo
+        contrario -- que ningun interruptor exista."""
+        c = estado.cargar_contrato()
+        self.assertNotIn("alcance_bloque", c)
+        for bid, decl in c["bloques"].items():
+            self.assertNotIn("vigente", decl, bid)
+            self.assertNotIn("como_se_cierra", decl, bid)
+        # Y el alcance sigue aplicandose sobre una ruta no declarada:
+        codigo, _ = alcance_pr.verificar(["engine/causal/mecanismos.py"])
+        self.assertEqual(codigo, 1, "la guarda tiene que seguir aplicando")
 
 
 class TestLasAutoridadesSiguenPasando(unittest.TestCase):

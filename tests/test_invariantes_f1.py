@@ -47,7 +47,12 @@ CODIGOS_DE_FALLO = {
                 validar.L0_DIVERGENTE, validar.L0_SOBRE_PRESUPUESTO,
                 validar.AMBIGUEDAD_RESUELTA_EN_SILENCIO, validar.AFIRMACION_SIN_FECHA,
                 validar.AFIRMACION_SIN_AUTORIA, validar.EVIDENCIA_NO_RESOLUBLE,
-                validar.BLOQUE_DESCONOCIDO, validar.FUERA_DE_ALCANCE),
+                validar.BLOQUE_DESCONOCIDO, validar.FUERA_DE_ALCANCE,
+                # DF-1 (S0.1): dos veredictos de alcance nuevos. Se anaden con
+                # su mutacion (M24, M25) en la misma tirada -- declarar un
+                # codigo sin demostrarlo es el "vocabulario muerto" que este
+                # fichero existe para impedir.
+                validar.PROTEGIDO_GLOBAL, validar.ALCANCE_NO_DECLARADO),
     "grafo": (grafo.ARCO_PROHIBIDO, grafo.POINTER_EXPANDE_L0,
               grafo.RELACION_DESCONOCIDA, grafo.L0_NO_ALCANZABLE),
     "extraccion": (extraccion.EXTRACCION_NO_REALIZADA, extraccion.ANCLA_ROTA,
@@ -166,14 +171,40 @@ def m11_sexto_bloque_en_la_superficie():
     return _codigos(validar.validar(superficie=sup))
 
 
-def m12_alcance_engine_data_knowledge():
+_BLOQUE_ESTRECHO = {"bloque_activo": "X",
+                    "bloques": {"X": {"escritura": ["contexto/"]}}}
+
+
+def m12_alcance_ruta_no_declarada():
+    """REESCRITA en S0.1. Antes mutaba "tocar engine/, data/ y knowledge/",
+    apoyandose en que esa lista fuese global; DF-1 la retiro porque el alcance
+    es DEL BLOQUE (S0 declara data/incoming/ y engine/contract/). La mutacion
+    equivalente, y la propiedad que sobrevive, es tocar lo que el bloque
+    activo NO declara."""
     out = set()
     for ruta in ("engine/knowledge/modelo.py", "data/incoming/BTC_2026.csv",
                  "knowledge/entities/securities.json"):
-        ok, motivo = validar.guarda_alcance([ruta])
+        ok, motivo = validar.guarda_alcance([ruta], contrato=_BLOQUE_ESTRECHO)
         assert not ok
         out.add(motivo.split(":")[0])
     return out
+
+
+def m24_protegido_global_sin_manifiesto():
+    """Modificar un fichero fijado por hash sin regenerar el manifiesto en el
+    mismo diff. El bloque lo declara en su escritura y AUN ASI no basta."""
+    c = {"bloque_activo": "X", "bloques": {"X": {"escritura": ["docs/", "contexto/"]}}}
+    ok, motivo = validar.guarda_alcance(["docs/DECISIONES.md"], contrato=c)
+    assert not ok
+    return {motivo.split(":")[0]}
+
+
+def m25_alcance_no_declarado():
+    """Retirar `bloque_activo`. No existe el estado "sin guarda"."""
+    c = {"bloques": {"X": {"escritura": ["contexto/"]}}}
+    ok, motivo = validar.guarda_alcance(["contexto/validar.py"], contrato=c)
+    assert not ok
+    return {motivo.split(":")[0]}
 
 
 def m13_arco_regenerable_a_historico():
@@ -305,7 +336,7 @@ MUTACIONES = [
     ("M09", "human-asserted", "citar un commit inexistente", m09_evidencia_irresoluble),
     ("M10", "L0", "declarado != efectivo", m10_l0_declarado_distinto_del_efectivo),
     ("M11", "superficie", "anadir un sexto bloque", m11_sexto_bloque_en_la_superficie),
-    ("M12", "alcance", "tocar engine/, data/ y knowledge/", m12_alcance_engine_data_knowledge),
+    ("M12", "alcance", "tocar lo que el bloque activo no declara", m12_alcance_ruta_no_declarada),
     ("M13", "reachability", "arco REGENERABLE -> HISTORICAL", m13_arco_regenerable_a_historico),
     ("M14", "reachability", "convertir un POINTS en MANDATORY_READ", m14_pointer_convertido_en_mandatory_read),
     ("M15", "reachability", "relacion fuera del vocabulario", m15_relacion_desconocida),
@@ -317,6 +348,10 @@ MUTACIONES = [
     ("M21", "extraccion", "tocar el bloque de privacidad", m21_ancla_de_cabecera_rota),
     ("M22", "L0", "superar el gate de 12.000 con una lectura obligatoria enorme", m22_l0_por_encima_del_presupuesto),
     ("M23", "extraccion", "no haber realizado la extraccion", m23_extraccion_no_realizada),
+    ("M24", "alcance", "modificar el historico sin regenerar el manifiesto",
+     m24_protegido_global_sin_manifiesto),
+    ("M25", "alcance", "retirar bloque_activo del contrato",
+     m25_alcance_no_declarado),
 ]
 
 

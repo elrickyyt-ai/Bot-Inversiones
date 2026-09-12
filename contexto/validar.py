@@ -120,9 +120,50 @@ AFIRMACION_SIN_FECHA = "AFIRMACION_SIN_FECHA"
 AFIRMACION_SIN_AUTORIA = "AFIRMACION_SIN_AUTORIA"
 EVIDENCIA_NO_RESOLUBLE = "EVIDENCIA_NO_RESOLUBLE"
 BLOQUE_DESCONOCIDO = "BLOQUE_DESCONOCIDO"
-FUERA_DE_ALCANCE = "FUERA_DE_ALCANCE"
 
-ARBOLES_PROHIBIDOS = ("engine/", "data/", "knowledge/")
+# --- Alcance por bloque (DF-1, S0.1) ---------------------------------------
+#
+#   Sustituye el interruptor binario `alcance_bloque.vigente`. El defecto de
+#   aquel mecanismo no era la lista: era que apagarlo dejaba proteccion CERO,
+#   y que un bloque solo podia declarar QUE su alcance aplicaba, nunca CUAL
+#   era. Aqui cada bloque declara su propia lista de escritura y SIEMPRE hay
+#   un bloque activo.
+#
+#   CUATRO VEREDICTOS, en este orden de precedencia:
+#
+#     ALCANCE_NO_DECLARADO  sin bloque activo, o apunta a un bloque que el
+#                           contrato no declara. Gana sobre todo y FALLA: no
+#                           existe el estado "sin guarda".
+#     PROTEGIDO_GLOBAL      la ruta esta bajo la autoridad de la integridad
+#                           historica. Gana sobre la lista del bloque, de modo
+#                           que NINGUN bloque puede autorizarse a si mismo el
+#                           historico. Es CONDICIONAL, no una prohibicion
+#                           absoluta: ver _condicion_protegido().
+#     PERMITIDO             prefijo declarado en bloques[activo].escritura
+#     FUERA_DE_ALCANCE      todo lo demas. DENEGACION POR DEFECTO: lo no
+#                           declarado nunca se permite, igual que UNDECLARED
+#                           nunca degrada a valor por defecto.
+#
+#   NINGUNA LISTA DE ARBOLES PROTEGIDOS SE DECLARA AQUI. Se DERIVA de quien
+#   ya posee esa autoridad -- las claves de contexto/manifiesto.json y el
+#   destino de la extraccion D-PRD-1. Escribir la lista en este modulo seria
+#   una segunda copia, que es el defecto que DF-1 venia a corregir.
+PERMITIDO = "PERMITIDO"
+PROTEGIDO_GLOBAL = "PROTEGIDO_GLOBAL"
+FUERA_DE_ALCANCE = "FUERA_DE_ALCANCE"
+ALCANCE_NO_DECLARADO = "ALCANCE_NO_DECLARADO"
+
+VEREDICTOS_ALCANCE = (ALCANCE_NO_DECLARADO, PROTEGIDO_GLOBAL,
+                      PERMITIDO, FUERA_DE_ALCANCE)
+
+# El unico veredicto que pasa sin condicion. PROTEGIDO_GLOBAL pasa solo si se
+# cumple su condicion; los otros dos fallan siempre.
+VEREDICTOS_QUE_PASAN = (PERMITIDO,)
+
+# Ruta del mecanismo que concede permiso sobre el historico. NO es una lista
+# de arboles: es el fichero que hay que regenerar para que integridad.py
+# pueda pronunciarse.
+MANIFIESTO = "contexto/manifiesto.json"
 
 
 def consultar(query_id, contrato=None):
@@ -225,11 +266,112 @@ def guardas_superficie(texto):
     return False, f"{BLOQUE_DESCONOCIDO}: faltan bloques {set(esperados) - set(bloques)}"
 
 
-def guarda_alcance(rutas):
-    """Anti-deriva: F1 no toca engine/, data/ ni knowledge/."""
-    fuera = [r for r in rutas if r.startswith(ARBOLES_PROHIBIDOS)]
+def bloque_activo(contrato=None):
+    """(id, declaracion) del bloque activo. Sin declaracion NO se asume nada:
+    devuelve (None, None) y el veredicto sera ALCANCE_NO_DECLARADO."""
+    c = contrato or _estado.cargar_contrato()
+    bid = c.get("bloque_activo")
+    if not bid:
+        return None, None
+    decl = (c.get("bloques") or {}).get(bid)
+    if decl is None:
+        return bid, None          # activo pero NO declarado -> sigue fallando
+    return bid, decl
+
+
+def superficie_protegida(raiz=RAIZ):
+    """Rutas bajo autoridad de la integridad historica. DERIVADAS, nunca
+    declaradas aqui.
+
+    Son (a) las claves del manifiesto -- los ficheros de docs/ e informes/
+    fijados por sha256 -- y (b) el destino de la extraccion D-PRD-1, cuya
+    ancla es byte-exacta.
+
+    CLAUDE.md queda FUERA a proposito: T5 dejo su bloque "Punto de entrada
+    obligatorio" explicitamente REESCRIBIBLE y retiro el ancla de la cabecera
+    completa. Sus partes intocables (preambulo y privacidad) ya las vigila
+    extraccion.py por ancla propia, que el gate de PR ejecuta. Incluirlo aqui
+    bloquearia la actualizacion legitima del puntero a la superficie."""
+    return _rutas_manifiesto(raiz) | _rutas_extraccion(raiz)
+
+
+def _rutas_manifiesto(raiz=RAIZ):
+    mod = _mod_contexto("integridad", raiz)
+    return set(mod.cargar(os.path.join(raiz, "contexto", "manifiesto.json")))
+
+
+def _rutas_extraccion(raiz=RAIZ):
+    return {_mod_contexto("extraccion", raiz).DESTINO}
+
+
+def _condicion_protegido(ruta, rutas, raiz=RAIZ):
+    """(ok, motivo) para una ruta PROTEGIDO_GLOBAL.
+
+    PROTEGIDO_GLOBAL no es "nunca escribible": el protocolo de informes de
+    docs/07 EXIGE escribir en docs/ e informes/ al cerrar una fase, asi que
+    una prohibicion absoluta haria inejecutable el cierre. Lo que significa
+    es que el alcance del bloque NO BASTA -- el permiso lo concede otro
+    mecanismo, y por eso ningun bloque puede concederselo a si mismo:
+
+      manifiesto  pasa si contexto/manifiesto.json viaja en el MISMO diff.
+                  Entonces integridad.py decide, con su propia autoridad.
+      extraccion  no pasa nunca por alcance. Su ancla es byte-exacta y la
+                  verifica extraccion.py, que el gate ya ejecuta aparte."""
+    if ruta in _rutas_extraccion(raiz):
+        return False, (f"{PROTEGIDO_GLOBAL}: {ruta} es el destino de la extraccion "
+                       f"D-PRD-1; su autoridad es contexto/extraccion.py, no el alcance")
+    if MANIFIESTO in rutas:
+        return True, None
+    return False, (f"{PROTEGIDO_GLOBAL}: {ruta} esta fijada por hash en {MANIFIESTO}. "
+                   f"Modificarla exige regenerar {MANIFIESTO} en el MISMO commit "
+                   f"(DF-2), y ningun bloque puede autorizarselo por alcance")
+
+
+def _mod_contexto(nombre, raiz=RAIZ):
+    import importlib
+    carpeta = os.path.join(raiz, "contexto")
+    sys.path.insert(0, carpeta)
+    try:
+        return importlib.import_module(nombre)
+    finally:
+        sys.path.remove(carpeta)
+
+
+def veredicto_alcance(rutas, contrato=None, raiz=RAIZ):
+    """{ruta: veredicto} para el diff completo, por precedencia estricta."""
+    bid, decl = bloque_activo(contrato)
+    if decl is None:
+        return {r: ALCANCE_NO_DECLARADO for r in rutas}, bid
+    protegidas = superficie_protegida(raiz)
+    escritura = tuple(decl.get("escritura") or ())
+    out = {}
+    for r in rutas:
+        if r in protegidas:
+            out[r] = PROTEGIDO_GLOBAL
+        elif escritura and r.startswith(escritura):
+            out[r] = PERMITIDO
+        else:
+            out[r] = FUERA_DE_ALCANCE          # denegacion por defecto
+    return out, bid
+
+
+def guarda_alcance(rutas, contrato=None, raiz=RAIZ):
+    """(ok, motivo) sobre el diff completo. Fachada estable del veredicto."""
+    veredictos, bid = veredicto_alcance(rutas, contrato, raiz)
+    if not veredictos:
+        return True, None
+    sin_declarar = [r for r, v in veredictos.items() if v == ALCANCE_NO_DECLARADO]
+    if sin_declarar:
+        return False, (f"{ALCANCE_NO_DECLARADO}: bloque_activo={bid!r} no esta "
+                       f"declarado en `bloques`; la guarda no asume nada")
+    fuera = sorted(r for r, v in veredictos.items() if v == FUERA_DE_ALCANCE)
     if fuera:
-        return False, f"{FUERA_DE_ALCANCE}: F1 no puede tocar {fuera}"
+        return False, (f"{FUERA_DE_ALCANCE}: el bloque {bid} no declara escritura "
+                       f"sobre {fuera}")
+    for r in sorted(r for r, v in veredictos.items() if v == PROTEGIDO_GLOBAL):
+        ok, motivo = _condicion_protegido(r, rutas, raiz)
+        if not ok:
+            return False, motivo
     return True, None
 
 

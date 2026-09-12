@@ -311,9 +311,15 @@ class TestMutacionesT2T3T4T6(unittest.TestCase):
         self.assertTrue(any(validar.BLOQUE_DESCONOCIDO in i for i in inc))
 
     def test_M_fuera_de_alcance(self):
+        """REESCRITO en S0.1 (protocolo de informes, §3). Se apoyaba en que
+        engine/, data/ y knowledge/ estuviesen prohibidos en global; DF-1
+        retiro esa lista porque el alcance es del BLOQUE -- S0 declara
+        data/incoming/ y engine/contract/ legitimamente. La mutacion sigue
+        siendo la misma: rutas que el bloque activo NO declara."""
+        c = {"bloque_activo": "X", "bloques": {"X": {"escritura": ["contexto/"]}}}
         for ruta in ("engine/knowledge/modelo.py", "data/incoming/BTC_2026.csv",
                      "knowledge/entities/securities.json"):
-            ok, motivo = validar.guarda_alcance([ruta])
+            ok, motivo = validar.guarda_alcance([ruta], contrato=c)
             self.assertFalse(ok, ruta)
             self.assertIn(validar.FUERA_DE_ALCANCE, motivo)
 
