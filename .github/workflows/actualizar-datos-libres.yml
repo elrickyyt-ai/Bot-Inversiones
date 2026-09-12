@@ -123,7 +123,11 @@ jobs:
           python-version: "3.11"
 
       - name: Instalar PyArrow (solo en este job, nunca en la ingesta)
-        run: pip install --quiet pyarrow
+        # VERSION FIJADA (S0.2): estaba sin pinear, en un proyecto que pinea
+        # todas sus fuentes. Una version nueva de PyArrow podria cambiar la
+        # serializacion de los parquet y romper la verificacion por hash del
+        # manifiesto de history/ sin que nada lo hubiese anunciado.
+        run: pip install --quiet pyarrow==25.0.1
 
       - name: QA completo (CORE + PARQUET, exige ambos)
         run: python3 engine/contract/qa.py --require-parquet

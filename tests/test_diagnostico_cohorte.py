@@ -19,6 +19,10 @@ import perfil_reaccion as pr       # noqa: E402
 HOY = "2026-09-07"
 
 
+from _parquet import requiere_parquet  # noqa: E402
+
+
+@requiere_parquet
 class TestCohorteReal(unittest.TestCase):
     """Sobre los 52 eventos reales de IBM/NVDA/XOM."""
 
@@ -95,6 +99,7 @@ class TestCohorteReal(unittest.TestCase):
         self.assertIn("solapado", c["motivo"])
 
 
+@requiere_parquet
 class TestNoSeHaDefinidoNEffective(unittest.TestCase):
     """El usuario pidio MEDIR la dependencia antes de formularla."""
 
@@ -119,6 +124,7 @@ class TestNoSeHaDefinidoNEffective(unittest.TestCase):
                          ["independence_status"], "LOW")
 
 
+@requiere_parquet
 class TestInformeCompleto(unittest.TestCase):
 
     def test_el_informe_cubre_los_cuatro_horizontes(self):

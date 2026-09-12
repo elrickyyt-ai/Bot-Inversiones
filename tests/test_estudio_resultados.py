@@ -21,6 +21,9 @@ FIXTURES = os.path.join(RAIZ, "tests", "fixtures", "eventos_resultados")
 SIMBOLOS = ("IBM", "NVDA", "XOM")
 
 
+from _parquet import requiere_parquet  # noqa: E402
+
+
 def _path(sym):
     return os.path.join(FIXTURES, f"{sym}_earnings.json")
 
@@ -57,6 +60,7 @@ class TestFixtures(unittest.TestCase):
         self.assertEqual(franjas, {"pre-market", "post-market"})
 
 
+@requiere_parquet
 class TestPrimeraSesionNegociable(unittest.TestCase):
 
     @classmethod
@@ -88,6 +92,7 @@ class TestPrimeraSesionNegociable(unittest.TestCase):
         self.assertNotEqual(pre, post)
 
 
+@requiere_parquet
 class TestObservaciones(unittest.TestCase):
 
     @classmethod
@@ -154,6 +159,7 @@ class TestObservaciones(unittest.TestCase):
         self.assertAlmostEqual(o["raw_return_1s_pct"], -7.11, places=2)
 
 
+@requiere_parquet
 class TestSolapamiento(unittest.TestCase):
 
     def test_ventana_corta_no_solapa_trimestres(self):
@@ -173,6 +179,7 @@ class TestSolapamiento(unittest.TestCase):
         self.assertTrue(solapados, "a 90 sesiones tiene que haber solapamiento")
 
 
+@requiere_parquet
 class TestElegibilidadPorFamilia(unittest.TestCase):
     """REESCRITO EN D-21 (2026-09-07). Antes habia una sola puerta:
     `suficiencia_de_muestra()` bloqueaba TODA agregacion por

@@ -18,6 +18,9 @@ import universo as uni         # noqa: E402
 HOY = "2026-09-08"
 
 
+from _parquet import requiere_parquet  # noqa: E402
+
+
 class TestUniversoCongelado(unittest.TestCase):
 
     def test_el_universo_tiene_el_tamano_pedido_y_diversidad_sectorial(self):
@@ -112,6 +115,7 @@ class TestCobertura(unittest.TestCase):
             n_assets_con_datos=uni.MIN_ACTIVOS_ALTO)["avanzar_a_v2"])
 
 
+@requiere_parquet
 class TestClaseDeHorizonte(unittest.TestCase):
 
     def test_2_60d_no_es_un_horizonte_de_reaccion(self):
@@ -135,6 +139,7 @@ class TestClaseDeHorizonte(unittest.TestCase):
             self.assertIn(p["horizon_class"], pr.CLASES_DE_HORIZONTE)
 
 
+@requiere_parquet
 class TestModeloDeIndependencia(unittest.TestCase):
 
     def test_earnings_se_agrupa_por_activo(self):
@@ -154,6 +159,7 @@ class TestModeloDeIndependencia(unittest.TestCase):
         self.assertFalse([n for n in dir(pr) if "effective" in n.lower()])
 
 
+@requiere_parquet
 class TestProfileLeakage(unittest.TestCase):
     """Un perfil fechado en T debe salir identico aunque el dataset contenga
     observaciones posteriores a T."""

@@ -391,6 +391,9 @@ CIERRE_SIN_DECLARAR = "CIERRE_SIN_DECLARAR"
 CIERRE_OBLIGACION_INCUMPLIDA = "CIERRE_OBLIGACION_INCUMPLIDA"
 CIERRE_CADUCADO = "CIERRE_CADUCADO"
 
+# El fichero que GUARDA la huella no puede formar parte de lo que sella.
+_CONTRATO_REL = "contexto/contrato.json"
+
 
 def _git(args, raiz=RAIZ):
     import subprocess
@@ -404,9 +407,18 @@ def huella_cierre(decl, raiz=RAIZ):
     Si cambia cualquiera -- el contenido de un entregable, el comando de
     tests, la lista de autoridades o las deudas que bloquean -- la huella
     cambia y el veredicto pasa a STALE. El cierre caduca solo, sin que nadie
-    tenga que acordarse de revisarlo."""
+    tenga que acordarse de revisarlo.
+
+    EL CONTRATO SE EXCLUYE DE SU PROPIO SELLO. `contexto/contrato.json` es un
+    entregable de F1 y es tambien donde se guarda la huella, asi que incluirlo
+    haria que escribir el sello lo invalidase en el acto: medido, la huella
+    pasaba de 0efbe3e3 a bbbad2a2 y el veredicto de CLOSED a STALE sin que
+    nada del material cerrado hubiera cambiado. Un sello no puede ser parte de
+    lo que sella. La integridad del contrato la cubren sus propios mecanismos
+    -- las STATE QUERY, el presupuesto L0 y la suite -- no esta huella."""
     partes = []
-    for rel in sorted(decl.get("entregables") or []):
+    for rel in sorted(r for r in (decl.get("entregables") or [])
+                      if r != _CONTRATO_REL):
         destino = os.path.join(raiz, rel)
         if os.path.isfile(destino):
             with open(destino, "rb") as fh:

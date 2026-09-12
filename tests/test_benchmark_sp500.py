@@ -21,6 +21,9 @@ FIXTURES = os.path.join(RAIZ, "tests", "fixtures", "eventos_resultados")
 SIMBOLOS = ("IBM", "NVDA", "XOM")
 
 
+from _parquet import requiere_parquet  # noqa: E402
+
+
 def _path(sym):
     return os.path.join(FIXTURES, f"{sym}_earnings.json")
 
@@ -154,6 +157,7 @@ class TestAsignacionYElegibilidad(unittest.TestCase):
         self.assertEqual(motivo, er.CALENDARIO_INCOMPATIBLE)
 
 
+@requiere_parquet
 class TestEventStudyConBenchmark(unittest.TestCase):
     """Tests 7 y 8, y la comprobacion de que no hay look-ahead."""
 

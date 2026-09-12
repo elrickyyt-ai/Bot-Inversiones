@@ -17,6 +17,10 @@ import perfil_reaccion as pr      # noqa: E402
 HOY = "2026-09-07"
 
 
+from _parquet import requiere_parquet  # noqa: E402
+
+
+@requiere_parquet
 class TestRejillaCompleta(unittest.TestCase):
 
     @classmethod
@@ -75,6 +79,7 @@ class TestRejillaCompleta(unittest.TestCase):
                 self.assertNotIn(clave.lower(), prohibidos)
 
 
+@requiere_parquet
 class TestPoblacionYExclusiones(unittest.TestCase):
 
     @classmethod
@@ -124,6 +129,7 @@ class TestPoblacionYExclusiones(unittest.TestCase):
         self.assertIn(pr.EXCL_SOLAPE, p["exclusiones_por_motivo"])
 
 
+@requiere_parquet
 class TestPointInTime(unittest.TestCase):
 
     @classmethod
@@ -163,6 +169,7 @@ class TestPointInTime(unittest.TestCase):
         self.assertEqual(p["n_observations"], 0)
 
 
+@requiere_parquet
 class TestEstados(unittest.TestCase):
 
     @classmethod
@@ -238,6 +245,7 @@ class TestEstados(unittest.TestCase):
         self.assertIn("80", p["estabilidad"]["motivo"])
 
 
+@requiere_parquet
 class TestBenchmarkEnElPerfil(unittest.TestCase):
 
     @classmethod
@@ -285,6 +293,7 @@ class TestEstadisticos(unittest.TestCase):
         self.assertIsNone(pr.estadisticos([]))
 
 
+@requiere_parquet
 class TestValidacionManualContraElMVP(unittest.TestCase):
     """Comprobacion de una muestra pequeña contra las observaciones del
     Event Study MVP, como pidio el encargo."""
@@ -336,6 +345,7 @@ class TestValidacionManualContraElMVP(unittest.TestCase):
         self.assertEqual(vistos, 3)
 
 
+@requiere_parquet
 class TestIndependencia(unittest.TestCase):
 
     @classmethod
@@ -363,6 +373,7 @@ class TestIndependencia(unittest.TestCase):
         self.assertEqual(p["n_events"], len(claves))
 
 
+@requiere_parquet
 class TestElPerfilNoSeUsaParaDecidir(unittest.TestCase):
     """PREDICTIVE_STATUS = NOT_EVALUATED tiene que ser una barrera real.
 

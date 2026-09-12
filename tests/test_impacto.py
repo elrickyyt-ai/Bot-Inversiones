@@ -37,6 +37,9 @@ import valoracion  # noqa: E402
 HOY = datetime.date(2026, 9, 7)
 
 
+from _parquet import requiere_parquet  # noqa: E402
+
+
 def _impacto_base(**kw):
     """Un EconomicImpact valido y minimo, para probar UNA regla cada vez."""
     r = {
@@ -294,6 +297,7 @@ class TestCombinarNoEsSumar(unittest.TestCase):
 
 
 # --- T8 y T9 ----------------------------------------------------------------
+@requiere_parquet
 class TestElCaminoRealDeP5C(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -399,6 +403,7 @@ class TestElCaminoRealDeP5C(unittest.TestCase):
 
 
 # --- T10 --------------------------------------------------------------------
+@requiere_parquet
 class TestInvariantes(unittest.TestCase):
     def test_p6_no_escribe_nada(self):
         def huella():

@@ -21,6 +21,9 @@ import identidad as idn           # noqa: E402
 import perfil_reaccion as pr      # noqa: E402
 
 
+from _parquet import requiere_parquet  # noqa: E402
+
+
 class TestRegistroDeAcciones(unittest.TestCase):
 
     def test_todo_tipo_declarado_es_conocido(self):
@@ -79,6 +82,7 @@ class TestParticionDeContinuidad(unittest.TestCase):
         self.assertEqual(ca.POLITICA_PROPUESTA["UNKNOWN"], "AMBIGUOUS")
 
 
+@requiere_parquet
 class TestMedicionSobreLosEventosReales(unittest.TestCase):
 
     @classmethod

@@ -32,6 +32,9 @@ import valoracion  # noqa: E402
 HOY = datetime.date(2026, 9, 7)
 
 
+from _parquet import requiere_parquet  # noqa: E402
+
+
 def _k():
     return modelo.cargar()
 
@@ -119,6 +122,7 @@ class TestElCatalogoEsDeclaracionNoInferencia(unittest.TestCase):
                 self.assertIn(cid, declarados, variable)
 
 
+@requiere_parquet
 class TestElProxyNoSeHacePasarPorMedicion(_Base):
     def test_revenue_no_es_demanda_pero_si_es_proxy_declarado(self):
         """El caso que el usuario puso como limite: `revenue` de NVIDIA
@@ -157,6 +161,7 @@ class TestElProxyNoSeHacePasarPorMedicion(_Base):
         self.assertIn(req["freshness"], cadencias.ORDEN_FRESCURA)
 
 
+@requiere_parquet
 class TestLaAusenciaNoSeConvierteEnRespuesta(_Base):
     def test_sin_dato_es_missing_nunca_not_applicable(self):
         """NO SOURCE != SOURCE SAYS IT DOES NOT EXIST."""
@@ -201,6 +206,7 @@ class TestLaAusenciaNoSeConvierteEnRespuesta(_Base):
         self.assertIn("ENTITY_NOT_DECLARED", req["reasons"])
 
 
+@requiere_parquet
 class TestElPuenteConP5B(_Base):
     """La cadena completa sobre el Knowledge real de P5C."""
 

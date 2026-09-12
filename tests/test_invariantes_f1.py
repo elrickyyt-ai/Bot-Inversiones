@@ -35,6 +35,7 @@ import estado       # noqa: E402
 import extraccion   # noqa: E402
 import grafo        # noqa: E402
 import integridad   # noqa: E402
+import suite_pr     # noqa: E402
 import validar      # noqa: E402
 
 # --- Vocabulario de FALLO -----------------------------------------------------
@@ -69,6 +70,9 @@ CODIGOS_DE_FALLO = {
                    extraccion.COPIA_PARCIAL, extraccion.SECCION_NO_ELIMINADA,
                    extraccion.ANCLA_CABECERA_ROTA, extraccion.PROCEDENCIA_NO_RESOLUBLE),
     "integridad": integridad.ESTADOS_QUE_FALLAN,
+    # DF-6 (S0.2): la autoridad de la suite en el gate de PR. M32-M35.
+    "suite_pr": (suite_pr.SUITE_SKIPS_INESPERADOS, suite_pr.SUITE_CON_ERRORES,
+                 suite_pr.SUITE_NO_INTERPRETABLE, suite_pr.SUITE_SIN_DECLARACION),
 }
 
 PROTEGIDOS = ("CLAUDE.md", "contexto/ESTADO_VIGENTE.md", "contexto/contrato.json",
@@ -262,6 +266,34 @@ def _cierre(**kw):
     return {m.split(":")[0] for m in d["motivos"]}
 
 
+_SALIDA_OK = "Ran 1052 tests in 3.5s\n\nOK (skipped={n})\n"
+
+
+def _suite(salida, esperados=187):
+    ok, cod, _c = suite_pr.evaluar(salida, esperados)
+    assert not ok
+    return {cod}
+
+
+def m32_suite_skips_inesperados():
+    """Un test de parquet nuevo sin declarar: se salta uno mas de lo dicho.
+    Un salto no declarado NO es cobertura."""
+    return _suite(_SALIDA_OK.format(n=188))
+
+
+def m33_suite_con_errores():
+    """Los 43 ImportError de DF-6: un error no es un salto."""
+    return _suite("Ran 927 tests in 3.5s\n\nFAILED (errors=43, skipped=12)\n")
+
+
+def m34_suite_no_interpretable():
+    return _suite("el runner se cayo antes de empezar")
+
+
+def m35_suite_sin_declaracion():
+    return _suite(_SALIDA_OK.format(n=187), esperados=None)
+
+
 def m29_cierre_sin_declarar():
     """Un bloque que no declara cierre: UNDECLARED, que no es OPEN."""
     return _cierre(_sin_cierre=True)
@@ -441,6 +473,11 @@ MUTACIONES = [
      m30_cierre_obligacion_incumplida),
     ("M31", "cierre", "huella de insumos que ya no corresponde",
      m31_cierre_caducado),
+    ("M32", "suite", "un salto de parquet no declarado", m32_suite_skips_inesperados),
+    ("M33", "suite", "ImportError confundible con salto", m33_suite_con_errores),
+    ("M34", "suite", "salida de la suite no interpretable",
+     m34_suite_no_interpretable),
+    ("M35", "suite", "sin skips_esperados declarados", m35_suite_sin_declaracion),
 ]
 
 

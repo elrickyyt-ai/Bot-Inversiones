@@ -47,8 +47,15 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Suite completa
-        run: python3 -m unittest discover -s tests
+      - name: Suite completa, con los saltos de parquet DECLARADOS
+        # DF-6 (S0.2). Antes esto era `python3 -m unittest discover -s tests` a
+        # secas, y en un runner limpio daba 43 ERRORES: 36 clases leen
+        # data/history/**.parquet y el gate declara no tener dependencias. El
+        # numero de saltos NO esta aqui -- vive en contrato.json::ci_pr y lo
+        # verifica la autoridad, que falla si no coincide en cualquiera de los
+        # dos sentidos. Un PR verde que hubiese saltado tests en silencio seria
+        # peor que el fallo original.
+        run: python3 contexto/suite_pr.py
 
       - name: Knowledge (autoridad del grafo)
         run: python3 engine/knowledge/consulta.py --validar

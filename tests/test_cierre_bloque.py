@@ -208,26 +208,33 @@ class TestF1Real(unittest.TestCase):
     def setUp(self):
         self.estado, self.detalle = validar.veredicto_cierre("F1")
 
-    def test_F1_no_esta_cerrada(self):
-        self.assertEqual(self.estado, validar.OPEN,
-                         "F1 no puede cerrarse mientras DF-6 la bloquee")
+    def test_F1_esta_cerrada_por_veredicto(self):
+        """ACTUALIZADO en S0.2: mientras DF-6 estuvo abierta este test exigia
+        OPEN, y era correcto -- el gate de PR de T9, entregable de F1, fallaba
+        en clean-room. Resuelta DF-6, las siete obligaciones pasan y el
+        veredicto es CLOSED. No se relajo ninguna obligacion: se resolvio la
+        deuda que las incumplia."""
+        self.assertEqual(self.estado, validar.CLOSED, self.detalle["motivos"])
 
-    def test_la_unica_obligacion_incumplida_es_la_de_deudas(self):
+    def test_las_siete_obligaciones_se_cumplen(self):
         ob = self.detalle["obligaciones"]
         incumplidas = [k for k, v in ob.items() if not v[0]]
-        self.assertEqual(incumplidas, ["deudas_bloqueantes"],
-                         f"detalle: {ob}")
+        self.assertEqual(incumplidas, [], f"detalle: {ob}")
 
-    def test_DF6_es_la_deuda_que_bloquea(self):
-        bl = validar.deudas_bloqueantes("F1")
-        self.assertEqual(len(bl), 1)
-        self.assertIn("DF-6", bl[0])
-        self.assertIn("pyarrow", bl[0])
+    def test_ya_no_hay_deudas_que_bloqueen_F1(self):
+        self.assertEqual(validar.deudas_bloqueantes("F1"), [])
 
-    def test_las_otras_seis_obligaciones_se_cumplen(self):
+    def test_DF6_queda_registrada_como_resuelta_no_borrada(self):
+        """La historia no se borra: la deuda sigue en el registro, con lo que
+        era y como se resolvio."""
+        deudas = " ".join(estado.cargar_contrato()["open_debt"])
+        self.assertIn("DF-6", deudas)
+        self.assertIn("RESUELTA en S0.2", deudas)
+        self.assertNotIn("bloqueante_para:F1", deudas.replace(" ", ""))
+
+    def test_cada_obligacion_por_separado(self):
         ob = self.detalle["obligaciones"]
-        for k in ("entregables", "tests", "validadores", "alcance",
-                  "ultima_verificacion", "commit"):
+        for k in validar.OBLIGACIONES_CIERRE:
             self.assertTrue(ob[k][0], f"{k}: {ob[k][1]}")
 
     def test_los_diez_entregables_de_F1_resuelven(self):
@@ -245,6 +252,65 @@ class TestF1Real(unittest.TestCase):
         _desde, hasta, _op = validar.rango_bloque("F1")
         cierre = estado.cargar_contrato()["bloques"]["F1"]["cierre"]
         self.assertEqual(cierre["commit_de_cierre"], hasta)
+
+
+class TestCoherenciaYAutorreferencia(unittest.TestCase):
+    """Dos propiedades descubiertas al sellar F1."""
+
+    def test_nadie_puede_declararse_CLOSED_sin_el_veredicto(self):
+        """`bloques[*].estado` es una etiqueta de ciclo de vida, legible, y NO
+        la autoridad. Exigir igualdad estricta seria confundir dos cosas: un
+        bloque EN CURSO se etiqueta OPEN mientras su veredicto es UNDECLARED
+        -- todavia no ha declarado cierre -- y eso no es una contradiccion.
+
+        El invariante que SI importa, y es el que D-56 protege: no se puede
+        DECLARAR CLOSED sin que el veredicto lo confirme."""
+        c = estado.cargar_contrato()
+        for bid, b in c["bloques"].items():
+            declarado = b.get("estado")
+            if declarado is None:
+                continue
+            calculado, d = validar.veredicto_cierre(bid, c)
+            if declarado == validar.CLOSED:
+                self.assertEqual(calculado, validar.CLOSED,
+                                 f"{bid} se declara CLOSED y el veredicto da "
+                                 f"{calculado}: {d['motivos']}")
+            else:
+                self.assertNotEqual(
+                    calculado, validar.CLOSED,
+                    f"{bid} esta cerrado por veredicto y no lo declara")
+
+    def test_el_contrato_se_excluye_de_su_propio_sello(self):
+        """Medido al sellar F1: incluir contrato.json en su propia huella la
+        invalidaba en el acto -- pasaba de 0efbe3e3 a bbbad2a2 y el veredicto de
+        CLOSED a STALE sin que el material cerrado hubiese cambiado. Un sello no
+        puede ser parte de lo que sella."""
+        decl = estado.cargar_contrato()["bloques"]["F1"]["cierre"]
+        self.assertIn(validar._CONTRATO_REL, decl["entregables"],
+                       "el contrato SI es un entregable de F1")
+        con = validar.huella_cierre(dict(decl, _bloqueantes=[]))
+        sin_contrato = [r for r in decl["entregables"]
+                        if r != validar._CONTRATO_REL]
+        self.assertEqual(
+            con,
+            validar.huella_cierre(dict(decl, entregables=sin_contrato,
+                                       _bloqueantes=[])),
+            "la huella no puede depender del fichero que la guarda")
+
+    def test_el_sello_de_F1_esta_fijado_y_corresponde(self):
+        decl = estado.cargar_contrato()["bloques"]["F1"]["cierre"]
+        self.assertTrue(decl.get("huella"), "un bloque CLOSED tiene que sellar")
+        self.assertEqual(decl["huella"],
+                         validar.huella_cierre(dict(decl, _bloqueantes=[])))
+
+    def test_tocar_un_entregable_dejaria_F1_en_STALE(self):
+        """La propiedad que hace util el sello, comprobada sin tocar nada."""
+        c = estado.cargar_contrato()
+        c["bloques"]["F1"]["cierre"] = dict(
+            c["bloques"]["F1"]["cierre"],
+            entregables=["contexto/grafo.py"])      # otro contenido
+        e, d = validar.veredicto_cierre("F1", c)
+        self.assertEqual(e, validar.STALE, d["motivos"])
 
 
 class TestElValorCaducadoSeConserva(unittest.TestCase):

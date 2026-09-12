@@ -27,10 +27,14 @@ import esquema  # noqa: E402
 ACTIVO = "US"
 
 
+from _parquet import requiere_parquet  # noqa: E402
+
+
 def _evidencia(asset_id=ACTIVO):
     return list(adaptadores.evidencia_de_metricas([asset_id]))
 
 
+@requiere_parquet
 class TestReversibilidad(unittest.TestCase):
     """(1) original → Evidence → reconstrucción inequívoca."""
 
@@ -55,6 +59,7 @@ class TestReversibilidad(unittest.TestCase):
         self.assertEqual([x["evidence_id"] for x in a], [x["evidence_id"] for x in b])
 
 
+@requiere_parquet
 class TestConservacionDeTiposYValores(unittest.TestCase):
     """(2) y (3)."""
 
@@ -88,6 +93,7 @@ class TestConservacionDeTiposYValores(unittest.TestCase):
             esquema.validar_fila(e)
 
 
+@requiere_parquet
 class TestTemporalidad(unittest.TestCase):
     """(4) y (5)."""
 
@@ -123,6 +129,7 @@ class TestTemporalidad(unittest.TestCase):
             self.assertNotIn("today()", codigo, fichero)
 
 
+@requiere_parquet
 class TestProcedencia(unittest.TestCase):
     """(6) y (8)."""
 
@@ -163,6 +170,7 @@ class TestProcedencia(unittest.TestCase):
             self.assertEqual(e["origin_data_quality_pct"], fila.get("data_quality_pct"))
 
 
+@requiere_parquet
 class TestDerivacion(unittest.TestCase):
     """(7)."""
 
@@ -246,6 +254,7 @@ class TestNoticias(unittest.TestCase):
             self.assertIn(e["derived_from"][0], scores)
 
 
+@requiere_parquet
 class TestFronteras(unittest.TestCase):
     """(10) y (11): lo que Evidence NO hace."""
 
@@ -306,6 +315,7 @@ class TestFronteras(unittest.TestCase):
         self.assertNotIn("INFERRED", {e["nature"] for e in todas})
 
 
+@requiere_parquet
 class TestConceptosYCobertura(unittest.TestCase):
     """(12) y el puente con P2."""
 

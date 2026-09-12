@@ -32,6 +32,9 @@ FX = json.load(open(os.path.join(RAIZ, "tests", "fixtures", "valoracion", "casos
                     encoding="utf-8"))
 
 
+from _parquet import requiere_parquet  # noqa: E402
+
+
 def _valorar(nombre, rel_id):
     """Ejecuta la tubería completa: P5A descubre el camino, P5B lo valora.
     El camino se elige por la relación que debe contener, no por su
@@ -51,6 +54,7 @@ def _tramo(a, variable):
     return next(t for t in a["segments"] if t["affected_variable"] == variable)
 
 
+@requiere_parquet
 class TestVocabularioYSeparacion(unittest.TestCase):
     def test_las_tres_direcciones_son_disjuntas(self):
         """Tercera aparición del patrón de source_priority. polarity,
@@ -239,6 +243,7 @@ class TestSeisEventoSinImpulso(unittest.TestCase):
         self.assertIsNone(mecanismos.IMPULSO_POR_ACCION["sentiment_assertion"])
 
 
+@requiere_parquet
 class TestReal(unittest.TestCase):
     """Un Event real de P4 y un camino real de P5A sobre el Knowledge real.
     El resultado es UNKNOWN, y el valor del test está en que diga por qué."""

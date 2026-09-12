@@ -26,7 +26,7 @@ import validar     # noqa: E402
 WORKFLOW = os.path.join(RAIZ, ".github", "workflows", "verificar-contexto.yml")
 CRON = os.path.join(RAIZ, ".github", "workflows", "actualizar-datos-libres.yml")
 
-AUTORIDADES = ("python3 -m unittest discover -s tests",
+AUTORIDADES = ("contexto/suite_pr.py",          # DF-6: la suite, con saltos declarados
                "engine/knowledge/consulta.py --validar",
                "contexto/integridad.py",
                "contexto/extraccion.py",
@@ -209,6 +209,111 @@ class TestGuardaDeAlcanceConectada(unittest.TestCase):
         # Y el alcance sigue aplicandose sobre una ruta no declarada:
         codigo, _ = alcance_pr.verificar(["engine/causal/mecanismos.py"])
         self.assertEqual(codigo, 1, "la guarda tiene que seguir aplicando")
+
+
+class TestDF6SaltosDeclarados(unittest.TestCase):
+    """DF-6: el gate era irreproducible en clean-room y nadie lo supo porque el
+    repositorio no habia tenido ni un PR."""
+
+    def setUp(self):
+        sys.path.insert(0, os.path.join(RAIZ, "contexto"))
+        import suite_pr
+        self.sp = suite_pr
+        self.esperados, self.decl = suite_pr.declaracion()
+
+    def test_el_contrato_declara_los_saltos(self):
+        self.assertIsInstance(self.esperados, int)
+        self.assertGreater(self.esperados, 0)
+        self.assertTrue(self.decl.get("motivo"))
+
+    def test_el_numero_no_esta_en_el_workflow_ni_en_la_autoridad(self):
+        """Seria una segunda copia: el mismo defecto que DF-1 corrigio."""
+        n = str(self.esperados)
+        self.assertNotIn(n, _ejecutable(WORKFLOW))
+        with open(os.path.join(RAIZ, "contexto", "suite_pr.py"),
+                  encoding="utf-8") as fh:
+            fuente = fh.read()
+        cuerpo = fuente.split('"""', 2)[-1]
+        self.assertNotIn(n, cuerpo, "la autoridad LEE el numero, no lo lleva")
+
+    def test_saltos_distintos_de_los_declarados_FALLAN(self):
+        """En los DOS sentidos, y por razones distintas."""
+        base = f"Ran 1052 tests in 3.5s\n\nOK (skipped={self.esperados})\n"
+        ok, cod, _ = self.sp.evaluar(base, self.esperados)
+        self.assertTrue(ok, "el caso declarado tiene que pasar")
+        for delta in (+1, -1):
+            salida = base.replace(f"skipped={self.esperados}",
+                                  f"skipped={self.esperados + delta}")
+            ok2, cod2, _ = self.sp.evaluar(salida, self.esperados)
+            self.assertFalse(ok2, f"delta {delta:+d}")
+            self.assertEqual(cod2, self.sp.SUITE_SKIPS_INESPERADOS)
+
+    def test_un_error_de_import_no_es_un_salto(self):
+        salida = ("Ran 927 tests in 3.5s\n\nFAILED (errors=43, skipped=12)\n")
+        ok, cod, cifras = self.sp.evaluar(salida, self.esperados)
+        self.assertFalse(ok)
+        self.assertEqual(cod, self.sp.SUITE_CON_ERRORES,
+                         "43 ImportError no pueden confundirse con saltos")
+        self.assertEqual(cifras["errors"], 43)
+
+    def test_un_fallo_de_test_tambien_falla(self):
+        salida = (f"Ran 1052 tests in 3.5s\n\n"
+                  f"FAILED (failures=1, skipped={self.esperados})\n")
+        ok, cod, _ = self.sp.evaluar(salida, self.esperados)
+        self.assertFalse(ok)
+        self.assertEqual(cod, self.sp.SUITE_CON_ERRORES)
+
+    def test_sin_declaracion_no_asume_nada(self):
+        ok, cod, _ = self.sp.evaluar("Ran 1 test\n\nOK\n", None)
+        self.assertFalse(ok)
+        self.assertEqual(cod, self.sp.SUITE_SIN_DECLARACION)
+
+    def test_una_salida_no_interpretable_falla(self):
+        ok, cod, _ = self.sp.evaluar("el runner murio", self.esperados)
+        self.assertFalse(ok)
+        self.assertEqual(cod, self.sp.SUITE_NO_INTERPRETABLE)
+
+    @unittest.skipIf(os.environ.get("BOTINV_SUITE_ANIDADA") == "1",
+                     "ejecucion anidada: este test lanza la suite entera y "
+                     "sin este guarda se invocaria a si mismo en recursion")
+    def test_el_clean_room_real_coincide_con_lo_declarado(self):
+        """La comprobacion que de verdad cierra DF-6: se ejecuta la suite con
+        pyarrow inutilizable y se exige 0 errores y los saltos declarados.
+
+        El marcador BOTINV_SUITE_ANIDADA corta la recursion: sin el, cada nivel
+        lanzaria la suite completa otra vez. Detectado al escribir el test."""
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            with open(os.path.join(tmp, "pyarrow.py"), "w") as fh:
+                fh.write("raise ImportError('clean-room')\n")
+            env = dict(os.environ, PYTHONPATH=tmp, BOTINV_SUITE_ANIDADA="1")
+            r = subprocess.run([sys.executable, "-m", "unittest", "discover",
+                                "-s", "tests"], capture_output=True, text=True,
+                               cwd=RAIZ, env=env)
+        salida = r.stdout + r.stderr
+        cifras = self.sp.leer(salida)
+        self.assertIsNotNone(cifras, salida[-400:])
+        self.assertEqual(cifras["errors"], 0, "ningun ImportError en clean-room")
+        self.assertEqual(cifras["failures"], 0)
+        self.assertEqual(cifras["skipped"], self.esperados + 1,
+                         "el anidado salta uno mas: este propio test")
+        self.assertEqual(r.returncode, 0)
+
+    def test_el_cron_fija_la_version_de_pyarrow(self):
+        """Un proyecto que pinea todas sus fuentes no puede dejar suelta la
+        biblioteca que serializa su historico."""
+        c = _texto(CRON)
+        self.assertRegex(c, r"pip install[^\n]*pyarrow==\d+\.\d+")
+
+    def test_el_cron_sigue_siendo_el_dueno_del_qa_de_parquet(self):
+        c = _texto(CRON)
+        self.assertIn("--require-parquet", c)
+        self.assertIn("pyarrow", c)
+
+    def test_el_PR_sigue_sin_instalar_nada(self):
+        t = _ejecutable(WORKFLOW)
+        for patron in ("pip install", "npm install", "apt-get", "pyarrow"):
+            self.assertNotIn(patron, t, patron)
 
 
 class TestLasAutoridadesSiguenPasando(unittest.TestCase):

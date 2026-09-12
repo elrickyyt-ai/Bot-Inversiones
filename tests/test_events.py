@@ -25,6 +25,9 @@ FIXTURES = json.load(open(os.path.join(RAIZ, "tests", "fixtures", "eventos", "ca
                           encoding="utf-8"))
 
 
+from _parquet import requiere_parquet  # noqa: E402
+
+
 def _caso(nombre):
     c = FIXTURES[nombre]
     return c["claims"], c["evidence"]
@@ -123,6 +126,7 @@ class TestUnoXRPReal(unittest.TestCase):
         self.assertIn("Lo que NO sabemos", texto)
 
 
+@requiere_parquet
 class TestDosCuantitativoReal(unittest.TestCase):
     """Test 2: eventos observables respaldados por Evidence MEASURED."""
 
@@ -279,6 +283,7 @@ class TestSieteRevision(unittest.TestCase):
         self.assertEqual(e["status"], "REVISED")
 
 
+@requiere_parquet
 class TestLimitesArquitectonicos(unittest.TestCase):
     """Lo que P4 no hace y no puede hacer."""
 
