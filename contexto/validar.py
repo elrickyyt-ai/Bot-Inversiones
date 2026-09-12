@@ -164,6 +164,7 @@ VEREDICTOS_QUE_PASAN = (PERMITIDO,)
 # de arboles: es el fichero que hay que regenerar para que integridad.py
 # pueda pronunciarse.
 MANIFIESTO = "contexto/manifiesto.json"
+AUTORIDAD_EXTRACCION = "contexto/extraccion.py"
 
 
 def consultar(query_id, contrato=None):
@@ -279,6 +280,25 @@ def bloque_activo(contrato=None):
     return bid, decl
 
 
+def rango_bloque(bid=None, contrato=None):
+    """(desde, hasta, hasta_es_operativo) del bloque.
+
+    BLOQUE = desde + hasta. `desde~1..hasta` es el rango REPRODUCIBLE del
+    bloque: los commits que escribio. La guarda se evalua sobre ese rango y
+    NO sobre el diff contra la rama base -- un bloque responde de lo que
+    escribio, no de lo que la base todavia ignora.
+
+    Mientras el bloque esta abierto, `hasta` es None y quien ejecute resuelve
+    a HEAD como valor OPERATIVO (hasta_es_operativo=True). Al cerrar el bloque
+    se fija al commit real y el rango queda reproducible para siempre: el
+    significado historico de un bloque cerrado no puede depender de HEAD."""
+    c = contrato or _estado.cargar_contrato()
+    bid = bid or c.get("bloque_activo")
+    decl = (c.get("bloques") or {}).get(bid) or {}
+    desde, hasta = decl.get("desde"), decl.get("hasta")
+    return desde, hasta, (hasta is None)
+
+
 def superficie_protegida(raiz=RAIZ):
     """Rutas bajo autoridad de la integridad historica. DERIVADAS, nunca
     declaradas aqui.
@@ -315,11 +335,22 @@ def _condicion_protegido(ruta, rutas, raiz=RAIZ):
 
       manifiesto  pasa si contexto/manifiesto.json viaja en el MISMO diff.
                   Entonces integridad.py decide, con su propia autoridad.
-      extraccion  no pasa nunca por alcance. Su ancla es byte-exacta y la
-                  verifica extraccion.py, que el gate ya ejecuta aparte."""
+      extraccion  pasa si contexto/extraccion.py viaja en el MISMO diff.
+                  Misma logica: se toca la AUTORIDAD al lado del dato.
+
+    La simetria importa. Una version anterior de esta funcion no dejaba pasar
+    NUNCA el destino de la extraccion, y eso rechazaba al propio bloque que lo
+    CREO (T5, 8c38056): crear no es alterar, igual que en el manifiesto una
+    ruta nueva es ADDED y no ALTERED. La autorizacion explicita -- mover la
+    autoridad en el mismo commit -- distingue las dos cosas sin necesidad de
+    una excepcion."""
     if ruta in _rutas_extraccion(raiz):
+        if AUTORIDAD_EXTRACCION in rutas:
+            return True, None
         return False, (f"{PROTEGIDO_GLOBAL}: {ruta} es el destino de la extraccion "
-                       f"D-PRD-1; su autoridad es contexto/extraccion.py, no el alcance")
+                       f"D-PRD-1. Crearlo o modificarlo exige mover su autoridad, "
+                       f"{AUTORIDAD_EXTRACCION}, en el MISMO commit; ningun bloque "
+                       f"puede autorizarselo por alcance")
     if MANIFIESTO in rutas:
         return True, None
     return False, (f"{PROTEGIDO_GLOBAL}: {ruta} esta fijada por hash en {MANIFIESTO}. "

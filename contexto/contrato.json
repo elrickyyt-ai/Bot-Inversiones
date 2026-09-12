@@ -226,8 +226,12 @@
     "tests/",
     ".github/",
     "docs/",
-    "informes/"
+    "informes/",
+    "CLAUDE.md"
    ],
+   "_escritura_claude_md": "CLAUDE.md faltaba en la declaracion heredada de `alcance_bloque.no_bloquea`, pese a que T5 (8c38056) reescribio legitimamente su bloque de entrada. No es un permiso nuevo: es la declaracion que estaba incompleta y que nadie detecto porque la guarda nunca se ejecuto sobre un rango real.",
+   "desde": "6316bcd78ed78667d2526477c51b23ee8871c6fe",
+   "hasta": "f784b8591ad00606fd85c9c979688c8b9feea88d",
    "decision": "D-54",
    "estado": "OPEN",
    "_nota": "F1 quedo TECNICAMENTE COMPLETADA (T1-T9 entregados, 942 tests, seis autoridades en verde). Su estado CONTRACTUAL sigue OPEN porque el cierre no estaba persistido. S0 es el trabajo que convierte esa F1 completada en una F1 cerrada; F1 no se rehace."
@@ -242,6 +246,8 @@
     "engine/contract/",
     "data/incoming/"
    ],
+   "desde": "aadb269",
+   "hasta": null,
    "decision": "D-55",
    "estado": "OPEN",
    "_nota": "S0 declara engine/contract/ y data/incoming/ porque reconcilia las 754 filas del cron en el carril del ano abierto. Eso es exactamente lo que el mecanismo nuevo permite expresar y el interruptor anterior no: un alcance PROPIO, no la ausencia de guarda."
@@ -254,6 +260,8 @@
     "informes/",
     "contexto/"
    ],
+   "desde": null,
+   "hasta": null,
    "decision": null,
    "estado": "UNDECLARED",
    "_nota": "Declarado por anticipado SOLO como destino del roadmap. `decision: null` y `estado: UNDECLARED` significan que todavia no esta autorizado: activarlo exige ponerlo en bloque_activo con su decision registrada."
@@ -270,6 +278,8 @@
   "precedencia": "ALCANCE_NO_DECLARADO > PROTEGIDO_GLOBAL > PERMITIDO > FUERA_DE_ALCANCE. La proteccion global gana SIEMPRE sobre la lista de escritura del bloque: ningun bloque puede autorizarse a si mismo el historico.",
   "denegacion_por_defecto": "una ruta que no encaja en ninguna regla es FUERA_DE_ALCANCE, nunca permitida. Mismo invariante que UNDECLARED != valor por defecto.",
   "protegido_global_es_condicional": "PROTEGIDO_GLOBAL no significa 'nunca escribible' -- eso haria inejecutable el propio protocolo de cierre de docs/07. Significa que el alcance del bloque NO BASTA: pasa solo si contexto/manifiesto.json viaja en el MISMO diff, y entonces integridad.py decide. Asi la deuda DF-2 deja de ser una costumbre documentada y pasa a ser condicion de PASS.",
+  "bloque_es_desde_mas_hasta": "BLOQUE = desde + hasta. `desde~1..hasta` es el RANGO REPRODUCIBLE del bloque. La guarda evalua ese rango, NO el diff contra la rama base: un bloque responde de los commits que escribio, no de lo que la rama base todavia ignora. Confundir ambas cosas producia 389 falsos FUERA_DE_ALCANCE en el PR de integracion, todos ellos obra de bloques anteriores (P1-P6.2, F1).",
+  "hasta_abierto": "Mientras el bloque esta abierto, `hasta` es null y se resuelve a HEAD como valor OPERATIVO. Al cerrarlo se fija al commit real, y desde ese momento el rango es reproducible para siempre. El significado historico de un bloque cerrado NO depende de HEAD: si dependiera, el bloque cambiaria de contenido con cada commit posterior.",
   "transicion_de_bloque": "cambiar `bloque_activo`, declarar la `escritura` del bloque nuevo y registrar su decision en docs/DECISIONES.md. El bloque anterior pasa a CLOSED por VEREDICTO CALCULADO, no por afirmacion. No hay ningun valor de este contrato que desactive la guarda entera."
  }
 }

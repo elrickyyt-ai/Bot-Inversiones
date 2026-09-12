@@ -216,10 +216,17 @@ class TestNoHaySegundaCopia(unittest.TestCase):
 class TestDiffCompletoDelPR(unittest.TestCase):
     """El `exit=0` historico solo habia mirado el ultimo commit."""
 
-    def test_sin_base_se_declara_que_el_rango_es_parcial(self):
+    def test_el_origen_del_rango_se_declara_siempre(self):
+        """REESCRITO con la correccion de S0.1: `rango_parcial()` desaparecio
+        al pasar el rango a ser el del bloque. La propiedad que sobrevive, y
+        es mas fuerte, es que la salida DECLARA que se ha medido."""
         import alcance_pr
-        self.assertTrue(alcance_pr.rango_parcial(None))
-        self.assertFalse(alcance_pr.rango_parcial("abc123"))
+        _r, origen = alcance_pr.rango_del_bloque()
+        self.assertIn(origen, ("bloque", "bloque-abierto"))
+        r2, o2 = alcance_pr.rango_del_bloque(
+            {"bloque_activo": "Z", "bloques": {"Z": {"escritura": []}}})
+        self.assertIsNone(r2, "sin `desde` no se inventa un rango")
+        self.assertIsNone(o2)
 
     def test_el_workflow_inyecta_base_y_head_del_pr(self):
         ruta = os.path.join(RAIZ, ".github", "workflows", "verificar-contexto.yml")
@@ -254,6 +261,88 @@ class TestTransicionDeBloque(unittest.TestCase):
         self.assertIsNone(pc1.get("decision"), "PC-1 no puede llevar decision aun")
         self.assertEqual(pc1.get("estado"), "UNDECLARED")
         self.assertNotEqual(c["bloque_activo"], "PC-1")
+
+
+class TestRangoDelBloque(unittest.TestCase):
+    """BLOQUE = desde + hasta. El rango es del bloque, no el diff contra la base."""
+
+    def test_bloque_cerrado_da_un_rango_reproducible(self):
+        """`hasta` fijado: el significado historico del bloque NO depende de
+        HEAD. Si dependiera, el bloque cambiaria con cada commit posterior."""
+        desde, hasta, operativo = validar.rango_bloque("F1")
+        self.assertTrue(desde)
+        self.assertTrue(hasta, "un bloque cerrado tiene que fijar `hasta`")
+        self.assertFalse(operativo)
+        rango, origen = self._rango("F1")
+        self.assertNotIn("HEAD", rango)
+        self.assertEqual(origen, "bloque")
+
+    def test_bloque_abierto_usa_HEAD_como_valor_operativo(self):
+        desde, hasta, operativo = validar.rango_bloque("S0")
+        self.assertTrue(desde)
+        self.assertIsNone(hasta, "un bloque abierto deja `hasta` en null")
+        self.assertTrue(operativo)
+        rango, origen = self._rango("S0")
+        self.assertIn("HEAD", rango)
+        self.assertEqual(origen, "bloque-abierto")
+
+    def test_bloque_sin_rango_no_lo_inventa(self):
+        desde, hasta, _ = validar.rango_bloque("PC-1")
+        self.assertIsNone(desde)
+        self.assertIsNone(hasta)
+        rango, origen = self._rango("PC-1")
+        self.assertIsNone(rango)
+        self.assertIsNone(origen)
+
+    def test_cada_bloque_con_rango_cumple_su_propio_alcance(self):
+        """La propiedad que el diff-contra-la-base no podia dar: un bloque
+        responde de los commits que escribio."""
+        import alcance_pr
+        c = estado.cargar_contrato()
+        for bid, decl in c["bloques"].items():
+            if not decl.get("desde"):
+                continue
+            rango, _ = self._rango(bid)
+            rutas = alcance_pr._diff(rango)
+            ok, motivo = validar.guarda_alcance(
+                rutas, {"bloque_activo": bid, "bloques": c["bloques"]})
+            self.assertTrue(ok, f"{bid} incumple su propio alcance: {motivo}")
+
+    def _rango(self, bid):
+        import alcance_pr
+        c = estado.cargar_contrato()
+        return alcance_pr.rango_del_bloque({"bloque_activo": bid,
+                                            "bloques": c["bloques"]})
+
+
+class TestAutoridadDeLaExtraccion(unittest.TestCase):
+    """El destino D-PRD-1: crear no es alterar, igual que en el manifiesto."""
+
+    def setUp(self):
+        self.destino = sorted(validar._rutas_extraccion())[0]
+        self.c = _contrato("X", {"X": {"escritura": ["contexto/"]}})
+
+    def test_sin_mover_su_autoridad_no_pasa(self):
+        ok, motivo = validar.guarda_alcance([self.destino], self.c)
+        self.assertFalse(ok)
+        self.assertIn(validar.PROTEGIDO_GLOBAL, motivo)
+        self.assertIn(validar.AUTORIDAD_EXTRACCION, motivo)
+
+    def test_moviendo_su_autoridad_en_el_mismo_commit_pasa(self):
+        """Es lo que hizo T5 (8c38056): creo el destino y su verificador a la
+        vez. Rechazarlo habria sido rechazar al bloque que lo creo."""
+        rutas = [self.destino, validar.AUTORIDAD_EXTRACCION]
+        ok, motivo = validar.guarda_alcance(rutas, self.c)
+        self.assertTrue(ok, motivo)
+
+    def test_el_manifiesto_no_autoriza_la_extraccion_ni_al_contrario(self):
+        """Cada dato exige SU autoridad, no una cualquiera."""
+        ok, _ = validar.guarda_alcance([self.destino, validar.MANIFIESTO], self.c)
+        self.assertFalse(ok, "el manifiesto no manda sobre la extraccion")
+        ok2, _ = validar.guarda_alcance(
+            ["docs/DECISIONES.md", validar.AUTORIDAD_EXTRACCION],
+            _contrato("X", {"X": {"escritura": ["contexto/", "docs/"]}}))
+        self.assertFalse(ok2, "extraccion.py no manda sobre el manifiesto")
 
 
 class TestNoEscribeNada(unittest.TestCase):
