@@ -41,9 +41,27 @@
    "que_detecta": "renderizaciones directas del valor canonico completo en la superficie",
    "limitacion": "heuristic detection != formal proof of absence. No garantiza detectar parafrasis ni representaciones semanticamente equivalentes.",
    "proteccion_primaria": "contractual: CODE-ANCHORED -> canonical_source -> canonical_fingerprint -> NO value field"
+  },
+  "copia-parcial/v1": {
+   "aplica_a": "deteccion de copia parcial del estado en CLAUDE.md tras D-PRD-1",
+   "que_detecta": "la marca de seccion, y cualquier linea de >=80 caracteres del contenido extraido que siga en CLAUDE.md",
+   "limitacion": "heuristic detection != formal proof of absence. Una parafrasis la evadiria.",
+   "proteccion_primaria": "contractual: la seccion se extrae entera y su ancla se verifica aparte"
   }
  },
  "open_debt": [
   "Structural enforcement of no-value duplication (D-2): la deteccion es heuristica, no estructural. NO se amplia F1 para resolverla."
- ]
+ ],
+ "procedencia_historica": {
+  "contexto/historico/claude_md_estado_previo_a_F1.md": {
+   "procede_de": "CLAUDE.md",
+   "seccion": "## Estado del proyecto",
+   "momento": "estado previo a F1",
+   "origen_fichero_sha256": "e924a3e20cf3b209456b6e3b7df09358438941edf9d98d2d89c7c44211b11e16",
+   "origen_repositorio": "3b008f0",
+   "ancla": "ff2003f9d59a162f9c6d753dddbb9c57ff5ba1881bcd593e0ee4a1840c75a9b5",
+   "verificado_por": "contexto/extraccion.py (mecanismo SEPARADO del manifiesto principal, P-1)",
+   "_nota": "La procedencia vive AQUI, fuera del contenido extraido: anadirla dentro del fichero destruiria el ancla (verificado: da ac9854d9...)."
+  }
+ }
 }
