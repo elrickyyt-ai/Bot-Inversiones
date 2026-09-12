@@ -212,7 +212,16 @@ class TestNoHaySegundaCopia(unittest.TestCase):
         import alcance_pr
         self.assertIs(alcance_pr.ALCANCE_NO_DECLARADO, validar.ALCANCE_NO_DECLARADO)
         self.assertIs(alcance_pr.FUERA_DE_ALCANCE, validar.FUERA_DE_ALCANCE)
-        self.assertEqual(len(set(validar.VEREDICTOS_ALCANCE)), 4)
+        # CADUCADO al anadir IMPORTADO (docs/07 s3): el literal `4` fijaba el
+        # numero, que no es la propiedad. La propiedad -- mas fuerte, y la que
+        # el `4` intentaba proteger -- es que el vocabulario este declarado una
+        # sola vez y que `alcance_pr` no invente veredictos propios.
+        self.assertEqual(len(set(validar.VEREDICTOS_ALCANCE)),
+                         len(validar.VEREDICTOS_ALCANCE),
+                         "el vocabulario no puede tener duplicados")
+        declarados = set(estado.cargar_contrato()["alcance"]["veredictos"])
+        self.assertEqual(declarados, set(validar.VEREDICTOS_ALCANCE),
+                         "contrato y validador tienen que declarar lo mismo")
 
 
 class TestDiffCompletoDelPR(unittest.TestCase):
@@ -306,8 +315,10 @@ class TestRangoDelBloque(unittest.TestCase):
                 continue
             rango, _ = self._rango(bid)
             rutas = alcance_pr._diff(rango)
-            ok, motivo = validar.guarda_alcance(
-                rutas, {"bloque_activo": bid, "bloques": c["bloques"]})
+            # El contrato ENTERO, no un recorte: `alcance.importado` forma
+            # parte de la regla desde que existe IMPORTADO, y un contrato
+            # parcial haria fallar al bloque por una ruta que no escribio.
+            ok, motivo = validar.guarda_alcance(rutas, dict(c, bloque_activo=bid))
             self.assertTrue(ok, f"{bid} incumple su propio alcance: {motivo}")
 
     def _rango(self, bid):
@@ -381,3 +392,306 @@ class TestNoEscribeNada(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
+
+# --- IMPORTADO: procedencia, no permiso ------------------------------------
+#
+# El defecto que estos tests fijan lo descubrio el PRIMER CI REAL del proyecto,
+# no una prueba de laboratorio: la equivalencia `diff(desde~1, HEAD) == lo que
+# escribio el bloque` deja de ser cierta en cuanto hay un merge. Lo que se
+# comprueba aqui no es "data/thesis/ pasa", sino que la unica forma de pasar
+# sea tener la PROCEDENCIA demostrada contra git.
+
+
+class TestImportadoNoEsAutorizacion(unittest.TestCase):
+    """La propiedad mas importante: IMPORTADO no concede nada."""
+
+    def test_no_esta_entre_los_veredictos_que_autorizan(self):
+        self.assertNotIn(validar.IMPORTADO, validar.VEREDICTOS_QUE_PASAN)
+        self.assertIn(validar.IMPORTADO, validar.VEREDICTOS_SIN_AUTORIA)
+
+    def test_la_precedencia_lo_pone_debajo_de_PERMITIDO_y_PROTEGIDO(self):
+        v = list(validar.VEREDICTOS_ALCANCE)
+        self.assertLess(v.index(validar.ALCANCE_NO_DECLARADO), v.index(validar.PROTEGIDO_GLOBAL))
+        self.assertLess(v.index(validar.PROTEGIDO_GLOBAL), v.index(validar.PERMITIDO))
+        self.assertLess(v.index(validar.PERMITIDO), v.index(validar.IMPORTADO))
+        self.assertLess(v.index(validar.IMPORTADO), v.index(validar.FUERA_DE_ALCANCE))
+
+    def test_un_bloque_no_puede_fabricar_IMPORTADO_declarandolo(self):
+        """Condicion 6 del encargo. Declarar una ruta en el contrato produce
+        PERMITIDO -- que es una autorizacion explicita y auditable-- o nada.
+        La procedencia no se declara: se demuestra contra git."""
+        inventada = "engine/causal/mecanismos.py"
+        c = _contrato(bloques={"S0": {"escritura": ["contexto/"],
+                                      "importado": [inventada],
+                                      "procedencia": "confia en mi"}})
+        c["alcance"] = {"importado": {"merge_de_integracion":
+                                      validar.merge_de_integracion()}}
+        c["bloques"]["S0"]["desde"] = estado.cargar_contrato()["bloques"]["S0"]["desde"]
+        ver, _bid = validar.veredicto_alcance([inventada], contrato=c)
+        self.assertEqual(ver[inventada], validar.FUERA_DE_ALCANCE)
+
+    def test_lo_protegido_sigue_protegido_aunque_llegase_por_el_merge(self):
+        """Condicion 5. Si IMPORTADO ganase a PROTEGIDO_GLOBAL, la superficie
+        historica podria blanquearse integrando. No puede."""
+        protegida = sorted(validar.superficie_protegida())[0]
+        c = _contrato(bloques={"S0": {"escritura": []}})
+        c["alcance"] = {"importado": {"merge_de_integracion":
+                                      validar.merge_de_integracion()}}
+        ver, _bid = validar.veredicto_alcance([protegida], contrato=c)
+        self.assertEqual(ver[protegida], validar.PROTEGIDO_GLOBAL)
+        ok, motivo = validar.guarda_alcance([protegida], contrato=c)
+        self.assertFalse(ok, "una ruta del manifiesto no pasa sin su condicion")
+        self.assertIn(validar.PROTEGIDO_GLOBAL, motivo)
+
+
+class TestLasTresCondiciones(unittest.TestCase):
+    """Ninguna es opcional, y la tercera no es redundante con la segunda."""
+
+    RUTA = "data/thesis/BTC.json"
+
+    def setUp(self):
+        self.merge = validar.merge_de_integracion()
+        self.p1, self.p2 = validar._padres(self.merge)
+
+    def test_1_con_las_tres_cumplidas_es_IMPORTADO(self):
+        ok, motivo = validar.procedencia_importada(self.RUTA)
+        self.assertTrue(ok, motivo)
+
+    def test_2_una_ruta_que_el_bloque_movio_no_es_IMPORTADO(self):
+        """Sobre el estado real. La topologia sintetica de
+        TestTopologiaDeMerge aisla las tres condiciones una a una."""
+        ok, motivo = validar.procedencia_importada("contexto/validar.py")
+        self.assertFalse(ok)
+
+    def test_3_si_el_bloque_toca_la_ruta_no_es_IMPORTADO(self):
+        """La tercera condicion, sobre el caso que las otras dos no ven: el
+        log del bloque. Se fuerza declarando un `desde` que SI contiene commits
+        que tocan la ruta."""
+        self.assertTrue(validar._tocada_por_el_bloque(
+            "contexto/validar.py", estado.cargar_contrato()["bloques"]["S0"]["desde"],
+            self.p1))
+        self.assertFalse(validar._tocada_por_el_bloque(
+            self.RUTA, estado.cargar_contrato()["bloques"]["S0"]["desde"], self.p1))
+
+    def test_un_fichero_escrito_por_S0_se_clasifica_por_su_alcance(self):
+        """Condicion 4 del encargo: autoria propia NUNCA se reclasifica."""
+        for ruta in ("contexto/validar.py", "engine/contract/reconciliar_metrics.py"):
+            ver, _b = validar.veredicto_alcance([ruta])
+            self.assertEqual(ver[ruta], validar.PERMITIDO, ruta)
+            self.assertFalse(validar.procedencia_importada(ruta)[0], ruta)
+
+    def test_una_ruta_ausente_no_se_importa(self):
+        """Borrar es un acto de autoria. Sin esta comprobacion dos ausencias
+        compararian iguales y pasarian solas."""
+        ok, motivo = validar.procedencia_importada("data/metrics/BTC.json")
+        self.assertFalse(ok)
+        self.assertIn("no existe", motivo)
+
+
+class TestElMecanismoEsPequeno(unittest.TestCase):
+    """No se construye un sistema generico de merges: se consulta UNO."""
+
+    def test_sin_merge_declarado_no_se_importa_nada(self):
+        c = dict(estado.cargar_contrato())
+        c["alcance"] = dict(c["alcance"], importado={})
+        ok, motivo = validar.procedencia_importada("data/thesis/BTC.json", contrato=c)
+        self.assertFalse(ok)
+        self.assertIn("sin `alcance.importado.merge_de_integracion`", motivo)
+
+    def test_un_merge_que_no_se_resuelve_no_concede(self):
+        c = dict(estado.cargar_contrato())
+        c["alcance"] = dict(c["alcance"],
+                            importado={"merge_de_integracion": "0" * 40})
+        ok, motivo = validar.procedencia_importada("data/thesis/BTC.json", contrato=c)
+        self.assertFalse(ok)
+        self.assertIn("no se resuelve", motivo)
+
+    def test_un_commit_sin_dos_padres_no_es_un_merge_de_integracion(self):
+        c = dict(estado.cargar_contrato())
+        sin_merge = validar._padres(validar.merge_de_integracion())[0]
+        c["alcance"] = dict(c["alcance"],
+                            importado={"merge_de_integracion": sin_merge})
+        ok, motivo = validar.procedencia_importada("data/thesis/BTC.json", contrato=c)
+        self.assertFalse(ok)
+        self.assertIn("dos padres", motivo)
+
+    def test_el_contrato_declara_el_limite_explicitamente(self):
+        d = estado.cargar_contrato()["alcance"]["importado"]
+        self.assertRegex(d["limite_del_mecanismo"],
+                         r"(?i)no es una autorizacion generica")
+        self.assertRegex(d["que_es"], r"(?i)no una autorizacion")
+        self.assertEqual(len(d["condiciones"]), 4)
+
+    def test_no_hay_descubrimiento_automatico_de_merges(self):
+        """Si el modulo buscase merges por su cuenta, el mecanismo crecería
+        solo. Solo puede leer el que el contrato declara."""
+        with open(os.path.join(RAIZ, "contexto", "validar.py"),
+                  encoding="utf-8") as fh:
+            fuente = fh.read()
+        i = fuente.index("def merge_de_integracion")
+        j = fuente.index("def veredicto_alcance")
+        for prohibido in ("--merges", "rev-list --all", "for-each-ref"):
+            self.assertNotIn(prohibido, fuente[i:j], prohibido)
+
+
+class TestLaIntegracionRealDeS0(unittest.TestCase):
+    """Sobre el estado real, no sobre un contrato de prueba."""
+
+    IMPORTADAS = tuple(f"data/thesis/{a}.json"
+                       for a in ("ADA", "BTC", "DOT", "ETH", "SOL", "XRP"))
+
+    def test_las_seis_rutas_del_cron_son_IMPORTADO(self):
+        ver, _b = validar.veredicto_alcance(list(self.IMPORTADAS))
+        for r in self.IMPORTADAS:
+            self.assertEqual(ver[r], validar.IMPORTADO, r)
+
+    def test_el_bloque_S0_vuelve_a_cumplir_su_propio_alcance(self):
+        import alcance_pr
+        rutas, _origen, _rango = alcance_pr.rutas_a_evaluar()
+        ok, motivo = validar.guarda_alcance(rutas)
+        self.assertTrue(ok, motivo)
+
+    def test_no_queda_ninguna_ruta_FUERA_DE_ALCANCE(self):
+        import alcance_pr
+        rutas, _o, _r = alcance_pr.rutas_a_evaluar()
+        ver, _b = validar.veredicto_alcance(rutas)
+        fuera = sorted(r for r, v in ver.items() if v == validar.FUERA_DE_ALCANCE)
+        self.assertEqual(fuera, [])
+
+    def test_los_ocho_metrics_siguen_sin_resucitar(self):
+        """La resolucion del merge no puede deshacerse por un cambio de guarda."""
+        for a in ("ADA", "BTC", "DOT", "EA", "ETH", "SOL", "US", "XRP"):
+            self.assertFalse(os.path.exists(
+                os.path.join(RAIZ, "data", "metrics", f"{a}.json")))
+
+
+class TestTopologiaDeMerge(unittest.TestCase):
+    """Las tres condiciones, AISLADAS sobre un repositorio sintetico.
+
+    El repositorio real no contiene el caso decisivo -- una ruta que el bloque
+    modifica y luego REVIERTE -- y es justamente el que separa la condicion 3
+    de la 2. Construirlo es la unica forma de demostrar que la 3 no sobra.
+
+    Se escribe en un directorio temporal propio; el repositorio del proyecto
+    no se toca.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        import subprocess, tempfile
+        cls.tmp = tempfile.mkdtemp(prefix="botinv_merge_")
+        def git(*a):
+            subprocess.run(["git", "-C", cls.tmp] + list(a), check=True,
+                           capture_output=True)
+        def escribir(rel, txt):
+            with open(os.path.join(cls.tmp, rel), "w", encoding="utf-8") as fh:
+                fh.write(txt)
+        cls.git, cls.escribir = staticmethod(git), staticmethod(escribir)
+
+        git("init", "-q", "-b", "base")
+        git("config", "user.email", "t@t"); git("config", "user.name", "t")
+        # `raiz` es el repositorio que se juzga, y un repositorio que se juzga
+        # tiene manifiesto. Vacio: aqui no hay superficie protegida que probar
+        # -- de eso se ocupa test_lo_protegido_sigue_protegido... sobre el real.
+        os.makedirs(os.path.join(cls.tmp, "contexto"))
+        escribir(os.path.join("contexto", "manifiesto.json"), '{"ficheros": {}}\n')
+        for rel in ("importada.txt", "propia.txt", "revertida.txt", "tomada_de_base.txt"):
+            escribir(rel, "merge-base\n")
+        git("add", "-A"); git("commit", "-qm", "merge-base")
+        cls.MB = subprocess.run(["git", "-C", cls.tmp, "rev-parse", "HEAD"],
+                                capture_output=True, text=True).stdout.strip()
+
+        # Lado del BLOQUE (primer padre)
+        git("checkout", "-q", "-b", "bloque")
+        escribir("desde.txt", "inicio del bloque\n")
+        git("add", "-A"); git("commit", "-qm", "desde")
+        cls.DESDE = subprocess.run(["git", "-C", cls.tmp, "rev-parse", "HEAD"],
+                                   capture_output=True, text=True).stdout.strip()
+        escribir("propia.txt", "escrita por el bloque\n")
+        escribir("revertida.txt", "el bloque la toca...\n")
+        escribir("tomada_de_base.txt", "el bloque tambien la movio\n")
+        git("add", "-A"); git("commit", "-qm", "el bloque escribe")
+        escribir("revertida.txt", "merge-base\n")          # ...y la REVIERTE
+        git("add", "-A"); git("commit", "-qm", "y revierte una")
+
+        # Lado INTEGRADO (segundo padre)
+        git("checkout", "-q", "base")
+        for rel in ("importada.txt", "revertida.txt", "tomada_de_base.txt"):
+            escribir(rel, "contenido de la base\n")
+        git("add", "-A"); git("commit", "-qm", "el cron de la base")
+
+        # Merge de integracion: la base entra en la rama del bloque
+        git("checkout", "-q", "bloque")
+        subprocess.run(["git", "-C", cls.tmp, "merge", "--no-ff", "--no-edit",
+                        "-X", "theirs", "base"], capture_output=True)
+        cls.MERGE = subprocess.run(["git", "-C", cls.tmp, "rev-parse", "HEAD"],
+                                   capture_output=True, text=True).stdout.strip()
+
+    @classmethod
+    def tearDownClass(cls):
+        import shutil
+        shutil.rmtree(cls.tmp, ignore_errors=True)
+
+    def _contrato_sintetico(self):
+        return {"bloque_activo": "B",
+                "bloques": {"B": {"escritura": ["propia.txt"], "desde": self.DESDE,
+                                  "hasta": None}},
+                "alcance": {"importado": {"merge_de_integracion": self.MERGE}}}
+
+    def _procedencia(self, ruta):
+        return validar.procedencia_importada(ruta, contrato=self._contrato_sintetico(),
+                                             raiz=self.tmp)
+
+    def test_la_topologia_es_la_esperada(self):
+        """Sin esta comprobacion, un fallo de construccion pasaria por exito."""
+        p1, p2 = validar._padres(self.MERGE, raiz=self.tmp)
+        self.assertTrue(p1 and p2, "el merge tiene que tener dos padres")
+        self.assertEqual(validar._blob("HEAD", "importada.txt", self.tmp),
+                         validar._blob(p2, "importada.txt", self.tmp))
+
+    def test_caso_1_las_tres_condiciones_cumplidas_es_IMPORTADO(self):
+        ok, motivo = self._procedencia("importada.txt")
+        self.assertTrue(ok, motivo)
+
+    def test_caso_2_HEAD_igual_al_segundo_padre_pero_el_bloque_la_movio(self):
+        """`HEAD == P2` NO es suficiente. La condicion 2 es obligatoria."""
+        p1, p2 = validar._padres(self.MERGE, raiz=self.tmp)
+        self.assertEqual(validar._blob("HEAD", "tomada_de_base.txt", self.tmp),
+                         validar._blob(p2, "tomada_de_base.txt", self.tmp),
+                         "premisa: el merge tomo el lado de la base")
+        self.assertNotEqual(validar._blob(p1, "tomada_de_base.txt", self.tmp),
+                            validar._blob(self.MB, "tomada_de_base.txt", self.tmp),
+                            "premisa: el bloque la habia movido")
+        ok, motivo = self._procedencia("tomada_de_base.txt")
+        self.assertFalse(ok, "condicion 2 incumplida y aun asi paso")
+        self.assertIn("movio la ruta respecto al merge-base", motivo)
+
+    def test_caso_3_modificada_y_revertida_no_es_IMPORTADO(self):
+        """EL CASO QUE JUSTIFICA LA TERCERA CONDICION. blob(P1) == blob(MB)
+        porque el bloque deshizo su cambio, asi que la condicion 2 pasa. Pero
+        el bloque SI la modifico, y el log lo ve."""
+        p1, _p2 = validar._padres(self.MERGE, raiz=self.tmp)
+        self.assertEqual(validar._blob(p1, "revertida.txt", self.tmp),
+                         validar._blob(self.MB, "revertida.txt", self.tmp),
+                         "premisa: la condicion 2 pasa")
+        self.assertTrue(validar._tocada_por_el_bloque(
+            "revertida.txt", self.DESDE, p1, self.tmp), "premisa: el bloque la toco")
+        ok, motivo = self._procedencia("revertida.txt")
+        self.assertFalse(ok, "la condicion 3 es redundante si esto pasa")
+        self.assertIn("algun commit del bloque toca la ruta", motivo)
+
+    def test_caso_4_autoria_propia_se_clasifica_por_su_alcance(self):
+        c = self._contrato_sintetico()
+        ver, _b = validar.veredicto_alcance(["propia.txt"], contrato=c, raiz=self.tmp)
+        self.assertEqual(ver["propia.txt"], validar.PERMITIDO)
+        self.assertFalse(self._procedencia("propia.txt")[0])
+
+    def test_el_veredicto_completo_sobre_la_topologia(self):
+        c = self._contrato_sintetico()
+        rutas = ["importada.txt", "propia.txt", "revertida.txt", "tomada_de_base.txt"]
+        ver, _b = validar.veredicto_alcance(rutas, contrato=c, raiz=self.tmp)
+        self.assertEqual(ver, {"importada.txt": validar.IMPORTADO,
+                               "propia.txt": validar.PERMITIDO,
+                               "revertida.txt": validar.FUERA_DE_ALCANCE,
+                               "tomada_de_base.txt": validar.FUERA_DE_ALCANCE})

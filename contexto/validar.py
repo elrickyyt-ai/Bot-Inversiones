@@ -141,9 +141,60 @@ BLOQUE_DESCONOCIDO = "BLOQUE_DESCONOCIDO"
 #                           historico. Es CONDICIONAL, no una prohibicion
 #                           absoluta: ver _condicion_protegido().
 #     PERMITIDO             prefijo declarado en bloques[activo].escritura
+#     IMPORTADO             la ruta aparece en el rango pero NO es autoria del
+#                           bloque: entro por el merge de integracion. NO ES
+#                           UNA AUTORIZACION -- ver el bloque siguiente.
 #     FUERA_DE_ALCANCE      todo lo demas. DENEGACION POR DEFECTO: lo no
 #                           declarado nunca se permite, igual que UNDECLARED
 #                           nunca degrada a valor por defecto.
+#
+# --- IMPORTADO: procedencia, no permiso (S0, tras el primer CI real) --------
+#
+#   El primer merge real del proyecto revelo una falsa asuncion en DF-1. El
+#   contrato dice que un bloque responde de los commits que ESCRIBIO, y el
+#   codigo lo medía asi:
+#
+#       diff(desde~1, HEAD)  ==  ficheros escritos por el bloque
+#
+#   Cierto mientras la rama es LINEAL. Un merge lo rompe: introduce en HEAD
+#   arboles que pertenecen al otro padre, y el bloque acaba respondiendo de
+#   lo que no escribio. En la integracion de S0 fueron seis data/thesis/*.json
+#   del cron de la canonica, que S0 no habia tocado jamas.
+#
+#   Ampliar `escritura` para taparlo habria sido FALSO -- S0 no escribe tesis.
+#   Exceptuar los PR de integracion habria sido el interruptor de
+#   `alcance_bloque.vigente` renacido con otro nombre. La distincion correcta
+#   no es de permiso sino de AUTORIA:
+#
+#       "el bloque modifico esta ruta"
+#            frente a
+#       "esta ruta esta en HEAD porque la introdujo la integracion"
+#
+#   IMPORTADO significa lo segundo, y SOLO lo segundo: esta modificacion no es
+#   autoria del bloque y queda fuera del calculo de su alcance propio. NO
+#   significa "el bloque puede importar cualquier cosa". Por eso PERMITIDO y
+#   PROTEGIDO_GLOBAL le ganan en precedencia: una ruta del historico sigue
+#   siendo PROTEGIDO_GLOBAL aunque llegue por un merge, de modo que la
+#   superficie protegida NO puede blanquearse integrando.
+#
+#   TRES CONDICIONES, todas obligatorias y verificadas contra git:
+#
+#       1. blob(HEAD, ruta) == blob(P2, ruta)   el contenido es el del lado
+#                                               integrado, no uno propio
+#       2. blob(P1, ruta) == blob(MB, ruta)     en el lado del bloque la ruta
+#                                               nunca se movio del merge-base
+#       3. ningun commit del bloque la toca      `git log --first-parent`
+#
+#   La 3 NO es redundante con la 2, y es la razon de que este por separado: un
+#   bloque que modifica una ruta y luego la revierte deja blob(P1)==blob(MB) y
+#   pasaria la 2. El log lo ve igualmente. "Aunque termine igual que el
+#   segundo padre, si el bloque la modifico no es IMPORTADO."
+#
+#   ALCANCE DEL MECANISMO, deliberadamente pequeno: se consulta UN unico merge,
+#   el declarado en `alcance.importado.merge_de_integracion`. No se recorre el
+#   grafo, no se buscan merges, no se admiten historiales de multiples padres.
+#   Lo que no explique ESE merge cae a FUERA_DE_ALCANCE por denegacion por
+#   defecto. Un segundo merge no declarado no concede nada: falla, y se ve.
 #
 #   NINGUNA LISTA DE ARBOLES PROTEGIDOS SE DECLARA AQUI. Se DERIVA de quien
 #   ya posee esa autoridad -- las claves de contexto/manifiesto.json y el
@@ -153,13 +204,20 @@ PERMITIDO = "PERMITIDO"
 PROTEGIDO_GLOBAL = "PROTEGIDO_GLOBAL"
 FUERA_DE_ALCANCE = "FUERA_DE_ALCANCE"
 ALCANCE_NO_DECLARADO = "ALCANCE_NO_DECLARADO"
+IMPORTADO = "IMPORTADO"
 
 VEREDICTOS_ALCANCE = (ALCANCE_NO_DECLARADO, PROTEGIDO_GLOBAL,
-                      PERMITIDO, FUERA_DE_ALCANCE)
+                      PERMITIDO, IMPORTADO, FUERA_DE_ALCANCE)
 
-# El unico veredicto que pasa sin condicion. PROTEGIDO_GLOBAL pasa solo si se
-# cumple su condicion; los otros dos fallan siempre.
+# El unico veredicto que AUTORIZA escritura. PROTEGIDO_GLOBAL pasa solo si se
+# cumple su condicion; ALCANCE_NO_DECLARADO y FUERA_DE_ALCANCE fallan siempre.
 VEREDICTOS_QUE_PASAN = (PERMITIDO,)
+
+# IMPORTADO no esta en VEREDICTOS_QUE_PASAN A PROPOSITO: no autoriza nada. Es
+# una clasificacion de PROCEDENCIA que excluye la ruta del calculo de autoria
+# propia del bloque. La separacion es el contrato: quien lea este modulo
+# buscando "que puede escribir el bloque" encuentra PERMITIDO y solo PERMITIDO.
+VEREDICTOS_SIN_AUTORIA = (IMPORTADO,)
 
 # Ruta del mecanismo que concede permiso sobre el historico. NO es una lista
 # de arboles: es el fichero que hay que regenerar para que integridad.py
@@ -633,8 +691,96 @@ def _mod_contexto(nombre, raiz=RAIZ):
         sys.path.remove(carpeta)
 
 
-def veredicto_alcance(rutas, contrato=None, raiz=RAIZ):
-    """{ruta: veredicto} para el diff completo, por precedencia estricta."""
+def merge_de_integracion(contrato=None):
+    """SHA del UNICO merge que este mecanismo consulta, o None.
+
+    Vive en el contrato, no aqui: es un dato del bloque, como `desde`. Sin
+    declaracion no se busca ninguno -- no hay descubrimiento automatico de
+    merges, y por tanto no hay forma de que el mecanismo crezca solo."""
+    c = contrato or _estado.cargar_contrato()
+    return ((c.get("alcance") or {}).get("importado") or {}).get("merge_de_integracion")
+
+
+def _blob(rev, ruta, raiz=RAIZ):
+    """sha del blob de `ruta` en `rev`, o None si alli no existe."""
+    import subprocess
+    r = subprocess.run(["git", "-C", raiz, "rev-parse", f"{rev}:{ruta}"],
+                       capture_output=True, text=True)
+    return r.stdout.strip() if r.returncode == 0 else None
+
+
+def _padres(merge, raiz=RAIZ):
+    """(p1, p2) del merge declarado, o (None, None) si no tiene exactamente
+    dos. Un octopus merge no se interpreta: se rechaza."""
+    import subprocess
+    r = subprocess.run(["git", "-C", raiz, "rev-list", "--parents", "-n", "1", merge],
+                       capture_output=True, text=True)
+    partes = r.stdout.split()
+    if r.returncode != 0 or len(partes) != 3:
+        return None, None
+    return partes[1], partes[2]
+
+
+def _tocada_por_el_bloque(ruta, desde, p1, raiz=RAIZ):
+    """True si ALGUN commit del bloque toca la ruta en su propia linea.
+
+    Tercera condicion de IMPORTADO, y la unica que ve el caso
+    modificar-y-revertir: ahi blob(P1) vuelve a ser blob(MB) y la comparacion
+    de blobs no lo distingue, pero el log si."""
+    import subprocess
+    r = subprocess.run(["git", "-C", raiz, "log", "--first-parent", "--name-only",
+                        "--pretty=format:", f"{desde}~1..{p1}", "--", ruta],
+                       capture_output=True, text=True)
+    return bool(r.stdout.strip())
+
+
+def procedencia_importada(ruta, contrato=None, raiz=RAIZ, head="HEAD"):
+    """(es_importado, motivo). Las TRES condiciones, ninguna opcional.
+
+    `motivo` explica por que NO lo es, para que la salida pueda declararlo en
+    vez de limitarse a negar. Sin merge declarado devuelve (False, ...): la
+    ausencia de declaracion nunca concede."""
+    import subprocess
+    merge = merge_de_integracion(contrato)
+    if not merge:
+        return False, "sin `alcance.importado.merge_de_integracion` declarado"
+    if subprocess.run(["git", "-C", raiz, "cat-file", "-e", merge + "^{commit}"],
+                      capture_output=True).returncode != 0:
+        return False, f"el merge declarado {merge[:12]} no se resuelve"
+
+    p1, p2 = _padres(merge, raiz)
+    if not p1:
+        return False, f"{merge[:12]} no es un merge de exactamente dos padres"
+
+    r = subprocess.run(["git", "-C", raiz, "merge-base", p1, p2],
+                       capture_output=True, text=True)
+    if r.returncode != 0:
+        return False, "no hay merge-base entre los dos padres"
+    mb = r.stdout.strip()
+
+    en_head, en_p2 = _blob(head, ruta, raiz), _blob(p2, ruta, raiz)
+    # Una ruta AUSENTE no se importa: borrar es un acto de autoria, y sin esta
+    # comprobacion dos ausencias compararian iguales y pasarian solas.
+    if en_head is None or en_p2 is None:
+        return False, "la ruta no existe en HEAD o en el segundo padre"
+    if en_head != en_p2:
+        return False, "el contenido en HEAD no es el del lado integrado"
+
+    if _blob(p1, ruta, raiz) != _blob(mb, ruta, raiz):
+        return False, "el lado del bloque movio la ruta respecto al merge-base"
+
+    desde, _h, _o = rango_bloque(contrato=contrato)
+    if desde and _tocada_por_el_bloque(ruta, desde, p1, raiz):
+        return False, "algun commit del bloque toca la ruta"
+    return True, None
+
+
+def veredicto_alcance(rutas, contrato=None, raiz=RAIZ, head="HEAD"):
+    """{ruta: veredicto} para el diff completo, por precedencia estricta.
+
+    ALCANCE_NO_DECLARADO > PROTEGIDO_GLOBAL > PERMITIDO > IMPORTADO >
+    FUERA_DE_ALCANCE. IMPORTADO va DESPUES de PERMITIDO y PROTEGIDO_GLOBAL a
+    proposito: no puede usarse para eludir ninguno de los dos."""
     bid, decl = bloque_activo(contrato)
     if decl is None:
         return {r: ALCANCE_NO_DECLARADO for r in rutas}, bid
@@ -646,14 +792,20 @@ def veredicto_alcance(rutas, contrato=None, raiz=RAIZ):
             out[r] = PROTEGIDO_GLOBAL
         elif escritura and r.startswith(escritura):
             out[r] = PERMITIDO
+        elif procedencia_importada(r, contrato, raiz, head)[0]:
+            out[r] = IMPORTADO             # procedencia demostrada, no permiso
         else:
-            out[r] = FUERA_DE_ALCANCE          # denegacion por defecto
+            out[r] = FUERA_DE_ALCANCE      # denegacion por defecto
     return out, bid
 
 
-def guarda_alcance(rutas, contrato=None, raiz=RAIZ):
-    """(ok, motivo) sobre el diff completo. Fachada estable del veredicto."""
-    veredictos, bid = veredicto_alcance(rutas, contrato, raiz)
+def guarda_alcance(rutas, contrato=None, raiz=RAIZ, head="HEAD"):
+    """(ok, motivo) sobre el diff completo. Fachada estable del veredicto.
+
+    IMPORTADO no aparece en ninguna de las comprobaciones de abajo, y esa
+    ausencia ES el significado del veredicto: la ruta no es autoria del bloque,
+    asi que no entra en el calculo de su alcance. No se le concede nada."""
+    veredictos, bid = veredicto_alcance(rutas, contrato, raiz, head)
     if not veredictos:
         return True, None
     sin_declarar = [r for r, v in veredictos.items() if v == ALCANCE_NO_DECLARADO]

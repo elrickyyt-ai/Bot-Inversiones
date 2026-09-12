@@ -637,3 +637,75 @@ sec:NVDA.NASDAQ -> ven:NASDAQ -> sec:WBA.NASDAQ -> org:walgreens
 - **«29 componentes» es una descomposición normativa**, no una afirmación de capacidades nuevas: la cadena conceptual de origen enumeraba 26 eslabones y la Fase 0 describía 10 capas. Cambió el corte, no el alcance.
 - **Se descartó** `clasificacion-nodos/v2` dentro de S0. Es la solución limpia a DF-7 —`ARBOLES_HISTORICOS` hace que todo documento normativo en `docs/` se clasifique `HISTORICAL`— pero es una **evolución del mecanismo de clasificación**, y meterla habría convertido S0 de continuidad en continuidad + rediseño. Por eso la arquitectura objetivo vive en `contexto/` (clase `OTRO`), que es lo que el mecanismo actual permite. Queda como DF-7.
 - **Se descartó** desarrollar cualquier capacidad de los niveles 2 y 3: sería construir producto desde un hueco documental.
+
+## D-59 · `IMPORTADO`: la procedencia no es una autorización
+
+**Fecha**: 2026-09-12 · **Bloque**: S0 · **Extiende**: D-54
+
+El primer merge real del proyecto —y el primer CI real, run #1 del PR #1, que
+terminó con 2 `failures`— reveló una falsa asunción dentro de D-54. El contrato
+dice que un bloque responde de los commits que **escribió**, y el código lo
+medía así:
+
+```
+diff(desde~1, HEAD)  ==  ficheros escritos por el bloque
+```
+
+La equivalencia es cierta mientras la rama es **lineal**. Un merge la rompe:
+introduce en `HEAD` árboles que pertenecen al otro padre. En la integración de
+S0 fueron seis `data/thesis/*.json` escritos por el cron de la rama canónica,
+que S0 no había tocado jamás y de los que sin embargo pasó a responder.
+
+**Las dos salidas fáciles se descartaron.** Ampliar la `escritura` de S0 con
+`data/thesis/` habría sido **falso**: S0 no escribe tesis, y el contrato habría
+pasado a mentir para ponerse verde. Exceptuar los PR de integración habría sido
+el interruptor `alcance_bloque.vigente` renacido con otro nombre, que es
+exactamente lo que D-54 vino a retirar.
+
+**La distinción que faltaba no es de permiso sino de autoría:**
+
+```
+"el bloque modificó esta ruta"      frente a
+"esta ruta está en HEAD porque la introdujo la integración"
+```
+
+`IMPORTADO` significa lo segundo, y sólo lo segundo: *esta modificación no es
+autoría del bloque y queda fuera del cálculo de su alcance propio*. **No**
+significa «el bloque puede importar cualquier cosa». Por eso no está en
+`VEREDICTOS_QUE_PASAN` —no autoriza nada— y por eso la precedencia lo coloca
+**por debajo** de `PERMITIDO` y de `PROTEGIDO_GLOBAL`:
+
+```
+ALCANCE_NO_DECLARADO > PROTEGIDO_GLOBAL > PERMITIDO > IMPORTADO > FUERA_DE_ALCANCE
+```
+
+Una ruta del histórico sigue siendo `PROTEGIDO_GLOBAL` aunque llegue por un
+merge: **la superficie protegida no puede blanquearse integrando**.
+
+**Tres condiciones, todas obligatorias**, verificadas contra git y nunca
+declarables:
+
+1. `blob(HEAD, ruta) == blob(P2, ruta)` — el contenido es el del lado integrado;
+2. `blob(P1, ruta) == blob(merge-base, ruta)` — el lado del bloque nunca la movió;
+3. ningún commit del bloque la toca (`git log --first-parent desde~1..P1`).
+
+`HEAD == P2` **no es condición suficiente**, y la tercera **no es redundante**
+con la segunda: un bloque que modifica una ruta y luego la revierte deja
+`blob(P1) == blob(MB)` y pasaría la 2; el log lo ve igualmente. El repositorio
+real no contiene ese caso, así que se demuestra sobre una topología sintética
+(`tests/test_alcance_bloque.py::TestTopologiaDeMerge`). Una ruta **ausente**
+tampoco se importa: borrar es un acto de autoría.
+
+**El mecanismo es deliberadamente pequeño.** `IMPORTADO` es una clasificación
+de integración aplicable **al merge de integración** que introduce el árbol base
+en la rama del bloque, declarado por SHA en
+`contrato.json::alcance.importado.merge_de_integracion`. No hay descubrimiento
+automático de merges, ni recorrido del grafo, ni soporte de múltiples padres o
+de varios merges en el rango. Lo que no explique **ese** merge cae a
+`FUERA_DE_ALCANCE` por denegación por defecto: un segundo merge no declarado no
+concede nada, falla, y se ve. Generalizarlo sería un bloque posterior con su
+propia decisión, no una ampliación silenciosa de ésta.
+
+**No se añade ningún código de fallo nuevo**, a propósito: el camino de rechazo
+sigue siendo `FUERA_DE_ALCANCE`. Las mutaciones M36–M39 comprueban que ese
+camino se recorre de verdad.

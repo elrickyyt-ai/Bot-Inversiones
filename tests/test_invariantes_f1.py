@@ -434,6 +434,57 @@ def m23_extraccion_no_realizada():
         shutil.rmtree(tmp)
 
 
+def _con_importado(**cambios):
+    """Contrato real con `alcance.importado` mutado EN MEMORIA."""
+    c = _contrato()
+    c["alcance"] = dict(c["alcance"],
+                        importado=dict(c["alcance"]["importado"], **cambios))
+    return c
+
+
+def m36_importado_sin_merge_declarado():
+    """Retirar el merge de integracion. La ausencia de declaracion NUNCA
+    concede: las rutas del lado integrado vuelven a FUERA_DE_ALCANCE."""
+    c = _con_importado(merge_de_integracion=None)
+    ok, motivo = validar.guarda_alcance(["data/thesis/BTC.json"], contrato=c)
+    assert not ok
+    return {motivo.split(":")[0]}
+
+
+def m37_importado_con_merge_irresoluble():
+    """Un SHA que no existe no puede clasificar nada. Denegacion por defecto,
+    no excepcion silenciosa."""
+    c = _con_importado(merge_de_integracion="0" * 40)
+    ok, motivo = validar.guarda_alcance(["data/thesis/BTC.json"], contrato=c)
+    assert not ok
+    return {motivo.split(":")[0]}
+
+
+def m38_importado_no_se_fabrica_declarandolo():
+    """Declarar la ruta en el contrato no produce IMPORTADO: la procedencia se
+    demuestra contra git o no existe. Aqui se apunta al merge REAL y aun asi
+    una ruta que el bloque escribio sigue sin poder importarse."""
+    c = _contrato()
+    c["bloques"] = dict(c["bloques"])
+    c["bloques"][c["bloque_activo"]] = dict(c["bloques"][c["bloque_activo"]],
+                                            escritura=[])
+    ok, motivo = validar.guarda_alcance(["contexto/validar.py"], contrato=c)
+    assert not ok
+    return {motivo.split(":")[0]}
+
+
+def m39_importado_no_blanquea_el_historico():
+    """PROTEGIDO_GLOBAL gana a IMPORTADO. Si no fuera asi, la superficie
+    historica podria colarse por un merge."""
+    c = _contrato()
+    c["bloques"] = dict(c["bloques"])
+    c["bloques"][c["bloque_activo"]] = dict(c["bloques"][c["bloque_activo"]],
+                                            escritura=["docs/"])
+    ok, motivo = validar.guarda_alcance(["docs/DECISIONES.md"], contrato=c)
+    assert not ok
+    return {motivo.split(":")[0]}
+
+
 MUTACIONES = [
     ("M01", "canonicalidad", "cambiar el sello de la fuente canonica", m01_canonical_source_cambiado),
     ("M02", "duplicate-as-truth", "inyectar el valor en la superficie", m02_valor_duplicado_en_superficie),
@@ -478,6 +529,18 @@ MUTACIONES = [
     ("M34", "suite", "salida de la suite no interpretable",
      m34_suite_no_interpretable),
     ("M35", "suite", "sin skips_esperados declarados", m35_suite_sin_declaracion),
+    # IMPORTADO (S0, tras el primer CI real). El veredicto no anade ningun
+    # codigo de fallo nuevo A PROPOSITO: lo que no se demuestra cae a
+    # FUERA_DE_ALCANCE por denegacion por defecto. Estas cuatro mutaciones
+    # comprueban que ese camino sigue siendo el que se recorre.
+    ("M36", "alcance", "retirar el merge de integracion declarado",
+     m36_importado_sin_merge_declarado),
+    ("M37", "alcance", "declarar un merge de integracion irresoluble",
+     m37_importado_con_merge_irresoluble),
+    ("M38", "alcance", "intentar importar lo que el bloque escribio",
+     m38_importado_no_se_fabrica_declarandolo),
+    ("M39", "alcance", "intentar colar el historico por el merge",
+     m39_importado_no_blanquea_el_historico),
 ]
 
 

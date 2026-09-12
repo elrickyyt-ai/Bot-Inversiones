@@ -547,9 +547,26 @@
    "ALCANCE_NO_DECLARADO",
    "PROTEGIDO_GLOBAL",
    "PERMITIDO",
+   "IMPORTADO",
    "FUERA_DE_ALCANCE"
   ],
-  "precedencia": "ALCANCE_NO_DECLARADO > PROTEGIDO_GLOBAL > PERMITIDO > FUERA_DE_ALCANCE. La proteccion global gana SIEMPRE sobre la lista de escritura del bloque: ningun bloque puede autorizarse a si mismo el historico.",
+  "precedencia": "ALCANCE_NO_DECLARADO > PROTEGIDO_GLOBAL > PERMITIDO > IMPORTADO > FUERA_DE_ALCANCE. La proteccion global gana SIEMPRE sobre la lista de escritura del bloque: ningun bloque puede autorizarse a si mismo el historico. IMPORTADO va por DEBAJO de PERMITIDO y de PROTEGIDO_GLOBAL a proposito: una ruta protegida sigue siendo PROTEGIDO_GLOBAL aunque llegue por un merge, de modo que la superficie protegida NO puede blanquearse integrando.",
+  "importado": {
+   "que_es": "Una clasificacion de PROCEDENCIA, no una autorizacion. Significa: esta modificacion detectada en el diff no es autoria del bloque; procede de una integracion y queda fuera del calculo de su alcance propio. NO significa que el bloque pueda importar cualquier cosa, y por eso NO esta en validar.py::VEREDICTOS_QUE_PASAN.",
+   "por_que_existe": "El primer merge real del proyecto -- CI run #1 del PR #1, 2 failures -- revelo una falsa asuncion de D-54: `diff(desde~1, HEAD)` equivale a `lo que escribio el bloque` SOLO mientras la rama es lineal. Un merge introduce en HEAD arboles del otro padre. Fueron seis data/thesis/*.json escritos por el cron de la canonica, que S0 no habia tocado jamas. Ampliar `escritura` para taparlo habria sido falso; exceptuar los PR de integracion habria sido el interruptor `alcance_bloque.vigente` renacido con otro nombre.",
+   "merge_de_integracion": "8326a1be3e27a8e0df7c8a6c5c2678ffc68807a1",
+   "condiciones": [
+    "1. blob(HEAD, ruta) == blob(segundo padre, ruta)",
+    "2. blob(primer padre, ruta) == blob(merge-base, ruta)",
+    "3. ningun commit del bloque toca la ruta: git log --first-parent desde~1..P1",
+    "La ruta tiene que EXISTIR en HEAD y en el segundo padre: borrar es un acto de autoria, y sin esta comprobacion dos ausencias compararian iguales y pasarian solas."
+   ],
+   "las_tres_son_obligatorias": "La 2 no puede eliminarse: `HEAD == segundo padre` NO es condicion suficiente. Y la 3 no es redundante con la 2 -- un bloque que modifica una ruta y luego la REVIERTE deja blob(P1)==blob(MB) y pasaria la 2; el log lo ve igualmente. Si el bloque la modifico no es IMPORTADO, aunque termine igual que el segundo padre. El repositorio real no contiene ese caso, asi que se demuestra sobre la topologia sintetica de tests/test_alcance_bloque.py::TestTopologiaDeMerge.",
+   "limite_del_mecanismo": "IMPORTADO es una clasificacion de integracion aplicable AL MERGE DE INTEGRACION que introduce el arbol base en la rama del bloque. No es una autorizacion generica para merges arbitrarios. Se consulta UN unico merge, el declarado aqui: no hay descubrimiento automatico, ni recorrido del grafo, ni soporte de multiples padres ni de varios merges en el rango. Lo que no explique ESE merge cae a FUERA_DE_ALCANCE por denegacion por defecto, de modo que un segundo merge no declarado no concede nada: falla, y se ve.",
+   "si_hiciera_falta_generalizarlo": "Seria un bloque posterior con su propia decision, no una ampliacion silenciosa de esta.",
+   "sin_codigo_de_fallo_nuevo": "A proposito: el camino de rechazo sigue siendo FUERA_DE_ALCANCE. Las mutaciones M36-M39 comprueban que ese camino se recorre de verdad.",
+   "decision": "D-59"
+  },
   "denegacion_por_defecto": "una ruta que no encaja en ninguna regla es FUERA_DE_ALCANCE, nunca permitida. Mismo invariante que UNDECLARED != valor por defecto.",
   "protegido_global_es_condicional": "PROTEGIDO_GLOBAL no significa 'nunca escribible' -- eso haria inejecutable el propio protocolo de cierre de docs/07. Significa que el alcance del bloque NO BASTA: pasa solo si contexto/manifiesto.json viaja en el MISMO diff, y entonces integridad.py decide. Asi la deuda DF-2 deja de ser una costumbre documentada y pasa a ser condicion de PASS.",
   "bloque_es_desde_mas_hasta": "BLOQUE = desde + hasta. `desde~1..hasta` es el RANGO REPRODUCIBLE del bloque. La guarda evalua ese rango, NO el diff contra la rama base: un bloque responde de los commits que escribio, no de lo que la rama base todavia ignora. Confundir ambas cosas producia 389 falsos FUERA_DE_ALCANCE en el PR de integracion, todos ellos obra de bloques anteriores (P1-P6.2, F1).",
