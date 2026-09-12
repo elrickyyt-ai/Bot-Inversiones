@@ -181,7 +181,8 @@
  },
  "open_debt": [
   "Structural enforcement of no-value duplication (D-2): la deteccion es heuristica, no estructural. NO se amplia F1 para resolverla.",
-  "DECISIONES.md no distingue vigente de superada de forma legible por maquina (vigencia-decisiones/v1). F1 lo REGISTRA, no lo resuelve."
+  "DECISIONES.md no distingue vigente de superada de forma legible por maquina (vigencia-decisiones/v1). F1 lo REGISTRA, no lo resuelve.",
+  "alcance_bloque.vigente sigue en true: el gate de alcance de F1 bloquea engine/, data/ y knowledge/ en todo PR. Apagarlo es requisito para arrancar AssessmentContract, y exige decision registrada."
  ],
  "procedencia_historica": {
   "contexto/historico/claude_md_estado_previo_a_F1.md": {
@@ -215,5 +216,19 @@
   "metodo_medida": "l0-budget/v1",
   "metodo_cierre": "l0-closure/v1",
   "_nota": "12.000 es el limite del PROXY l0-budget/v1, no una medicion universal de tokens de ningun proveedor."
+ },
+ "alcance_bloque": {
+  "bloque": "F1",
+  "vigente": true,
+  "regla": "la REGLA vive en contexto/validar.py::guarda_alcance (ARBOLES_PROHIBIDOS). Aqui SOLO se declara si aplica -- duplicar la lista seria un defecto de diseno.",
+  "por_que_existe_el_interruptor": "el alcance 'no tocar engine/, data/ ni knowledge/' es del BLOQUE F1, no del repositorio para siempre. El siguiente bloque de producto (AssessmentContract) tiene que tocar engine/ por definicion; un gate permanente bloquearia el roadmap.",
+  "como_se_cierra": "poner vigente=false con una decision registrada en docs/DECISIONES.md cuando F1 se cierre. Apagarlo editando el workflow seria hacerlo a escondidas.",
+  "no_bloquea": [
+   "contexto/",
+   "tests/",
+   ".github/",
+   "docs/",
+   "informes/"
+  ]
  }
 }

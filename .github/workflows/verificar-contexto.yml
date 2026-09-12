@@ -1,0 +1,72 @@
+name: Verificar contexto (PR)
+
+# Gate de pull request de F1. Su unica funcion es EJECUTAR LAS AUTORIDADES
+# que ya existen y propagar su codigo de salida. No contiene ninguna regla:
+# si este fichero llegara a llevar una lista de arboles, un umbral o un
+# hash, seria una segunda implementacion y un defecto de diseno.
+#
+# REPARTO DE RESPONSABILIDADES, deliberado:
+#
+#   este workflow (PR)  integridad de CODIGO y CONTEXTO
+#   actualizar-datos-libres.yml (cron diario)  QA de DATOS + parquet
+#
+# Por eso aqui NO aparece `qa.py --require-parquet`: exige el estado
+# completo de datos y PyArrow, y convertirlo en requisito de cada PR
+# mezclaria dos responsabilidades que el PRD separo a proposito.
+#
+# SIN DEPENDENCIAS: Python estandar puro, igual que el job de ingesta del
+# cron. Nada de pip, npm ni servicios externos.
+#
+# Y sin escapes: ningun paso lleva `|| true`, `continue-on-error` ni
+# redirecciones que oculten stderr. Un fallo de autoridad es un FAIL del PR.
+
+on:
+  pull_request:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verificar-contexto-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        # Historia completa: la guarda de alcance necesita el diff real
+        # contra la base del PR, y las HUMAN-ASSERTED citan commits.
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Suite completa
+        run: python3 -m unittest discover -s tests
+
+      - name: Knowledge (autoridad del grafo)
+        run: python3 engine/knowledge/consulta.py --validar
+
+      - name: Integridad del contenido historico
+        run: python3 contexto/integridad.py
+
+      - name: Integridad de la extraccion D-PRD-1
+        run: python3 contexto/extraccion.py
+
+      - name: Contexto durable, L0 y State Query
+        run: python3 contexto/validar.py
+
+      - name: Indice de alcanzabilidad
+        run: python3 contexto/grafo.py
+
+      - name: Guarda de alcance sobre el diff real del PR
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: python3 contexto/alcance_pr.py
