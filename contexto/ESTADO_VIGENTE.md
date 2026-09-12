@@ -32,6 +32,11 @@ Lo que es cierto hoy, con su procedencia:
 | ¿En qué punto está F1? | T1, T5 y los slices de T2/T4/T6 cerrados; T7-T10 pendientes | 2026-09-12 | `commit:8c38056` |
 | ¿Está el universo histórico listo para backfill? | no — BACKFILL_READY=false, el cuello es la identidad de instrumento | 2026-09-12 | `file:informes/2026-09-08_backfill_readiness_historico.md` |
 
+**Hacia dónde va**: la arquitectura objetivo vive en
+`contexto/ARQUITECTURA_OBJETIVO.md`; el estado efectivo de cada componente lo
+calcula `contexto/validar.py::estado_arquitectura()` desde su ancla de código.
+Qué existe HOY es `docs/ESTADO.md` §2, y no se duplica en ninguno de los dos.
+
 Cualquier cifra viva —número de entidades, relaciones, filas de evidencia,
 estado de QA, número de tests— **no se copia aquí**: se obtiene ejecutando
 `engine/knowledge/consulta.py --validar`, `engine/contract/qa.py --require-parquet`

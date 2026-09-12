@@ -52,7 +52,13 @@ CODIGOS_DE_FALLO = {
                 # su mutacion (M24, M25) en la misma tirada -- declarar un
                 # codigo sin demostrarlo es el "vocabulario muerto" que este
                 # fichero existe para impedir.
-                validar.PROTEGIDO_GLOBAL, validar.ALCANCE_NO_DECLARADO),
+                validar.PROTEGIDO_GLOBAL, validar.ALCANCE_NO_DECLARADO,
+                # Arquitectura objetivo (S0.4): tres codigos nuevos, cada uno
+                # con su mutacion (M26-M28). Misma regla de siempre -- un
+                # codigo declarado y nunca producido es vocabulario muerto.
+                validar.ARQUITECTURA_ANCLA_NO_RESOLUBLE,
+                validar.ARQUITECTURA_ESTADO_DIVERGENTE,
+                validar.ARQUITECTURA_ESTADO_DESCONOCIDO),
     "grafo": (grafo.ARCO_PROHIBIDO, grafo.POINTER_EXPANDE_L0,
               grafo.RELACION_DESCONOCIDA, grafo.L0_NO_ALCANZABLE),
     "extraccion": (extraccion.EXTRACCION_NO_REALIZADA, extraccion.ANCLA_ROTA,
@@ -197,6 +203,35 @@ def m24_protegido_global_sin_manifiesto():
     ok, motivo = validar.guarda_alcance(["docs/DECISIONES.md"], contrato=c)
     assert not ok
     return {motivo.split(":")[0]}
+
+
+def _arq(componentes):
+    """Contrato con SOLO la arquitectura mutada. El resto del informe no se
+    toca: interesa el codigo que produce esta comprobacion, no otros."""
+    c = _contrato()
+    c["arquitectura_objetivo"] = dict(c["arquitectura_objetivo"],
+                                      componentes=componentes)
+    return {f["motivo"].split(":")[0]
+            for f in validar.estado_arquitectura(c) if not f["ok"]}
+
+
+def m26_arquitectura_ancla_no_resoluble():
+    """Declarar IMPLEMENTED un componente cuyo ancla ya no existe: el caso que
+    convierte un documento de arquitectura en ficcion."""
+    return _arq([{"id": "X", "nivel": "1", "estado_declarado": "IMPLEMENTED",
+                  "ancla": "engine/borrado/hace/tiempo.py"}])
+
+
+def m27_arquitectura_estado_divergente():
+    """Aparece codigo bajo un componente declarado PLANNED. Es el sentido
+    inverso, y el que de verdad envejece sin que nadie lo note."""
+    return _arq([{"id": "X", "nivel": "2", "estado_declarado": "PLANNED",
+                  "ancla": "contexto/validar.py"}])
+
+
+def m28_arquitectura_estado_desconocido():
+    return _arq([{"id": "X", "nivel": "1", "estado_declarado": "CASI_LISTO",
+                  "ancla": None}])
 
 
 def m25_alcance_no_declarado():
@@ -352,6 +387,12 @@ MUTACIONES = [
      m24_protegido_global_sin_manifiesto),
     ("M25", "alcance", "retirar bloque_activo del contrato",
      m25_alcance_no_declarado),
+    ("M26", "arquitectura", "IMPLEMENTED con ancla que ya no existe",
+     m26_arquitectura_ancla_no_resoluble),
+    ("M27", "arquitectura", "PLANNED con ancla: declaracion obsoleta",
+     m27_arquitectura_estado_divergente),
+    ("M28", "arquitectura", "estado fuera del vocabulario",
+     m28_arquitectura_estado_desconocido),
 ]
 
 

@@ -280,6 +280,80 @@ def bloque_activo(contrato=None):
     return bid, decl
 
 
+# --- Arquitectura objetivo (S0.4) ------------------------------------------
+#
+#   "esta en la arquitectura"  !=  "esta implementado"
+#
+# Esa confusion es la que convierte un documento de arquitectura en ficcion a
+# los tres meses. Aqui se impide por mecanismo, no por disciplina: IMPLEMENTED
+# es el UNICO estado que se DERIVA -- se calcula resolviendo el ancla -- y los
+# otros tres son declaraciones de intencion que el codigo no puede deducir.
+# La ausencia de codigo no dice si algo esta planificado o prohibido.
+#
+# Y la comprobacion va en LOS DOS SENTIDOS, que es lo que la hace util:
+#   declarar IMPLEMENTED/PARTIAL sin ancla resoluble   -> ANCLA_NO_RESOLUBLE
+#   declarar PLANNED/NOT_AUTHORIZED y que exista ancla -> ESTADO_DIVERGENTE
+# Lo segundo detecta el caso que de verdad envejece: aparece codigo bajo un
+# componente declarado PLANNED y la declaracion se queda obsoleta en silencio.
+IMPLEMENTED = "IMPLEMENTED"
+PARTIAL = "PARTIAL"
+PLANNED = "PLANNED"
+NOT_AUTHORIZED = "NOT_AUTHORIZED"
+
+ESTADOS_ARQUITECTURA = (IMPLEMENTED, PARTIAL, PLANNED, NOT_AUTHORIZED)
+
+# Estados que EXIGEN ancla resoluble, y estados que exigen su AUSENCIA.
+ESTADOS_CON_ANCLA = (IMPLEMENTED, PARTIAL)
+ESTADOS_SIN_ANCLA = (PLANNED, NOT_AUTHORIZED)
+
+ARQUITECTURA_ANCLA_NO_RESOLUBLE = "ARQUITECTURA_ANCLA_NO_RESOLUBLE"
+ARQUITECTURA_ESTADO_DIVERGENTE = "ARQUITECTURA_ESTADO_DIVERGENTE"
+ARQUITECTURA_ESTADO_DESCONOCIDO = "ARQUITECTURA_ESTADO_DESCONOCIDO"
+
+
+def componentes_arquitectura(contrato=None):
+    c = contrato or _estado.cargar_contrato()
+    return ((c.get("arquitectura_objetivo") or {}).get("componentes")) or []
+
+
+def estado_arquitectura(contrato=None, raiz=RAIZ):
+    """[{id, nivel, estado_declarado, ancla, ancla_resuelve, estado_efectivo,
+    ok, motivo}] por componente.
+
+    `estado_efectivo` NO se lee del contrato: para IMPLEMENTED se deriva de
+    que el ancla exista. Un componente declarado IMPLEMENTED cuyo ancla haya
+    desaparecido no sale IMPLEMENTED -- sale con su fallo."""
+    out = []
+    for comp in componentes_arquitectura(contrato):
+        declarado = comp.get("estado_declarado")
+        ancla = comp.get("ancla")
+        resuelve = bool(ancla) and os.path.exists(os.path.join(raiz, ancla))
+        fila = {"id": comp.get("id"), "nivel": comp.get("nivel"),
+                "estado_declarado": declarado, "ancla": ancla,
+                "ancla_resuelve": resuelve, "estado_efectivo": None,
+                "ok": True, "motivo": None}
+
+        if declarado not in ESTADOS_ARQUITECTURA:
+            fila.update(ok=False, motivo=(
+                f"{ARQUITECTURA_ESTADO_DESCONOCIDO}: {comp.get('id')} declara "
+                f"{declarado!r}, fuera de {list(ESTADOS_ARQUITECTURA)}"))
+        elif declarado in ESTADOS_CON_ANCLA and not resuelve:
+            fila.update(ok=False, motivo=(
+                f"{ARQUITECTURA_ANCLA_NO_RESOLUBLE}: {comp.get('id')} declara "
+                f"{declarado} pero su ancla {ancla!r} no existe"))
+        elif declarado in ESTADOS_SIN_ANCLA and ancla:
+            fila.update(ok=False, motivo=(
+                f"{ARQUITECTURA_ESTADO_DIVERGENTE}: {comp.get('id')} declara "
+                f"{declarado} y sin embargo declara ancla {ancla!r}: si ya hay "
+                f"codigo, la declaracion ha quedado obsoleta"))
+        else:
+            # IMPLEMENTED se DERIVA; los otros tres son la declaracion misma.
+            fila["estado_efectivo"] = IMPLEMENTED if (
+                declarado == IMPLEMENTED and resuelve) else declarado
+        out.append(fila)
+    return out
+
+
 def rango_bloque(bid=None, contrato=None):
     """(desde, hasta, hasta_es_operativo) del bloque.
 
@@ -591,7 +665,13 @@ def validar(contrato=None, superficie=None, raiz=RAIZ):
     if not ok_sup:
         incidencias.append(motivo_sup)
 
-    return {"consultas_declaradas": len(_estado.consultas(contrato)),
+    arquitectura = estado_arquitectura(contrato, raiz)
+    for fila in arquitectura:
+        if not fila["ok"]:
+            incidencias.append(fila["motivo"])
+
+    return {"arquitectura": arquitectura,
+            "consultas_declaradas": len(_estado.consultas(contrato)),
             "fingerprint_version": CANONICAL_FINGERPRINT_VERSION,
             "duplicacion_deteccion": DUPLICACION_HEURISTICA_VERSION,
             "vigencia_decisiones": VIGENCIA_DECISIONES_VERSION,
@@ -611,6 +691,17 @@ def main(argv=None):
         por_clase.setdefault(r["class"], []).append(r)
     for clase, rs in sorted(por_clase.items()):
         print(f"  {clase:16s} {len(rs)} consulta(s)")
+    arq = informe.get("arquitectura") or []
+    if arq:
+        conteo = {}
+        for f in arq:
+            conteo[f["estado_efectivo"] or "FALLO"] = \
+                conteo.get(f["estado_efectivo"] or "FALLO", 0) + 1
+        derivados = sum(1 for f in arq if f["estado_declarado"] == IMPLEMENTED)
+        print(f"  ARQUITECTURA     {len(arq)} componente(s) . "
+              + " . ".join(f"{k}={v}" for k, v in sorted(conteo.items())))
+        print(f"     IMPLEMENTED derivado del ancla en {derivados}; "
+              f"PARTIAL/PLANNED/NOT_AUTHORIZED son declaraciones")
     fallos = [r for r in informe["resultados"] if not r["ok"]]
     for r in fallos:
         print(f"  FAIL {r['query_id']}: {r['motivo']}")

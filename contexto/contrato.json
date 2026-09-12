@@ -182,6 +182,9 @@
  "open_debt": [
   "Structural enforcement of no-value duplication (D-2): la deteccion es heuristica, no estructural. NO se amplia F1 para resolverla.",
   "DECISIONES.md no distingue vigente de superada de forma legible por maquina (vigencia-decisiones/v1). F1 lo REGISTRA, no lo resuelve.",
+  "DC-5 (colision de namespace L0): `L0` significa NIVEL DE CARGA DE CONTEXTO en contexto/ (implementado en contrato.json::L0, presupuesto_L0, l0-budget/v1, l0-closure/v1, la suite y el CI) y NIVEL DE AUTONOMIA en la arquitectura objetivo (autonomia:L0..L4, 0 ocurrencias en el arbol). Mismo token, dos significados. S0.4 los SEPARA POR NAMESPACE y lo REGISTRA; no renombra el mecanismo implementado para acomodar al ausente. Misma forma que X-1: dos usos deliberados que siguen discrepando.",
+  "DD-4 (PC-1 sin encaje en el roadmap): el roadmap de producto vigente es P0..P11 (docs/ESTADO.md, informes/...trazabilidad_fases_P0_P61.md) y no contiene PC-1. `bloques` declara PC-1 como bloque de ALCANCE futuro. Producto y alcance son ejes distintos, pero la relacion de PC-1 con P7..P11 no esta declarada. Queda como deuda EXPLICITA, no como omision silenciosa.",
+  "DF-7 (clasificacion-nodos/v2): ARBOLES_HISTORICOS = (docs/, informes/, contexto/historico/) hace que TODO documento normativo puesto en docs/ se clasifique HISTORICAL. No hay clase para 'documento pequeno, vigente, normativo, de carga no obligatoria', que es lo que la arquitectura objetivo es. Por eso vive en contexto/ (clase OTRO). La solucion limpia es una clase nueva en clasificacion-nodos/v2, que es una EVOLUCION DEL MECANISMO y queda FUERA de S0 por decision expresa: meterla convertiria S0 de continuidad en continuidad + rediseno del sistema de clasificacion. Es la deuda DC-3 en su forma accionable.",
   "DF-1 RESUELTA en S0.1: `alcance_bloque.vigente` (interruptor binario) sustituido por `bloque_activo` + `bloques[*].escritura` con cuatro veredictos, denegacion por defecto y proteccion global DERIVADA del manifiesto. Ya no existe ningun valor del contrato que desactive la guarda."
  ],
  "procedencia_historica": {
@@ -267,6 +270,215 @@
    "_nota": "Declarado por anticipado SOLO como destino del roadmap. `decision: null` y `estado: UNDECLARED` significan que todavia no esta autorizado: activarlo exige ponerlo en bloque_activo con su decision registrada."
   }
  },
+ "arquitectura_objetivo": {
+ "_que_es": "ARQUITECTURA OBJETIVO. Que sistema se esta construyendo y como se relacionan sus componentes. NO es el estado actual: eso vive en docs/ESTADO.md seccion 2 y no se duplica aqui. El texto legible para humanos esta en contexto/ARQUITECTURA_OBJETIVO.md; aqui viven SOLO los estados declarados y sus anclas.",
+ "estados": {
+  "IMPLEMENTED": "DERIVADO, no declarado: se calcula resolviendo `ancla`. Declararlo sin ancla resoluble es un fallo.",
+  "PARTIAL": "DECLARATIVO. El componente existe en codigo pero no como objeto contratado. Exige ancla.",
+  "PLANNED": "DECLARATIVO. Arquitectura objetivo, sin implementacion. Exige ancla=null: si aparece codigo, la declaracion ha quedado obsoleta y el validador lo detecta.",
+  "NOT_AUTHORIZED": "DECLARATIVO, y NO es sinonimo de 'no implementado'. Es una capacidad deliberadamente fuera de las autorizadas en el estado actual del sistema. Exige ancla=null."
+ },
+ "_estados_derivado_vs_declarativo": "Solo IMPLEMENTED se deriva. PARTIAL, PLANNED y NOT_AUTHORIZED son declaraciones de intencion y no pueden calcularse desde el codigo: la ausencia de codigo no dice si algo esta planificado o prohibido.",
+ "_not_authorized_no_es_d01": "D-01 dice 'el sistema propone, el usuario ejecuta' -- es una decision de producto sobre quien actua. NOT_AUTHORIZED es un estado de capacidad: esta pieza no esta entre las autorizadas hoy. Estan relacionados (D-01 es la razon por la que EXECUTION_GATE y BROKER_ORDER lo estan) pero no son sinonimos: una capacidad podria dejar de estar autorizada por motivos ajenos a D-01, y D-01 seguiria siendo cierto aunque existiese una ejecucion autorizada y supervisada.",
+ "namespaces": {
+  "contexto:L0": "nivel de CARGA DE CONTEXTO obligatoria. Implementado: contrato.json::L0, presupuesto_L0, l0-budget/v1, l0-closure/v1, validar.py, la suite y el CI de PR.",
+  "autonomia:L0..L4": "escalera de AUTONOMIA -- L0 READ, L1 ANALYZE, L2 PROPOSE, L3 HUMAN-APPROVED EXECUTION, L4 BOUNDED AUTONOMY. Techo inicial L3. NO implementada: 0 ocurrencias en el arbol.",
+  "_colision": "`L0` y `L2` son el mismo token con dos significados. Registrado como deuda DC-5, sin resolver. No se renombra el mecanismo implementado para acomodar al ausente."
+ },
+ "bucles": {
+  "decision": "EVIDENCE -> CAUSAL -> THESIS -> INVESTMENT_PROPOSAL -> RISK -> VERIFICATION -> APPROVAL",
+  "execution": "EXECUTION_GATE -> BROKER_ORDER -> OUTCOME",
+  "learning": "OUTCOME -> LEARNING -> CANDIDATE -> BACKTEST/RISK_TEST -> OOS -> SHADOW -> POLICY_GATE -> POLICY_REGISTRY -> NEW_VERSION",
+  "_por_que_separados": "el sistema no es una cadena lineal: se realimenta. Un cambio aprendido NUNCA entra directo en produccion -- recorre candidate -> validacion -> OOS -> shadow -> aprobacion -> version nueva."
+ },
+ "componentes": [
+  {
+   "id": "DATA",
+   "nivel": "1-comprender",
+   "estado_declarado": "IMPLEMENTED",
+   "ancla": "engine/contract/storage.py"
+  },
+  {
+   "id": "EVIDENCE",
+   "nivel": "1-comprender",
+   "estado_declarado": "IMPLEMENTED",
+   "ancla": "engine/evidence/construir.py"
+  },
+  {
+   "id": "EVENT_CLAIM",
+   "nivel": "1-comprender",
+   "estado_declarado": "IMPLEMENTED",
+   "ancla": "engine/events/consolidar.py"
+  },
+  {
+   "id": "KNOWLEDGE",
+   "nivel": "1-comprender",
+   "estado_declarado": "IMPLEMENTED",
+   "ancla": "engine/knowledge/modelo.py"
+  },
+  {
+   "id": "CAUSAL_PATH",
+   "nivel": "1-comprender",
+   "estado_declarado": "IMPLEMENTED",
+   "ancla": "engine/causal/caminos.py"
+  },
+  {
+   "id": "CAUSAL_ASSESSMENT",
+   "nivel": "1-comprender",
+   "estado_declarado": "IMPLEMENTED",
+   "ancla": "engine/causal/valoracion.py"
+  },
+  {
+   "id": "ECONOMIC_IMPACT",
+   "nivel": "1-comprender",
+   "estado_declarado": "IMPLEMENTED",
+   "ancla": "engine/impact/impacto.py"
+  },
+  {
+   "id": "MATERIALITY",
+   "nivel": "1-comprender",
+   "estado_declarado": "IMPLEMENTED",
+   "ancla": "engine/impact/materialidad.py"
+  },
+  {
+   "id": "TECHNICAL_ASSESSMENT",
+   "nivel": "1-comprender",
+   "estado_declarado": "PARTIAL",
+   "ancla": "engine/technical/score.py",
+   "_nota": "existe como CALCULO, no como objeto contratado: no declara que afirma, con que cobertura ni que UNKNOWN admite"
+  },
+  {
+   "id": "FUNDAMENTAL_ASSESSMENT",
+   "nivel": "1-comprender",
+   "estado_declarado": "PARTIAL",
+   "ancla": "engine/equity/score.py",
+   "_nota": "igual que el tecnico. El ancla cubre acciones; cripto vive en engine/crypto/score.py"
+  },
+  {
+   "id": "THESIS",
+   "nivel": "1-comprender",
+   "estado_declarado": "IMPLEMENTED",
+   "ancla": "engine/reasoning/thesis.py",
+   "_nota": "el Thesis Ledger (engine/reasoning/ledger.py) registra el lado de la PREDICCION; el lado del resultado es OUTCOME, que sigue PLANNED"
+  },
+  {
+   "id": "INVESTMENT_PROPOSAL",
+   "nivel": "2-decidir",
+   "estado_declarado": "PLANNED",
+   "ancla": null,
+   "_nota": "EL PUENTE. Hasta THESIS el sistema explica; desde aqui decide. Es capa propia porque una misma tesis puede dar BUY, WAIT o NO_ACTION segun valoracion, riesgo, exposicion, horizonte y condiciones de entrada"
+  },
+  {
+   "id": "RISK_ASSESSMENT",
+   "nivel": "2-decidir",
+   "estado_declarado": "PLANNED",
+   "ancla": null
+  },
+  {
+   "id": "INDEPENDENT_VERIFICATION",
+   "nivel": "2-decidir",
+   "estado_declarado": "PLANNED",
+   "ancla": null
+  },
+  {
+   "id": "HUMAN_APPROVAL",
+   "nivel": "2-decidir",
+   "estado_declarado": "PLANNED",
+   "ancla": null
+  },
+  {
+   "id": "AUTONOMY_POLICY",
+   "nivel": "2-decidir",
+   "estado_declarado": "PLANNED",
+   "ancla": null,
+   "_nota": "deny by default. Techo inicial autonomia:L3; autonomia:L4 no se contempla en este estado del sistema"
+  },
+  {
+   "id": "EXECUTION_GATE",
+   "nivel": "2-decidir",
+   "estado_declarado": "NOT_AUTHORIZED",
+   "ancla": null,
+   "_nota": "NO es 'todavia no implementado': es una capacidad deliberadamente FUERA de las autorizadas en el estado actual del sistema"
+  },
+  {
+   "id": "BROKER_ORDER",
+   "nivel": "2-decidir",
+   "estado_declarado": "NOT_AUTHORIZED",
+   "ancla": null,
+   "_nota": "idem. Sin credenciales de trading en ninguna parte del sistema (D-01)"
+  },
+  {
+   "id": "OUTCOME",
+   "nivel": "3-aprender",
+   "estado_declarado": "PLANNED",
+   "ancla": null,
+   "_nota": "el Thesis Ledger ya tiene 6 tesis registradas SIN evaluar: existe la prediccion, falta el resultado"
+  },
+  {
+   "id": "LEARNING_ENGINE",
+   "nivel": "3-aprender",
+   "estado_declarado": "PLANNED",
+   "ancla": null,
+   "_nota": "learning NUNCA modifica una politica activa de forma directa"
+  },
+  {
+   "id": "CANDIDATE_IMPROVEMENT",
+   "nivel": "3-aprender",
+   "estado_declarado": "PLANNED",
+   "ancla": null
+  },
+  {
+   "id": "BACKTEST",
+   "nivel": "3-aprender",
+   "estado_declarado": "PARTIAL",
+   "ancla": "engine/events/estudio_resultados.py",
+   "_nota": "existe event study y HistoricalReactionProfile v1 sobre 52 eventos reales, DESCRIPTIVO. Backtest de POLITICA no existe"
+  },
+  {
+   "id": "RISK_TEST",
+   "nivel": "3-aprender",
+   "estado_declarado": "PLANNED",
+   "ancla": null
+  },
+  {
+   "id": "OOS",
+   "nivel": "3-aprender",
+   "estado_declarado": "PLANNED",
+   "ancla": null
+  },
+  {
+   "id": "SHADOW",
+   "nivel": "3-aprender",
+   "estado_declarado": "PLANNED",
+   "ancla": null
+  },
+  {
+   "id": "POLICY_GATE",
+   "nivel": "3-aprender",
+   "estado_declarado": "PLANNED",
+   "ancla": null
+  },
+  {
+   "id": "POLICY_REGISTRY",
+   "nivel": "3-aprender",
+   "estado_declarado": "PLANNED",
+   "ancla": null
+  },
+  {
+   "id": "NEW_VERSION",
+   "nivel": "3-aprender",
+   "estado_declarado": "PLANNED",
+   "ancla": null
+  },
+  {
+   "id": "RUN",
+   "nivel": "transversal",
+   "estado_declarado": "PLANNED",
+   "ancla": null,
+   "_nota": "trazabilidad de extremo a extremo. Cada RUN conserva la policy_version EXACTA usada, para que una decision historica no pueda reinterpretarse bajo una politica posterior"
+  }
+ ]
+},
  "alcance": {
   "regla": "La REGLA vive en contexto/validar.py::veredicto_alcance. Aqui SOLO se declaran datos: que bloque esta activo y que puede escribir cada bloque. Ninguna lista de arboles protegidos se declara en este fichero ni en el validador -- se DERIVA de contexto/manifiesto.json y de contexto/extraccion.py, que son quienes ya poseen esa autoridad.",
   "veredictos": [
