@@ -179,94 +179,35 @@ class TestM1YM2SonDistintas(unittest.TestCase):
 
 
 class TestElSliceEsUnSlice(unittest.TestCase):
-    """P-3: T2-SLICE / T4-SLICE / T6-SLICE no son T2/T4/T6 completos."""
+    """CADUCADO Y REESCRITO (2026-09-12, cierre de F1).
 
-    def test_solo_esta_declarada_la_clase_code_anchored(self):
-        c = estado.cargar_contrato()
-        self.assertEqual(list(c["clases_declaradas_en_este_slice"]), ["CODE-ANCHORED"])
-        self.assertEqual(c["clases_pendientes_de_T2_completo"],
-                         ["AMBIGUOUS", "HUMAN-ASSERTED"])
+    Nacio para vigilar que BLOCK 1A NO se pasara de alcance: afirmaba que el
+    contrato solo declaraba CODE-ANCHORED y que validar.py no definia
+    AMBIGUOUS, HUMAN-ASSERTED ni UNDECLARED. Se apoyaba en una AUSENCIA
+    deliberada, y esa ausencia desaparecio cuando T2 y T6 se completaron --
+    que era exactamente lo previsto.
+
+    Se reescribe a lo que sigue siendo cierto (protocolo de informes, §3):
+    la superficie conserva sus cinco bloques, y la transicion slice ->
+    completo ocurrio de verdad, con las tres clases declaradas."""
 
     def test_la_superficie_tiene_exactamente_los_cinco_bloques(self):
+        """Lo unico del test original que NO dependia de una ausencia."""
         self.assertEqual(list(estado.bloques(estado.texto_superficie())),
                          list(estado.BLOQUES_SUPERFICIE))
 
-    def test_el_slice_no_implementa_ambiguous_ni_human_asserted_ni_undeclared(self):
-        fuente = open(os.path.join(RAIZ, "contexto", "validar.py"), encoding="utf-8").read()
-        cuerpo = fuente.split('"""', 2)[-1]
-        for pendiente in ("AMBIGUOUS", "HUMAN_ASSERTED", "UNDECLARED"):
-            self.assertNotIn(f'{pendiente} = "', cuerpo,
-                             f"{pendiente} es T6 completo, no entra en la bala")
-
-
-class TestCanonicalFingerprintV1(unittest.TestCase):
-    """D-1.1 -- comportamiento NORMATIVO del sello. La implementacion es
-    [I]; esto es lo que no puede cambiar sin bump de version."""
-
-    def test_el_mecanismo_esta_versionado(self):
-        self.assertEqual(validar.CANONICAL_FINGERPRINT_VERSION, "canonical-fingerprint/v1")
-        self.assertEqual(validar.validar()["fingerprint_version"],
-                         "canonical-fingerprint/v1")
-        c = {q["query_id"]: q for q in estado.consultas()}[CONSULTA]
-        self.assertEqual(c["canonical_fingerprint_version"], "canonical-fingerprint/v1")
-
-    def test_el_orden_incidental_no_forma_parte_del_valor(self):
-        """frozenset != orden arbitrario: la MISMA coleccion semantica
-        produce SIEMPRE el mismo fingerprint."""
-        elems = ["COMPARED_TO", "BENCHMARKED_BY", "SUCCEEDED_BY"]
-        formas = [frozenset(elems), set(elems), list(elems), tuple(elems),
-                  list(reversed(elems)), sorted(elems)]
-        huellas = {validar._huella(f) for f in formas}
-        self.assertEqual(len(huellas), 1, "el orden incidental cambio el fingerprint")
-
-    def test_la_multiplicidad_si_forma_parte_del_valor(self):
-        """["A","A"] y {"A"} son valores DISTINTOS, no el mismo."""
-        self.assertNotEqual(validar._huella(["A", "A"]), validar._huella({"A"}))
-
-    def test_es_sha256_de_la_serializacion_canonica(self):
-        import hashlib
-        v = modelo.PREDICADOS_NO_CAUSALES
-        esperado = hashlib.sha256(
-            validar.canonical_serialization(v).encode("utf-8")).hexdigest()
-        self.assertEqual(validar._huella(v), esperado)
-        self.assertEqual(len(esperado), 64)
-
-    def test_la_serializacion_de_una_coleccion_es_LF(self):
-        self.assertEqual(validar.canonical_serialization(frozenset({"B", "A"})), "A\nB")
-
-    def test_el_fingerprint_es_procedencia_y_no_respuesta(self):
-        """El validador resuelve la fuente VIVA para responder. Si el
-        fingerprint fuese la respuesta, bastaria con el."""
-        r = _resultado(validar.validar())
-        self.assertEqual(sorted(r["valor_resuelto"]), sorted(modelo.PREDICADOS_NO_CAUSALES))
-        c = {q["query_id"]: q for q in estado.consultas()}[CONSULTA]
-        self.assertNotIn("value", c)
-        self.assertIn("provenance", c["_canonical_fingerprint_es"])
-
-
-class TestHeuristicaDeDuplicacionV1(unittest.TestCase):
-    """D-2 -- la deteccion es heuristica declarada, NO prueba formal."""
-
-    def test_la_heuristica_esta_versionada(self):
-        self.assertEqual(validar.DUPLICACION_HEURISTICA_VERSION, "heuristic/v1")
-        self.assertEqual(validar.validar()["duplicacion_deteccion"], "heuristic/v1")
-
-    def test_la_limitacion_esta_declarada_en_el_contrato(self):
-        m = estado.cargar_contrato()["mecanismos"]["heuristic/v1"]
-        self.assertIn("formal proof of absence", m["limitacion"])
-
-    def test_la_deuda_abierta_esta_registrada(self):
-        deudas = " ".join(estado.cargar_contrato()["open_debt"])
-        self.assertIn("Structural enforcement of no-value duplication", deudas)
-
-    def test_la_proteccion_primaria_es_contractual_no_la_heuristica(self):
-        """Si la heuristica no detecta una parafrasis, el contrato sigue
-        impidiendo el campo de valor. Esa es la proteccion real."""
+    def test_el_slice_se_completo_con_las_tres_clases(self):
         c = estado.cargar_contrato()
-        c["state_queries"][0]["value"] = sorted(modelo.PREDICADOS_NO_CAUSALES)
-        r = _resultado(validar.validar(contrato=c))
-        self.assertFalse(r["ok"])
-        self.assertIn(validar.DUPLICACION_COMO_VERDAD, r["motivo"])
+        self.assertEqual(sorted(c["clases"]),
+                         ["AMBIGUOUS", "CODE-ANCHORED", "HUMAN-ASSERTED"])
+        self.assertNotIn("clases_declaradas_en_este_slice", c,
+                         "el marcador de slice debe desaparecer al completarse T2")
+
+    def test_el_validador_implementa_los_dos_estados_de_respuesta(self):
+        self.assertEqual(validar.DECLARED, "DECLARED")
+        self.assertEqual(validar.UNDECLARED, "UNDECLARED")
+        self.assertEqual(validar.consultar("no_declarada_en_ninguna_parte"),
+                         (validar.UNDECLARED, None))
 
 
 if __name__ == "__main__":

@@ -12,6 +12,7 @@ import hashlib
 import importlib
 import json
 import os
+import re
 import sys
 
 import estado as _estado
@@ -67,6 +68,180 @@ FUENTE_NO_RESOLUBLE = "FUENTE_NO_RESOLUBLE"
 
 class ValidacionError(Exception):
     pass
+
+
+# --- Estados de respuesta (T2/T6 completos) ---------------------------------
+#
+#   DECLARED    la pregunta tiene entrada en el registro
+#   UNDECLARED  NO la tiene -> respuesta explicita, NUNCA un valor por defecto
+#
+# Son un EJE DISTINTO de las clases: CODE-ANCHORED / AMBIGUOUS /
+# HUMAN-ASSERTED clasifican una entrada declarada; DECLARED/UNDECLARED dicen
+# si hay entrada. El validador no los confunde.
+DECLARED = "DECLARED"
+UNDECLARED = "UNDECLARED"
+
+# l0-closure/v1  [N] CIERRE EFECTIVO DE L0 (P-2)
+#
+#   L0_efectivo = (a) todo CLAUDE.md del arbol, excluyendo .git/
+#               + (b) ficheros traidos por import explicito desde (a)
+#               + (c) lecturas obligatorias INCONDICIONALES declaradas en (a)
+#
+#   FRONTERA:  OBLIGATORY LOAD != REFERENCE != POINTER
+#   Una cita, un enlace, un canonical_source o un historical_pointer NO
+#   expanden L0. Solo lo hace una declaracion explicita de lectura
+#   obligatoria previa. Sin esta frontera, el grafo de referencias
+#   convertiria el contexto pequeno en un cierre recursivo.
+#
+#   Una lectura obligatoria CONDICIONAL (acotada a una parte del trabajo, como
+#   el protocolo de privacidad: "antes de tratar cualquier dato del usuario")
+#   es L2, no L0. Su ENUNCIADO vive en L0; su texto integro se recupera bajo
+#   demanda (decision del PRD, seccion CONTEXT MODEL).
+#
+#   HEURISTICA DECLARADA, con su limite: reconoce el patron imperativo de
+#   lectura con una ruta entre backticks. Una lectura obligatoria redactada
+#   de otra forma no seria detectada. La comprobacion declarado-vs-efectivo
+#   atrapa el caso contrario -- algo que se carga y no se declaro -- pero no
+#   este. Es enumerable desde el sistema de ficheros y NO introspecciona el
+#   comportamiento interno de ningun runtime externo.
+L0_CLOSURE_VERSION = "l0-closure/v1"
+_PATRON_LECTURA = re.compile(r"(?im)^.*?\b(?:lee|leer)\b[^`\n]*`([^`\n]+)`")
+_PATRON_CONDICION = re.compile(r"(?i)antes de\s+(.+?),")
+_ALCANCE_INCONDICIONAL = ("trabajar en nada",)
+_PATRON_IMPORT = re.compile(r"(?m)^@([^\s]+)\s*$")
+
+GATE_L0 = 12000
+OBJETIVO_L0 = 10000          # NO vinculante: nunca es criterio de fallo
+
+L0_DIVERGENTE = "L0_DIVERGENTE"
+L0_SOBRE_PRESUPUESTO = "L0_SOBRE_PRESUPUESTO"
+AMBIGUEDAD_RESUELTA_EN_SILENCIO = "AMBIGUEDAD_RESUELTA_EN_SILENCIO"
+AFIRMACION_SIN_FECHA = "AFIRMACION_SIN_FECHA"
+AFIRMACION_SIN_AUTORIA = "AFIRMACION_SIN_AUTORIA"
+EVIDENCIA_NO_RESOLUBLE = "EVIDENCIA_NO_RESOLUBLE"
+BLOQUE_DESCONOCIDO = "BLOQUE_DESCONOCIDO"
+FUERA_DE_ALCANCE = "FUERA_DE_ALCANCE"
+
+ARBOLES_PROHIBIDOS = ("engine/", "data/", "knowledge/")
+
+
+def consultar(query_id, contrato=None):
+    """(estado, entrada). UNDECLARED NUNCA trae un valor por defecto."""
+    for q in _estado.consultas(contrato or _estado.cargar_contrato()):
+        if q["query_id"] == query_id:
+            return DECLARED, q
+    return UNDECLARED, None
+
+
+def l0_efectivo(raiz=RAIZ):
+    """Cierre enumerable de L0 segun P-2. Devuelve (conjunto, detalle)."""
+    pendientes, conjunto, condicionales, imports = [], [], [], []
+    for carpeta, subdirs, ficheros in os.walk(raiz):
+        subdirs[:] = [d for d in subdirs if d not in (".git", "__pycache__")]
+        for f in ficheros:
+            if f == "CLAUDE.md":
+                rel = os.path.relpath(os.path.join(carpeta, f), raiz).replace(os.sep, "/")
+                conjunto.append(rel)
+                pendientes.append(rel)
+
+    vistos = set(conjunto)
+    while pendientes:
+        rel = pendientes.pop()
+        destino = os.path.join(raiz, rel)
+        if not os.path.isfile(destino):
+            continue
+        texto = open(destino, encoding="utf-8").read()
+        for ruta in _PATRON_IMPORT.findall(texto):          # (b) imports
+            if ruta not in vistos:
+                vistos.add(ruta); conjunto.append(ruta); imports.append(ruta)
+                pendientes.append(ruta)
+        for linea in texto.split("\n"):                      # (c) lecturas
+            m = _PATRON_LECTURA.search(linea)
+            if not m:
+                continue
+            ruta = m.group(1).strip()
+            if not os.path.isfile(os.path.join(raiz, ruta)):
+                continue
+            cond = _PATRON_CONDICION.search(linea)
+            incondicional = bool(cond) and any(
+                a in cond.group(1) for a in _ALCANCE_INCONDICIONAL)
+            if incondicional:
+                if ruta not in vistos:
+                    vistos.add(ruta); conjunto.append(ruta); pendientes.append(ruta)
+            elif ruta not in condicionales:
+                condicionales.append(ruta)
+    return sorted(conjunto), {"metodo": L0_CLOSURE_VERSION, "imports": sorted(imports),
+                              "L2_condicional": sorted(condicionales)}
+
+
+def medir_l0(conjunto, raiz=RAIZ):
+    """l0-budget/v1: ceil(bytes_utf8 / 4), sumado. PROXY, no medicion."""
+    total = 0
+    for rel in conjunto:
+        p = os.path.join(raiz, rel)
+        if os.path.isfile(p):
+            total += -(-os.path.getsize(p) // 4)
+    return total
+
+
+# vigencia-decisiones/v1  [N] REGLA DECLARADA, con su limite
+#
+#   Una decision se considera marcada como vigente si su cuerpo contiene
+#   alguno de los marcadores en negrita del conjunto declarado. Medido sobre
+#   docs/DECISIONES.md: el fichero usa CUATRO redacciones distintas --
+#   "**Vigente**" (50), "**Vigente.**" (D-01), "**VIGENTE e IMPLEMENTADA**"
+#   (D-21) y solo "**Decision vigente**" dentro de un bullet (D-27).
+#
+#   LIMITE, y es importante: con esta regla las 53 decisiones salen marcadas.
+#   Eso NO significa que ninguna haya sido superada -- significa que
+#   DECISIONES.md NO distingue vigente de superada de forma legible por
+#   maquina, porque el protocolo prohibe borrar historia y las revisiones se
+#   anaden DENTRO de la misma entrada. Esa distincion es una DEUDA ABIERTA;
+#   F1 no la resuelve ni la inventa.
+VIGENCIA_DECISIONES_VERSION = "vigencia-decisiones/v1"
+_MARCADOR_VIGENCIA = re.compile(r"(?i)\*\*(?:decisi[oó]n\s+)?vigente")
+
+
+def decisiones_vigentes(raiz=RAIZ):
+    """IDs marcados como vigentes segun vigencia-decisiones/v1."""
+    p = os.path.join(raiz, "docs", "DECISIONES.md")
+    if not os.path.isfile(p):
+        return []
+    trozos = re.split(r"(?m)^##\s+(D-\d+)", open(p, encoding="utf-8").read())
+    return [trozos[i] for i in range(1, len(trozos), 2)
+            if _MARCADOR_VIGENCIA.search(trozos[i + 1])]
+
+
+def guardas_superficie(texto):
+    """Anti-deriva: exactamente cinco bloques, ni uno mas."""
+    bloques = list(_estado.bloques(texto))
+    esperados = list(_estado.BLOQUES_SUPERFICIE)
+    if bloques == esperados:
+        return True, None
+    sobra = [b for b in bloques if b not in esperados]
+    if sobra:
+        return False, (f"{BLOQUE_DESCONOCIDO}: la superficie no admite un SEXTO bloque "
+                       f"(ni un septimo): {sobra}")
+    return False, f"{BLOQUE_DESCONOCIDO}: faltan bloques {set(esperados) - set(bloques)}"
+
+
+def guarda_alcance(rutas):
+    """Anti-deriva: F1 no toca engine/, data/ ni knowledge/."""
+    fuera = [r for r in rutas if r.startswith(ARBOLES_PROHIBIDOS)]
+    if fuera:
+        return False, f"{FUERA_DE_ALCANCE}: F1 no puede tocar {fuera}"
+    return True, None
+
+
+def _evidencia_resoluble(ref, raiz=RAIZ):
+    if ref.startswith("file:"):
+        return os.path.isfile(os.path.join(raiz, ref[5:]))
+    if ref.startswith("commit:"):
+        import subprocess
+        r = subprocess.run(["git", "-C", raiz, "cat-file", "-e", ref[7:] + "^{commit}"],
+                           capture_output=True)
+        return r.returncode == 0
+    return False
 
 
 def _resolver(canonical_source):
@@ -131,77 +306,146 @@ def _renderizaciones(v):
             json.dumps(n), repr(n), repr(sorted(n))}
 
 
-def validar(contrato=None, superficie=None):
-    """Informe por consulta declarada.
+def _validar_code_anchored(c, superficie, bloque):
+    r = {"query_id": c["query_id"], "class": c["class"], "ok": True, "motivo": None,
+         "canonical_source": c["canonical_source"], "valor_resuelto": None}
+    valor, error = _resolver(c["canonical_source"])
+    if error:
+        return dict(r, ok=False, motivo=error)
+    r["valor_resuelto"] = _normalizar(valor)
+    r["fingerprint_resuelto"] = _huella(valor)
 
-    Sin consultas declaradas, cero resultados: el mecanismo de STATE QUERY
-    no existe todavia.
+    declarado = c.get("canonical_fingerprint")
+    if declarado and declarado != r["fingerprint_resuelto"]:
+        return dict(r, ok=False,
+                    motivo=f"{DIVERGENCIA_CANONICA}: la fuente canonica cambio desde que se "
+                           f"declaro {c['query_id']} (sello {declarado[:12]} != "
+                           f"{r['fingerprint_resuelto'][:12]})")
+    if c["canonical_source"] not in bloque:
+        return dict(r, ok=False,
+                    motivo=f"{REFERENCIA_AUSENTE}: la superficie no referencia "
+                           f"{c['canonical_source']}")
+    if any(x in superficie for x in _renderizaciones(valor)):
+        return dict(r, ok=False,
+                    motivo=f"{DUPLICACION_COMO_VERDAD}: la superficie almacena el valor de "
+                           f"{c['query_id']} en vez de referenciarlo")
+    if "value" in c or "valor" in c:
+        return dict(r, ok=False,
+                    motivo=f"{DUPLICACION_COMO_VERDAD}: el registro almacena el valor de "
+                           f"{c['query_id']} en vez de referenciarlo")
+    return r
 
-    En T6-SLICE solo se valida CODE-ANCHORED. AMBIGUOUS, HUMAN-ASSERTED y
-    UNDECLARED son T6 completo y NO estan implementados."""
+
+def _validar_ambiguous(c):
+    """Una AMBIGUOUS se valida por que SIGUE siendo ambigua, nunca por valor.
+
+    Si las fuentes convergen, la entrada CADUCA y hay que reclasificarla --
+    no se auto-resuelve. Es la propiedad que impide que el contexto fabrique
+    certeza falsa sobre una pregunta con dos respuestas defendibles."""
+    r = {"query_id": c["query_id"], "class": c["class"], "ok": True, "motivo": None,
+         "candidate_sources": [f["canonical_source"] for f in c["candidate_sources"]]}
+    if "value" in c or "valor" in c:
+        return dict(r, ok=False,
+                    motivo=f"{AMBIGUEDAD_RESUELTA_EN_SILENCIO}: {c['query_id']} almacena un "
+                           f"valor unico para una pregunta con dos respuestas defendibles")
+    if len(c["candidate_sources"]) < 2:
+        return dict(r, ok=False,
+                    motivo=f"{AMBIGUEDAD_RESUELTA_EN_SILENCIO}: una AMBIGUOUS necesita >=2 fuentes")
+    valores = []
+    for f in c["candidate_sources"]:
+        v, err = _resolver(f["canonical_source"])
+        if err:
+            return dict(r, ok=False, motivo=err)
+        valores.append(v)
+    if c.get("discrepancy_check") == "interseccion_no_vacia":
+        comun = set(_normalizar(valores[0])) & set(_normalizar(valores[1]))
+        r["discrepancia"] = sorted(comun)
+        if not comun:
+            return dict(r, ok=False,
+                        motivo=f"{AMBIGUEDAD_RESUELTA_EN_SILENCIO}: las fuentes de "
+                               f"{c['query_id']} ya no discrepan; la entrada CADUCO y hay "
+                               f"que reclasificarla, no darla por resuelta")
+    return r
+
+
+def _validar_human_asserted(c, raiz):
+    """Se verifica TRAZABILIDAD, nunca veracidad. Una afirmacion falsa pero
+    bien citada pasa: es el techo declarado de esta arquitectura."""
+    r = {"query_id": c["query_id"], "class": c["class"], "ok": True, "motivo": None,
+         "asserted_at": c.get("asserted_at"), "evidence_ref": c.get("evidence_ref")}
+    if not c.get("asserted_at"):
+        return dict(r, ok=False, motivo=f"{AFIRMACION_SIN_FECHA}: {c['query_id']}")
+    if not c.get("asserted_by"):
+        return dict(r, ok=False, motivo=f"{AFIRMACION_SIN_AUTORIA}: {c['query_id']}")
+    ref = c.get("evidence_ref")
+    if not ref or not _evidencia_resoluble(ref, raiz):
+        return dict(r, ok=False,
+                    motivo=f"{EVIDENCIA_NO_RESOLUBLE}: {c['query_id']} cita {ref!r}, que no "
+                           f"resuelve a un commit ni a un fichero existente")
+    return r
+
+
+def validar(contrato=None, superficie=None, raiz=RAIZ):
+    """Informe por consulta declarada, para las TRES clases.
+
+    T6 COMPLETO: CODE-ANCHORED (igualdad con la fuente), AMBIGUOUS (sigue
+    discrepando, sin valor unico) y HUMAN-ASSERTED (trazabilidad).
+    """
     contrato = contrato or _estado.cargar_contrato()
     superficie = superficie if superficie is not None else _estado.texto_superficie(contrato)
     bloque = _estado.bloques(superficie).get(contrato["bloque_de_referencias"], "")
 
     resultados = []
     for c in _estado.consultas(contrato):
-        if c["class"] != "CODE-ANCHORED":
-            continue
-        r = {"query_id": c["query_id"], "class": c["class"],
-             "canonical_source": c["canonical_source"], "ok": True,
-             "motivo": None, "valor_resuelto": None}
-        valor, error = _resolver(c["canonical_source"])
-        if error:
-            r.update(ok=False, motivo=error)
-            resultados.append(r)
-            continue
-        r["valor_resuelto"] = _normalizar(valor)
-        r["fingerprint_resuelto"] = _huella(valor)
+        if c["class"] == "CODE-ANCHORED":
+            resultados.append(_validar_code_anchored(c, superficie, bloque))
+        elif c["class"] == "AMBIGUOUS":
+            resultados.append(_validar_ambiguous(c))
+        elif c["class"] == "HUMAN-ASSERTED":
+            resultados.append(_validar_human_asserted(c, raiz))
 
-        # 0. El sello de deriva: se declaro contra ESTE estado del codigo.
-        declarado = c.get("canonical_fingerprint")
-        if declarado and declarado != r["fingerprint_resuelto"]:
-            r.update(ok=False, motivo=f"{DIVERGENCIA_CANONICA}: la fuente canonica cambio desde "
-                                      f"que se declaro la consulta {c['query_id']} "
-                                      f"(sello {declarado[:12]} != {r['fingerprint_resuelto'][:12]})")
-            resultados.append(r)
-            continue
+    conjunto, detalle = l0_efectivo(raiz)
+    l0 = {"metodo_cierre": L0_CLOSURE_VERSION, "metodo_medida": "l0-budget/v1",
+          "efectivo": conjunto, "declarado": sorted(contrato.get("L0", [])),
+          "tokens": medir_l0(conjunto, raiz), "gate": GATE_L0, **detalle}
+    incidencias = []
+    if l0["declarado"] != l0["efectivo"]:
+        incidencias.append(f"{L0_DIVERGENTE}: declarado {l0['declarado']} != "
+                           f"efectivo {l0['efectivo']}")
+    if l0["tokens"] > GATE_L0:
+        incidencias.append(f"{L0_SOBRE_PRESUPUESTO}: {l0['tokens']} > {GATE_L0}")
+    ok_sup, motivo_sup = guardas_superficie(superficie)
+    if not ok_sup:
+        incidencias.append(motivo_sup)
 
-        # 1. La superficie tiene que REFERENCIAR la fuente.
-        if c["canonical_source"] not in bloque:
-            r.update(ok=False, motivo=f"{REFERENCIA_AUSENTE}: la superficie no referencia "
-                                      f"{c['canonical_source']}")
-
-        # 2. Y NO puede contener el valor: eso es duplicar como verdad.
-        elif any(x in superficie for x in _renderizaciones(valor)):
-            r.update(ok=False, motivo=f"{DUPLICACION_COMO_VERDAD}: la superficie almacena el "
-                                      f"valor de {c['query_id']} en vez de referenciarlo")
-
-        # 3. Si el contrato almacenase el valor, tambien seria duplicacion.
-        elif "value" in c or "valor" in c:
-            declarado = _normalizar(c.get("value", c.get("valor")))
-            if declarado != r["valor_resuelto"]:
-                r.update(ok=False, motivo=f"{DIVERGENCIA_CANONICA}: declarado {declarado!r} "
-                                          f"!= canonico {r['valor_resuelto']!r}")
-            else:
-                r.update(ok=False, motivo=f"{DUPLICACION_COMO_VERDAD}: el registro almacena el "
-                                          f"valor de {c['query_id']} en vez de referenciarlo")
-        resultados.append(r)
     return {"consultas_declaradas": len(_estado.consultas(contrato)),
             "fingerprint_version": CANONICAL_FINGERPRINT_VERSION,
             "duplicacion_deteccion": DUPLICACION_HEURISTICA_VERSION,
-            "resultados": resultados}
+            "vigencia_decisiones": VIGENCIA_DECISIONES_VERSION,
+            "l0": l0, "incidencias": incidencias, "resultados": resultados}
 
 
 def main(argv=None):
     informe = validar()
-    n = informe["consultas_declaradas"]
-    print(f"CONTEXTO DURABLE - {n} consulta(s) declarada(s)")
+    l0 = informe["l0"]
+    print(f"CONTEXTO DURABLE - {informe['consultas_declaradas']} consulta(s) declarada(s)")
+    print(f"  L0 ({l0['metodo_medida']}, PROXY declarado)  {l0['tokens']} tok / gate {l0['gate']}")
+    print(f"     cierre {l0['metodo_cierre']}: {l0['efectivo']}")
+    if l0["L2_condicional"]:
+        print(f"     L2 condicional (no cuenta): {l0['L2_condicional']}")
+    por_clase = {}
+    for r in informe["resultados"]:
+        por_clase.setdefault(r["class"], []).append(r)
+    for clase, rs in sorted(por_clase.items()):
+        print(f"  {clase:16s} {len(rs)} consulta(s)")
     fallos = [r for r in informe["resultados"] if not r["ok"]]
     for r in fallos:
         print(f"  FAIL {r['query_id']}: {r['motivo']}")
-    print(f"RESULTADO: {'FAIL' if fallos else 'PASS'}")
-    return 1 if fallos else 0
+    for inc in informe["incidencias"]:
+        print(f"  FAIL {inc}")
+    ok = not fallos and not informe["incidencias"]
+    print(f"RESULTADO: {'PASS' if ok else 'FAIL'}")
+    return 0 if ok else 1
 
 
 if __name__ == "__main__":

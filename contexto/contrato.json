@@ -1,17 +1,6 @@
 {
  "contrato": "contexto/v1",
- "_estado": "T2-SLICE — NO es T2 completo. Solo declara la clase CODE-ANCHORED, lo minimo que la bala trazadora de BLOCK 1A necesita. T2 completo exige ademas AMBIGUOUS, HUMAN-ASSERTED y DECLARED/UNDECLARED, y sigue pendiente.",
- "clases_declaradas_en_este_slice": {
-  "CODE-ANCHORED": "existe UNA fuente canonica en codigo. El valor NO se almacena: se resuelve al validar y se compara. Duplicarlo en la superficie es duplicar como verdad, y falla."
- },
- "clases_pendientes_de_T2_completo": [
-  "AMBIGUOUS",
-  "HUMAN-ASSERTED"
- ],
- "estados_de_respuesta_pendientes_de_T2_completo": [
-  "DECLARED",
-  "UNDECLARED"
- ],
+ "_estado": "T2 COMPLETO (2026-09-12). Las tres clases y los dos estados de respuesta.",
  "superficie": "contexto/ESTADO_VIGENTE.md",
  "bloque_de_referencias": "CANONICAL REFERENCES",
  "state_queries": [
@@ -20,10 +9,140 @@
    "question": "¿Qué predicados son no causales?",
    "class": "CODE-ANCHORED",
    "canonical_source": "engine/knowledge/modelo.py::PREDICADOS_NO_CAUSALES",
-   "_nota": "NO se almacena el valor: se resuelve al validar y se compara. Almacenarlo seria duplicar como verdad.",
    "canonical_fingerprint": "f5d1ca60118498826528e476d706a8c48e9105cc6bd30a88d78022a3dd8a2d03",
    "canonical_fingerprint_version": "canonical-fingerprint/v1",
    "_canonical_fingerprint_es": "metadata / provenance, no query result"
+  },
+  {
+   "query_id": "clases_semanticas_de_predicado",
+   "question": "¿Qué clase semántica tiene cada predicado?",
+   "class": "CODE-ANCHORED",
+   "canonical_source": "engine/knowledge/modelo.py::SEMANTICA_PREDICADO",
+   "canonical_fingerprint": "78d55727559eac7f1deec4784c041a7b256cf7d68fda0b9399fbe70b4d01558c",
+   "canonical_fingerprint_version": "canonical-fingerprint/v1",
+   "_canonical_fingerprint_es": "metadata / provenance, no query result"
+  },
+  {
+   "query_id": "rule_version_causal",
+   "question": "¿Qué versión de reglas causales está vigente?",
+   "class": "CODE-ANCHORED",
+   "canonical_source": "engine/causal/mecanismos.py::RULE_VERSION",
+   "canonical_fingerprint": "f0a573d6b307f13a7623abe2098c9f62bca3784e1c839ac24a5ed5575b77a84c",
+   "canonical_fingerprint_version": "canonical-fingerprint/v1",
+   "_canonical_fingerprint_es": "metadata / provenance, no query result"
+  },
+  {
+   "query_id": "direcciones_economicas",
+   "question": "¿Qué direcciones económicas admite un camino?",
+   "class": "CODE-ANCHORED",
+   "canonical_source": "engine/causal/mecanismos.py::DIRECCIONES_CAMINO",
+   "canonical_fingerprint": "c164b5d8132d240b500e9476193b26756bb764c864325eb61220c056715bfbb2",
+   "canonical_fingerprint_version": "canonical-fingerprint/v1",
+   "_canonical_fingerprint_es": "metadata / provenance, no query result"
+  },
+  {
+   "query_id": "niveles_de_soporte",
+   "question": "¿Qué niveles de soporte existen?",
+   "class": "CODE-ANCHORED",
+   "canonical_source": "engine/causal/mecanismos.py::SOPORTES",
+   "canonical_fingerprint": "9337544d28c93d4bdc56cad6cd243a3472327c56de41916c9ada7a8042c662e7",
+   "canonical_fingerprint_version": "canonical-fingerprint/v1",
+   "_canonical_fingerprint_es": "metadata / provenance, no query result"
+  },
+  {
+   "query_id": "variables_de_mecanismo",
+   "question": "¿Qué variables observa un mecanismo?",
+   "class": "CODE-ANCHORED",
+   "canonical_source": "engine/causal/mecanismos.py::VARIABLES_MECANISMO",
+   "canonical_fingerprint": "d45b2415138264c91d7149bd04963509a119590a00135dae9ab3aa9ebb648d2d",
+   "canonical_fingerprint_version": "canonical-fingerprint/v1",
+   "_canonical_fingerprint_es": "metadata / provenance, no query result"
+  },
+  {
+   "query_id": "semanticas_de_camino",
+   "question": "¿Qué semánticas puede tener un camino causal?",
+   "class": "CODE-ANCHORED",
+   "canonical_source": "engine/causal/caminos.py::SEMANTICAS_CAMINO",
+   "canonical_fingerprint": "862c8d26249937d4f5aed7edd0457ad78f949755235bafa338004a562940c746",
+   "canonical_fingerprint_version": "canonical-fingerprint/v1",
+   "_canonical_fingerprint_es": "metadata / provenance, no query result"
+  },
+  {
+   "query_id": "campos_causal_assessment",
+   "question": "¿Qué campos tiene un CausalAssessment?",
+   "class": "CODE-ANCHORED",
+   "canonical_source": "engine/causal/valoracion.py::CAMPOS_ASSESSMENT",
+   "canonical_fingerprint": "373b7094efb180b4789423526425761d64044d4ae0582e501a3119627ee551e6",
+   "canonical_fingerprint_version": "canonical-fingerprint/v1",
+   "_canonical_fingerprint_es": "metadata / provenance, no query result"
+  },
+  {
+   "query_id": "estados_integridad_historica",
+   "question": "¿Qué estados admite el manifiesto histórico?",
+   "class": "CODE-ANCHORED",
+   "canonical_source": "contexto/integridad.py::ESTADOS",
+   "canonical_fingerprint": "9447e9bc28e427eb17c2ac2d13fcca976ae8ebd337c06175db0beed40ded8479",
+   "canonical_fingerprint_version": "canonical-fingerprint/v1",
+   "_canonical_fingerprint_es": "metadata / provenance, no query result"
+  },
+  {
+   "query_id": "relaciones_economicas_afirmativas",
+   "question": "¿Cuántas relaciones económicas afirmativas existen?",
+   "class": "AMBIGUOUS",
+   "candidate_sources": [
+    {
+     "canonical_source": "engine/knowledge/modelo.py::PREDICADOS_CAUSALES",
+     "lectura": "21 — EXPOSED_TO cuenta como CAUSAL para el recorrido (P5A)"
+    },
+    {
+     "canonical_source": "engine/causal/mecanismos.py::SIN_MECANISMO",
+     "lectura": "3 — EXPOSED_TO no puede producir signo económico (P5B, D-02)"
+    }
+   ],
+   "ambiguity_note": "La palabra 'causal' significa dos cosas distintas en dos capas, y las dos son deliberadas. EXPOSED_TO está simultáneamente en PREDICADOS_CAUSALES y en SIN_MECANISMO. X-1.",
+   "discrepancy_check": "interseccion_no_vacia",
+   "resolution_ref": null,
+   "_no_se_resuelve_en_F1": "pertenece a P5A, capa cerrada. F1 la REGISTRA, no la resuelve."
+  },
+  {
+   "query_id": "p5b_implementado",
+   "question": "¿Está P5B implementado?",
+   "class": "HUMAN-ASSERTED",
+   "asserted_value": "sí — engine/causal/valoracion.py, reglas R0-R5, 32 tests",
+   "asserted_at": "2026-09-12",
+   "asserted_by": "sesión de F1 (auditoría del repositorio), revisada por el usuario",
+   "evidence_ref": "commit:0c4003f",
+   "_test_verifica": "TRAZABILIDAD, no veracidad. Una afirmación falsa pero bien citada pasa."
+  },
+  {
+   "query_id": "p5a_endurecido",
+   "question": "¿Está aplicada la variante C de D-49 sobre P5A?",
+   "class": "HUMAN-ASSERTED",
+   "asserted_value": "sí — D-53, path_semantics y caminos_causales()",
+   "asserted_at": "2026-09-12",
+   "asserted_by": "sesión de F1 (auditoría del repositorio), revisada por el usuario",
+   "evidence_ref": "commit:ff7a4da",
+   "_test_verifica": "TRAZABILIDAD, no veracidad. Una afirmación falsa pero bien citada pasa."
+  },
+  {
+   "query_id": "f1_estado",
+   "question": "¿En qué punto está F1?",
+   "class": "HUMAN-ASSERTED",
+   "asserted_value": "T1, T5 y los slices de T2/T4/T6 cerrados; T7-T10 pendientes",
+   "asserted_at": "2026-09-12",
+   "asserted_by": "sesión de F1 (auditoría del repositorio), revisada por el usuario",
+   "evidence_ref": "commit:8c38056",
+   "_test_verifica": "TRAZABILIDAD, no veracidad. Una afirmación falsa pero bien citada pasa."
+  },
+  {
+   "query_id": "backfill_ready",
+   "question": "¿Está el universo histórico listo para backfill?",
+   "class": "HUMAN-ASSERTED",
+   "asserted_value": "no — BACKFILL_READY=false, el cuello es la identidad de instrumento",
+   "asserted_at": "2026-09-12",
+   "asserted_by": "sesión de F1 (auditoría del repositorio), revisada por el usuario",
+   "evidence_ref": "file:informes/2026-09-08_backfill_readiness_historico.md",
+   "_test_verifica": "TRAZABILIDAD, no veracidad. Una afirmación falsa pero bien citada pasa."
   }
  ],
  "mecanismos": {
@@ -47,10 +166,22 @@
    "que_detecta": "la marca de seccion, y cualquier linea de >=80 caracteres del contenido extraido que siga en CLAUDE.md",
    "limitacion": "heuristic detection != formal proof of absence. Una parafrasis la evadiria.",
    "proteccion_primaria": "contractual: la seccion se extrae entera y su ancla se verifica aparte"
+  },
+  "l0-closure/v1": {
+   "frontera": "OBLIGATORY LOAD != REFERENCE != POINTER",
+   "cierre": "(a) todo CLAUDE.md del arbol + (b) imports explicitos + (c) lecturas obligatorias INCONDICIONALES",
+   "condicional_es_L2": "una lectura obligatoria acotada a una parte del trabajo (protocolo de privacidad) es L2; su enunciado esta en L0, su texto integro se recupera bajo demanda",
+   "limitacion": "heuristica sobre el patron imperativo de lectura. Una lectura obligatoria redactada de otra forma no seria detectada. Enumerable desde el sistema de ficheros; no introspecciona ningun runtime externo."
+  },
+  "vigencia-decisiones/v1": {
+   "regla": "una decision esta marcada como vigente si su cuerpo contiene **Vigente / **Vigente. / **VIGENTE... / **Decision vigente",
+   "medido": "DECISIONES.md usa CUATRO redacciones distintas; con esta regla las 53 salen marcadas",
+   "limitacion": "eso NO significa que ninguna haya sido superada: DECISIONES.md no distingue vigente de superada de forma legible por maquina, porque el protocolo prohibe borrar historia y las revisiones se anaden dentro de la misma entrada"
   }
  },
  "open_debt": [
-  "Structural enforcement of no-value duplication (D-2): la deteccion es heuristica, no estructural. NO se amplia F1 para resolverla."
+  "Structural enforcement of no-value duplication (D-2): la deteccion es heuristica, no estructural. NO se amplia F1 para resolverla.",
+  "DECISIONES.md no distingue vigente de superada de forma legible por maquina (vigencia-decisiones/v1). F1 lo REGISTRA, no lo resuelve."
  ],
  "procedencia_historica": {
   "contexto/historico/claude_md_estado_previo_a_F1.md": {
@@ -63,5 +194,26 @@
    "verificado_por": "contexto/extraccion.py (mecanismo SEPARADO del manifiesto principal, P-1)",
    "_nota": "La procedencia vive AQUI, fuera del contenido extraido: anadirla dentro del fichero destruiria el ancla (verificado: da ac9854d9...)."
   }
+ },
+ "clases": {
+  "CODE-ANCHORED": "una unica fuente canonica en codigo. El valor NO se almacena: se resuelve al validar y se compara. Test de IGUALDAD.",
+  "AMBIGUOUS": "dos o mas respuestas defendibles. NO almacena valor y NO es testeable por valor. Se comprueba que las fuentes SIGUEN discrepando; si convergen, la entrada caduca y hay que reclasificarla. No se resuelve en F1.",
+  "HUMAN-ASSERTED": "sin fuente canonica en codigo. Lleva asserted_value, asserted_at, asserted_by y evidence_ref. Su test verifica TRAZABILIDAD, nunca veracidad."
+ },
+ "estados_de_respuesta": {
+  "DECLARED": "la pregunta tiene entrada en el registro",
+  "UNDECLARED": "NO la tiene. Respuesta explicita, NUNCA un valor por defecto, None-como-cero ni cadena vacia."
+ },
+ "L0": [
+  "CLAUDE.md",
+  "contexto/ESTADO_VIGENTE.md"
+ ],
+ "presupuesto_L0": {
+  "gate_duro": 12000,
+  "objetivo_no_vinculante": 10000,
+  "objetivo_10000_es_criterio_de_fallo": false,
+  "metodo_medida": "l0-budget/v1",
+  "metodo_cierre": "l0-closure/v1",
+  "_nota": "12.000 es el limite del PROXY l0-budget/v1, no una medicion universal de tokens de ningun proveedor."
  }
 }
