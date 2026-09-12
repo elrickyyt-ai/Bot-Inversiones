@@ -178,5 +178,25 @@
     "confidence_pct": 80,
     "data_as_of": "2026-09-11",
     "retrieved_at": "2026-09-11T10:14:16Z"
+  },
+  {
+    "thesis_id": "ETH_2026-09-12_2026-09-12T09:48:36Z",
+    "asset_id": "ETH",
+    "thesis_type": "crypto",
+    "bull_case": "Si el precio confirma el sesgo técnico actual (mixto (3/4 señales alcistas — sin confluencia clara)) y el contexto macro deja de ser restrictivo (pausa o recortes de tipos), la posición actual cerca de mínimos de 365d dejaría margen de recuperación.",
+    "base_case": "Continuación del rango actual sin una confluencia clara en ningún sentido — es la lectura más probable con los datos de hoy, según el propio motor técnico.",
+    "bear_case": "Si el entorno de tipos altos persiste y el técnico gira a bajista, no hay en los datos actuales un catalizador fundamental (tokenomics/on-chain) que sostenga un rebote.",
+    "contradictions": [],
+    "convergences": [],
+    "divergences": [
+      "Fundamental muestra el activo cerca de mínimos de 365d, pero el técnico ya muestra sesgo alcista de corto plazo — posible giro temprano, o rebote técnico dentro de una tendencia de fondo aún débil. No se puede distinguir con los datos actuales."
+    ],
+    "invalidation_factors": [
+      "Un cambio de régimen macro (la Fed o el BCE giran a recortes agresivos) alteraría el contexto que sostiene la lectura actual.",
+      "Una corrección posterior de los datos marcados con posible incidencia (ver advertencias) cambiaría la lectura fundamental."
+    ],
+    "confidence_pct": 80,
+    "data_as_of": "2026-09-12",
+    "retrieved_at": "2026-09-12T09:48:36Z"
   }
 ]
