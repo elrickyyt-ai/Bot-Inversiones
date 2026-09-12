@@ -105,6 +105,8 @@ CONSUMO (desacoplado, no dicta el motor)   Power BI · Web App
 | D-46/47/48/49 | `e581e22` | Backfill readiness: `false`; el cuello es la identidad del instrumento, no la cobertura |
 | D-50/51/52 | `86068de` | Historical Instrument Master v1: aliases fechados, `SUCCEEDED_BY` no causal, validador temporal |
 | D-53 | `ff7a4da` | P5A hardening: el recorrido causal se define por contenido, no por lista negra |
+| **F1** | `6316bcd`…`f784b85` | **Contexto durable**: `contexto/` — integridad histórica por manifiesto, contrato de STATE QUERY, superficie de estado vigente, presupuesto `contexto:L0` por cierre efectivo, índice de alcanzabilidad, batería negativa y gate de PR. **Técnicamente completada; su cierre contractual es `OPEN`** — ver §6 |
+| **S0** | `aadb269`… | **Reconciliación** (en curso): alcance por bloque sin interruptor (D-54), `BLOQUE = desde + hasta`, arquitectura objetivo persistida (D-58), contrato de cierre calculado (D-56) |
 
 Detalle por fase, con qué se rompe si cae y cómo recuperarla: `informes/2026-09-07_trazabilidad_fases_P0_P61.md`.
 
@@ -235,6 +237,11 @@ magnitud      UNKNOWN                      (P6)
 | **`predictive_status` nunca evaluado** | D-29 · `perfil_reaccion.PREDICTIVE_STATUS` | Ninguna comprobación fuera de muestra: ni walk-forward, ni partición temporal, ni otros activos. Corresponde a P8 |
 | **`diagnostico_cohorte.py` fuera de `qa.py`** | D-24 (mismo patrón que la serie de benchmark) | Tiene 12 tests propios sobre datos reales, pero no condiciona el `STATUS: VERIFIED` global |
 | `consolidate.py` huérfano · `confluencia_sesgo` con dos vocabularios | P0 | Sin impacto funcional |
+| **DF-6 — el gate de PR de F1 falla en un runner limpio** | `contrato.json::open_debt`, `bloqueante_para:F1` | `verificar-contexto.yml` declara *«SIN DEPENDENCIAS»* y ejecuta la suite completa, pero 11 ficheros de test importan `pyarrow` vía `storage.py`: **43 errores**. Nunca se detectó porque el repositorio **no ha tenido ni un PR**. **Bloquea el cierre de F1**; se corrige en S0.2 |
+| **DF-7 — `clasificacion-nodos/v2`** | `contrato.json::open_debt` | `ARBOLES_HISTORICOS` hace que todo documento normativo en `docs/` se clasifique `HISTORICAL`. Por eso la arquitectura objetivo vive en `contexto/`. Es evolución del mecanismo de clasificación y queda **fuera de S0** por decisión expresa (D-58) |
+| **DC-5 — colisión de namespace `L0`** | `contrato.json::open_debt` · `arquitectura_objetivo.namespaces` | `contexto:L0` (carga de contexto, implementado en 6 sitios) frente a `autonomia:L0..L4` (0 ocurrencias). Separados por namespace, **sin renombrar el mecanismo implementado** para acomodar al ausente. Misma forma que `X-1` |
+| **DD-4 — `PC-1` sin encaje en el roadmap** | `contrato.json::open_debt` | El roadmap de producto vigente es `P0…P11` y no contiene `PC-1`, que es un bloque de **alcance**. Producto y alcance son ejes distintos, pero la relación no está declarada |
+| **DF-2 — un fichero nuevo no declarado se etiqueta `LOST`** | `contexto/integridad.py` | `main()` invoca `verificar()` sin `adiciones` y no expone forma de declararlas. Falla correctamente, pero el rótulo miente. El procedimiento que lo rodea está declarado en D-56 |
 
 ---
 

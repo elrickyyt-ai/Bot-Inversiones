@@ -354,6 +354,157 @@ def estado_arquitectura(contrato=None, raiz=RAIZ):
     return out
 
 
+# --- Cierre de bloque (S0.4) -----------------------------------------------
+#
+#   CLOSED NO puede ser una afirmacion HUMAN-ASSERTED.
+#
+# Es la leccion de `f1_estado`: una afirmacion bien citada caduco tres commits
+# despues de escribirse, el mismo dia, y paso el validador porque el mecanismo
+# verifica TRAZABILIDAD, no vigencia. Aqui el cierre es un VEREDICTO CALCULADO
+# sobre siete obligaciones. La afirmacion humana queda acotada a la INTENCION
+# ("doy por completo el alcance de este bloque"); las siete obligaciones se
+# calculan o el bloque no cierra.
+#
+#   UNDECLARED  el bloque no declara cierre          != OPEN
+#   OPEN        declarado, con obligaciones sin cumplir
+#   STALE       se cumplieron, pero el material cambio despues
+#   CLOSED      las siete se cumplen sobre commit_de_cierre
+UNDECLARED_CIERRE = "UNDECLARED"
+OPEN = "OPEN"
+STALE = "STALE"
+CLOSED = "CLOSED"
+
+ESTADOS_CIERRE = (UNDECLARED_CIERRE, OPEN, STALE, CLOSED)
+
+# Las siete obligaciones, en el orden en que se evaluan.
+OBLIGACIONES_CIERRE = (
+    "entregables",        # 1 cada entregable declarado resuelve
+    "tests",              # 2 suite verde con el comando declarado
+    "validadores",        # 3 cada autoridad declarada sale 0
+    "alcance",            # 4 el bloque tiene rango y existe sucesor activo
+    "deudas_bloqueantes",  # 5 cero deudas que bloqueen este bloque
+    "ultima_verificacion",  # 6 hay verificacion, y es de este commit
+    "commit",             # 7 commit_de_cierre resoluble y ancestro de HEAD
+)
+
+CIERRE_SIN_DECLARAR = "CIERRE_SIN_DECLARAR"
+CIERRE_OBLIGACION_INCUMPLIDA = "CIERRE_OBLIGACION_INCUMPLIDA"
+CIERRE_CADUCADO = "CIERRE_CADUCADO"
+
+
+def _git(args, raiz=RAIZ):
+    import subprocess
+    return subprocess.run(["git", "-C", raiz] + args,
+                          capture_output=True, text=True)
+
+
+def huella_cierre(decl, raiz=RAIZ):
+    """canonical-fingerprint/v1 sobre los INSUMOS del cierre.
+
+    Si cambia cualquiera -- el contenido de un entregable, el comando de
+    tests, la lista de autoridades o las deudas que bloquean -- la huella
+    cambia y el veredicto pasa a STALE. El cierre caduca solo, sin que nadie
+    tenga que acordarse de revisarlo."""
+    partes = []
+    for rel in sorted(decl.get("entregables") or []):
+        destino = os.path.join(raiz, rel)
+        if os.path.isfile(destino):
+            with open(destino, "rb") as fh:
+                partes.append(f"{rel}:{hashlib.sha256(fh.read()).hexdigest()}")
+        else:
+            partes.append(f"{rel}:AUSENTE")
+    partes.append(f"tests:{decl.get('tests', '')}")
+    partes += [f"autoridad:{a}" for a in sorted(decl.get("validadores") or [])]
+    partes += [f"bloquea:{d}" for d in sorted(decl.get("_bloqueantes") or [])]
+    return _huella(partes)
+
+
+def deudas_bloqueantes(bid, contrato=None):
+    """Deudas abiertas que declaran bloquear este bloque."""
+    c = contrato or _estado.cargar_contrato()
+    return [d for d in (c.get("open_debt") or [])
+            if f"bloqueante_para:{bid}" in d.replace(" ", "")]
+
+
+def veredicto_cierre(bid=None, contrato=None, raiz=RAIZ, ejecutar=False):
+    """(estado, detalle) del cierre de un bloque. NUNCA una afirmacion.
+
+    `ejecutar=False` no lanza la suite ni las autoridades: comprueba que estan
+    DECLARADAS y que la ultima verificacion registrada corresponde a este
+    commit. Ese es el punto -- el cierre se apoya en una verificacion
+    reproducible y fechada, no en volver a correrlo al consultarlo."""
+    c = contrato or _estado.cargar_contrato()
+    bid = bid or c.get("bloque_activo")
+    bloques = c.get("bloques") or {}
+    decl = (bloques.get(bid) or {}).get("cierre")
+    detalle = {"bloque": bid, "obligaciones": {}, "motivos": []}
+
+    if not decl:
+        detalle["motivos"].append(
+            f"{CIERRE_SIN_DECLARAR}: {bid} no declara `cierre`; UNDECLARED no es OPEN")
+        return UNDECLARED_CIERRE, detalle
+
+    b = dict(bloques.get(bid) or {})
+    decl = dict(decl, _bloqueantes=[d[:40] for d in deudas_bloqueantes(bid, c)])
+    ob = detalle["obligaciones"]
+
+    # 1 entregables
+    faltan = [r for r in (decl.get("entregables") or [])
+              if not os.path.exists(os.path.join(raiz, r))]
+    ob["entregables"] = (not faltan, f"faltan {faltan}" if faltan else
+                         f"{len(decl.get('entregables') or [])} resuelven")
+
+    # 2 tests -- declarado, y su resultado vive en la ultima verificacion
+    ob["tests"] = (bool(decl.get("tests")),
+                   decl.get("tests") or "sin comando declarado")
+
+    # 3 validadores
+    auts = decl.get("validadores") or []
+    sin = [a for a in auts if not os.path.exists(
+        os.path.join(raiz, a.split()[0]))]
+    ob["validadores"] = (bool(auts) and not sin,
+                         f"no resuelven {sin}" if sin else f"{len(auts)} declaradas")
+
+    # 4 alcance: rango propio y sucesor activo distinto de este bloque
+    activo = c.get("bloque_activo")
+    ob["alcance"] = (bool(b.get("desde")) and activo is not None and activo != bid,
+                     f"desde={str(b.get('desde'))[:7]} sucesor_activo={activo}")
+
+    # 5 deudas bloqueantes
+    bl = decl["_bloqueantes"]
+    ob["deudas_bloqueantes"] = (not bl, f"{len(bl)} bloqueante(s)" if bl else "ninguna")
+
+    # 6 ultima verificacion, y del mismo commit que el cierre
+    uv = decl.get("ultima_verificacion") or {}
+    ob["ultima_verificacion"] = (
+        bool(uv.get("commit")) and uv.get("commit") == decl.get("commit_de_cierre"),
+        f"verificada en {str(uv.get('commit'))[:7]}")
+
+    # 7 commit resoluble y ancestro de HEAD
+    sha = decl.get("commit_de_cierre")
+    resuelve = bool(sha) and _git(["cat-file", "-e", f"{sha}^{{commit}}"],
+                                  raiz).returncode == 0
+    ancestro = resuelve and _git(["merge-base", "--is-ancestor", sha, "HEAD"],
+                                 raiz).returncode == 0
+    ob["commit"] = (ancestro, f"{str(sha)[:7]} resuelve={resuelve} ancestro={ancestro}")
+
+    incumplidas = [k for k in OBLIGACIONES_CIERRE if not ob[k][0]]
+    if incumplidas:
+        detalle["motivos"] += [
+            f"{CIERRE_OBLIGACION_INCUMPLIDA}: {k} -- {ob[k][1]}" for k in incumplidas]
+        return OPEN, detalle
+
+    # Caducidad: los insumos no pueden haber cambiado desde que se cerro.
+    actual = huella_cierre(decl, raiz)
+    if decl.get("huella") and decl["huella"] != actual:
+        detalle["motivos"].append(
+            f"{CIERRE_CADUCADO}: la huella de los insumos cambio "
+            f"({decl['huella'][:12]} -> {actual[:12]})")
+        return STALE, detalle
+    detalle["huella"] = actual
+    return CLOSED, detalle
+
+
 def rango_bloque(bid=None, contrato=None):
     """(desde, hasta, hasta_es_operativo) del bloque.
 

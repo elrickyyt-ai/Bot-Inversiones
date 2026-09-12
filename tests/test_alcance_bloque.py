@@ -111,7 +111,9 @@ class TestProteccionGlobal(unittest.TestCase):
     def test_T17_anadir_un_informe_nuevo_no_es_proteccion_global(self):
         """Anadir != alterar. Un fichero que no esta en el manifiesto no esta
         fijado por hash, asi que el alcance del bloque basta."""
-        nuevo = "informes/2026-09-12_f1_contexto_durable_y_cierre.md"
+        # Un nombre que no existe: el informe de T10 ya entro al manifiesto
+        # en S0.4, asi que usarlo aqui probaria lo contrario de lo que toca.
+        nuevo = "informes/9999-12-31_informe_que_no_existe.md"
         self.assertNotIn(nuevo, self.protegida)
         v, _ = validar.veredicto_alcance([nuevo], _contrato(bloques=CON_DOCS))
         self.assertEqual(v[nuevo], validar.PERMITIDO)
@@ -348,12 +350,33 @@ class TestAutoridadDeLaExtraccion(unittest.TestCase):
 class TestNoEscribeNada(unittest.TestCase):
 
     def test_ninguna_comprobacion_altero_el_repositorio(self):
-        import subprocess
-        r = subprocess.run(["git", "-C", RAIZ, "status", "--porcelain",
-                            "docs", "informes", "knowledge"],
-                           capture_output=True, text=True)
-        self.assertEqual(r.stdout.strip(), "",
-                         "los tests de alcance no pueden tocar el historico")
+        """REESCRITO en S0.4: antes exigia un arbol limpio, lo que fallaba
+        durante el propio commit que modifica docs/ e informes/. Eso medía el
+        estado del worktree, no la propiedad. La propiedad real es que ESTOS
+        tests no escriben: se comprueba por hash antes y despues."""
+        import hashlib
+        rutas = ["docs/DECISIONES.md", "docs/ESTADO.md", "contexto/contrato.json",
+                 "contexto/manifiesto.json", "contexto/ESTADO_VIGENTE.md"]
+
+        def huellas():
+            out = {}
+            for rel in rutas:
+                destino = os.path.join(RAIZ, rel)
+                if os.path.isfile(destino):
+                    with open(destino, "rb") as fh:
+                        out[rel] = hashlib.sha256(fh.read()).hexdigest()
+            return out
+
+        antes = huellas()
+        self._ejercitar()
+        self.assertEqual(huellas(), antes,
+                         "las comprobaciones no pueden escribir en el repositorio")
+
+    def _ejercitar(self):
+        validar.superficie_protegida()
+        validar.veredicto_alcance(["docs/DECISIONES.md", "contexto/x.py"])
+        validar.guarda_alcance(["docs/ESTADO.md"])
+        validar.rango_bloque("F1")
 
 
 if __name__ == "__main__":

@@ -579,3 +579,61 @@ sec:NVDA.NASDAQ -> ven:NASDAQ -> sec:WBA.NASDAQ -> org:walgreens
 
 - **Dos mecanismos conviven**: `PREDICADOS_NO_CAUSALES` saca `BENCHMARKED_BY`, `COMPARED_TO` y `SUCCEEDED_BY` del índice, y la variante C etiqueta lo emitido. Con C, la lista negra ya no hace falta **como salvaguarda causal**, pero sigue suprimiendo conocimiento estructural verdadero del recorrido: medido, `sec:DWDP.NYSE` a profundidad 2 da **0 caminos** pese a que `rel:0057` (`SUCCEEDED_BY`) existe y está vigente. No se unificó: es un cambio de comportamiento de P5A fuera del alcance.
 - **Ningún consumidor usa `caminos_causales()` todavía.** P5B usa a propósito un camino sin mecanismo para demostrar su `UNKNOWN`; decidir qué capa consume qué conjunto es trabajo de P5B/P5D/P6.
+
+## D-54 · El alcance es del bloque, y siempre hay un bloque activo
+
+**Vigente** (S0.1, 2026-09-12, `aadb269` · `27a3b16`). **Sustituye `alcance_bloque.vigente`, que era un interruptor.**
+
+- **El defecto no era la lista, era el interruptor**: apagarlo dejaba protección **cero**, y un bloque solo podía declarar *que* su alcance aplicaba, nunca *cuál* era. `contrato.json` pasa a `bloque_activo` + `bloques[*].escritura`. **No queda ningún valor del contrato que desactive la guarda**, y hay un test que prueba seis formas de intentarlo.
+- **Cuatro veredictos, precedencia estricta**: `ALCANCE_NO_DECLARADO` > `PROTEGIDO_GLOBAL` > `PERMITIDO` > `FUERA_DE_ALCANCE`. Sin `bloque_activo` todo falla: **no existe el estado «sin guarda»**.
+- **Denegación por defecto**: lo que el bloque no declara no se permite. Mismo invariante que `UNDECLARED` ≠ valor por defecto.
+- **Ninguna lista de árboles se declara en el validador.** La superficie protegida se **deriva** de quien ya posee esa autoridad: las claves de `contexto/manifiesto.json` y el destino de la extracción D-PRD-1. Escribirla habría sido la segunda copia que esta decisión corrige.
+- **`PROTEGIDO_GLOBAL` es condicional, no una prohibición absoluta.** `docs/07` §1 *exige* escribir en `docs/` e `informes/` al cerrar una fase, así que prohibirlo del todo hacía **inejecutable el propio protocolo de cierre** — y eso es exactamente lo que dejó a F1 sin registro. Pasa si la autoridad del dato viaja en el mismo commit: `manifiesto.json` para lo fijado por hash, `extraccion.py` para el destino D-PRD-1. Así **ningún bloque puede autorizarse a sí mismo el histórico**: el permiso lo concede otro mecanismo.
+- **`BLOQUE = desde + hasta`.** La guarda evalúa `desde~1..hasta`, el rango propio del bloque, **no el diff contra la rama base**. Medido sobre el PR de integración real, el diff contra la base daba **389 falsos `FUERA_DE_ALCANCE`** —`data/history` 298, `engine/events` 26, `knowledge/` 13— todos obra de bloques anteriores que la canónica no tiene. `hasta: null` = bloque abierto, con HEAD como valor **operativo**; al cerrarlo se fija al commit y el rango queda reproducible: el significado histórico de un bloque cerrado no puede depender de HEAD.
+- **Dos correcciones que solo se vieron al poder medir el rango propio**: `CLAUDE.md` faltaba en la escritura legítima de F1 pese a que T5 reescribió su bloque de entrada a propósito —declaración incompleta, no permiso nuevo—; y la condición del destino D-PRD-1 rechazaba al bloque que lo **creó**, porque crear no es alterar.
+- **Se descartó** ampliar `escritura` para tapar los 389 (falso: S0 no escribió `engine/causal` ni `knowledge/`) y exceptuar los PR de integración (el interruptor renacido con otro nombre).
+- **Diez tests caducaron y se reescribieron** (`docs/07` §3), fijando la propiedad que sobrevive con contratos explícitos en memoria. Uno **invierte** su premisa: exigía que el interruptor existiese; ahora exige que no exista. Mutaciones M24/M25 acompañan a los dos códigos nuevos.
+
+## D-55 · S0 es un bloque de reconciliación, no de producto
+
+**Vigente** (S0, 2026-09-12). Declarado en `contrato.json::bloques.S0`.
+
+- **Qué es**: el trabajo que convierte una F1 *técnicamente completada* en una F1 *contractual y documentalmente cerrada*. **F1 no se rehace.**
+- **Su alcance declarado incluye `engine/contract/` y `data/incoming/`**, que F1 prohibía en global. Esa es precisamente la propiedad que D-54 aporta y el interruptor no podía expresar: un alcance **propio**, no la ausencia de guarda.
+- **Qué no es**: S0 **no es el producto financiero**. Es lo que permite que el producto siga evolucionando sin perder su arquitectura, sus decisiones ni su historia. El objetivo económico sigue siendo `INVESTMENT_PROPOSAL` y el circuito posterior, no F1.
+
+## D-56 · `CLOSED` es un veredicto calculado, nunca una afirmación humana
+
+**Vigente** (S0.4, 2026-09-12). **Es la corrección del fallo que motivó todo S0.**
+
+- **Qué falló**: `state_queries[f1_estado]` afirmaba «T7-T10 pendientes» citando `commit:8c38056`, y **caducó tres commits después de escribirse, el mismo día**, cuando T7/T8/T9 aterrizaron. **Pasó el validador estando obsoleta**, porque el mecanismo `HUMAN-ASSERTED` verifica *trazabilidad, no vigencia* — y eso es correcto por diseño. El error fue apoyar el cierre de un bloque en ese tipo de afirmación.
+- **Cuatro estados**, nunca un booleano: `UNDECLARED` ≠ `OPEN` · `STALE` · `CLOSED`. La ausencia de registro de cierre no es un cierre.
+- **Siete obligaciones calculadas**: entregables que resuelven · comando de tests declarado · autoridades declaradas y resolubles · rango propio y sucesor activo · **cero deudas bloqueantes** · última verificación del mismo commit · `commit_de_cierre` resoluble y ancestro de HEAD.
+- **La afirmación humana queda acotada a la INTENCIÓN** («doy por completo el alcance de este bloque»). Las siete obligaciones se calculan o el bloque no cierra, con independencia de esa intención.
+- **Caducidad automática**: `canonical-fingerprint/v1` sobre los insumos del cierre —contenido de cada entregable, comando de tests, lista de autoridades, deudas bloqueantes—. Si cambia cualquiera, el veredicto pasa a `STALE`, **nunca se queda en `CLOSED`**. El cierre caduca solo.
+- **Primera aplicación, y da `OPEN`**: F1 cumple 6 de 7 obligaciones y **DF-6 la bloquea** — el gate de PR de T9 falla en un runner limpio por 43 errores de importación de `pyarrow`. No se puede declarar cerrado un bloque cuyo propio gate no pasa. **Que el mecanismo diga `OPEN` aquí es la prueba de que no es decorativo.**
+- **Procedimiento de manifiesto declarado** (resuelve el bloqueo de §D del informe, no la taxonomía): un cambio en `docs/` o `informes/` viaja **en el mismo commit** que la regeneración de `contexto/manifiesto.json`, y la guarda de alcance lo **exige**. La distinción `ADDED` frente a `LOST` sigue siendo deuda (DF-2).
+
+## D-57 · La rama canónica es `claude/session-abz5pi`
+
+**Vigente** (S0, 2026-09-12). Decisión del usuario.
+
+- **Qué se descubrió**: el trabajo de F1 y de P1–P6.2 vivía en `claude/bot-inversiones-audit-peh0x2`, mientras la rama por defecto —`claude/session-abz5pi`— solo recibía los commits diarios del cron. Divergieron en `db64475` (2026-09-04) y la brecha crecía sola: **61 commits** a un lado, **8** al otro. **Sin ningún PR en el repositorio.** Una sesión nueva aterrizaba en la rama por defecto y concluía, con razón dado lo que veía, que el proyecto no existía.
+- **Decisión**: la rama por defecto es la canónica; `claude/bot-inversiones-audit-peh0x2` se integra **por merge**, no por rebase. Los SHA se conservan.
+- **Por qué merge y no rebase, y es una razón dura**: `contrato.json` cita evidencia como `commit:0c4003f`, `commit:ff7a4da`, `commit:8c38056`, y `validar.py::_evidencia_resoluble()` las comprueba con `git cat-file -e`. `extraccion.py` fija además `repo@3b008f0`. **Un rebase cambia los SHA y rompe el propio mecanismo de trazabilidad**: en un checkout limpio de CI, `validar.py` pasaría a FAIL.
+- **Se descartó** el cherry-pick selectivo: 61 commits encadenados, y perder los padres reales borraría la evidencia de en qué orden se supo cada cosa.
+- **Las 754 filas del cron se preservan convirtiéndolas, no re-descargándolas** (S0.5): `retrieved_at` es procedencia point-in-time y un refetch la destruiría.
+
+## D-58 · La arquitectura objetivo se persiste, separada de la implementada
+
+**Vigente** (S0.4, 2026-09-12, `cdeab6a` · `986b502`).
+
+- **Qué se descubrió**: el repositorio conocía bien su núcleo epistemológico y **no conocía su destino**. `InvestmentProposal`, `RiskAssessment`, `Independent Verification`, `Human Approval`, `Outcome`, `Learning`, `OOS`, `Shadow` y `Policy Registry` tenían **cero ocurrencias** en todo el árbol. Una IA nueva leía el repo y concluía «sistema de análisis con Thesis Ledger». Era pérdida de **continuidad arquitectónica**, no del diseño.
+- **Cuatro autoridades, ninguna duplicando a otra**: `docs/ESTADO.md` §2 = qué existe · `contexto/ARQUITECTURA_OBJETIVO.md` = qué se construye · `contrato.json::arquitectura_objetivo` = estados declarados y anclas · `validar.py::estado_arquitectura()` = estado efectivo calculado.
+- **`IMPLEMENTED` se DERIVA del ancla de código**; `PARTIAL`, `PLANNED` y `NOT_AUTHORIZED` son declaraciones. La ausencia de código no puede distinguir lo planificado de lo prohibido. **Y la comprobación va en los dos sentidos**: declarar `IMPLEMENTED` sin ancla resoluble falla, y que aparezca código bajo un componente `PLANNED` también — ese segundo caso es el que envejece en silencio. Así `"está en la arquitectura" != "está implementado"` se sostiene por mecanismo.
+- **`NOT_AUTHORIZED` no es sinónimo de «no implementado» ni de D-01.** D-01 dice *quién actúa*; `NOT_AUTHORIZED` dice qué está entre las capacidades autorizadas hoy. `EXECUTION_GATE` y `BROKER_ORDER` lo están; `INVESTMENT_PROPOSAL` es `PLANNED` — se va a construir, no está prohibido.
+- **Dos dimensiones, explícitamente separadas**: **A** producto/decisión, los 29 componentes con estado y ancla; **B** *System Operating Model* (`PROJECT → TASK → COMPLEXITY GATE → CONTEXT/RESOURCE RESOLUTION → WORKFLOW → RESEARCH/ANALYSIS/VERIFICATION`), **solo flujo conceptual, sin componentes ni estados**. Lo prohibido es la **maquinaria** —Task Router, agentes, skills, hooks— no el concepto; hay un test que recorre `git ls-files` y exige cero coincidencias. F1 y S0 ya son las primeras piezas reales de B: el presupuesto de `contexto:L0`, el cierre efectivo y el alcance por bloque **son** resolución de contexto y recursos, hecha a mano.
+- **La frontera económica queda visible**: `THESIS` interpreta y explica; `INVESTMENT PROPOSAL` transforma la tesis en **decisión candidata**. Es capa propia porque una misma tesis puede dar `BUY`, `WAIT` o `NO_ACTION`. Todo P1–P6.2 no fue «construir más analytics»: es el núcleo que hace esa decisión auditable.
+- **«29 componentes» es una descomposición normativa**, no una afirmación de capacidades nuevas: la cadena conceptual de origen enumeraba 26 eslabones y la Fase 0 describía 10 capas. Cambió el corte, no el alcance.
+- **Se descartó** `clasificacion-nodos/v2` dentro de S0. Es la solución limpia a DF-7 —`ARBOLES_HISTORICOS` hace que todo documento normativo en `docs/` se clasifique `HISTORICAL`— pero es una **evolución del mecanismo de clasificación**, y meterla habría convertido S0 de continuidad en continuidad + rediseño. Por eso la arquitectura objetivo vive en `contexto/` (clase `OTRO`), que es lo que el mecanismo actual permite. Queda como DF-7.
+- **Se descartó** desarrollar cualquier capacidad de los niveles 2 y 3: sería construir producto desde un hueco documental.

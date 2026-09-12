@@ -386,11 +386,32 @@ class TestFronteraEconomica(unittest.TestCase):
 class TestNoEscribeNada(unittest.TestCase):
 
     def test_ninguna_comprobacion_altero_el_repositorio(self):
-        import subprocess
-        r = subprocess.run(["git", "-C", RAIZ, "status", "--porcelain",
-                            "docs", "informes", "engine", "knowledge", "data"],
-                           capture_output=True, text=True)
-        self.assertEqual(r.stdout.strip(), "")
+        """REESCRITO en S0.4: antes exigia un arbol limpio, lo que fallaba
+        durante el propio commit que modifica docs/ e informes/. Eso medía el
+        estado del worktree, no la propiedad. La propiedad real es que ESTOS
+        tests no escriben: se comprueba por hash antes y despues."""
+        import hashlib
+        rutas = ["docs/DECISIONES.md", "docs/ESTADO.md", "contexto/contrato.json",
+                 "contexto/manifiesto.json", "contexto/ESTADO_VIGENTE.md"]
+
+        def huellas():
+            out = {}
+            for rel in rutas:
+                destino = os.path.join(RAIZ, rel)
+                if os.path.isfile(destino):
+                    with open(destino, "rb") as fh:
+                        out[rel] = hashlib.sha256(fh.read()).hexdigest()
+            return out
+
+        antes = huellas()
+        self._ejercitar()
+        self.assertEqual(huellas(), antes,
+                         "las comprobaciones no pueden escribir en el repositorio")
+
+    def _ejercitar(self):
+        validar.estado_arquitectura()
+        validar.componentes_arquitectura()
+        validar.validar()
 
 
 if __name__ == "__main__":

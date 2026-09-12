@@ -25,10 +25,25 @@ BASE = integridad.cargar(os.path.join(RAIZ, "contexto", "manifiesto.json"))
 class TestAlcance(unittest.TestCase):
     """El manifiesto cubre lo que dice cubrir, y nada mas."""
 
-    def test_cubre_exactamente_los_43_ficheros_historicos(self):
+    def test_cubre_exactamente_los_ficheros_historicos(self):
+        """REESCRITO en S0.4 (protocolo de informes, §3). Fijaba el literal 43,
+        que caduco al anadir el informe de cierre de F1 -- y anadir un informe
+        es justo lo que docs/07 exige al cerrar una fase. La propiedad que
+        sobrevive, y es la que el manifiesto promete, es que cubre EXACTAMENTE
+        los .md de docs/ + informes/ y nada mas."""
         actual = integridad.generar()
-        self.assertEqual(len(actual), 43)
-        self.assertEqual(set(actual), set(BASE))
+        esperados = set()
+        for arbol in integridad.ARBOLES:
+            for raiz, _d, ficheros in os.walk(os.path.join(RAIZ, arbol)):
+                for f in ficheros:
+                    if f.endswith(integridad.EXTENSIONES):
+                        esperados.add(os.path.relpath(
+                            os.path.join(raiz, f), RAIZ).replace(os.sep, "/"))
+        self.assertEqual(set(actual), esperados)
+        self.assertGreaterEqual(len(actual), len(BASE),
+                                "el historico no puede encogerse")
+        self.assertTrue(set(BASE) <= set(actual),
+                        "ningun fichero de la base de F1 puede desaparecer")
 
     def test_solo_docs_e_informes(self):
         for ruta in integridad.generar():

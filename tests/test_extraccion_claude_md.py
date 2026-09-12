@@ -119,13 +119,19 @@ class TestLaExtraccion(unittest.TestCase):
 class TestSeparacionDelManifiestoPrincipal(unittest.TestCase):
     """P-1: la extraccion NO es una entrada ADDED del manifiesto principal."""
 
-    def test_el_manifiesto_principal_sigue_en_43_sin_movimientos(self):
+    def test_el_manifiesto_principal_sigue_intacto_sin_movimientos(self):
+        """REESCRITO en S0.4: fijaba PRESERVED == 43, que caduco al anadir el
+        informe de cierre de F1. La propiedad que importa -- y la unica que
+        este test debia proteger -- es que la extraccion D-PRD-1 NO metio nada
+        en el manifiesto principal y que nada se movio ni se altero."""
         base = integridad.cargar(os.path.join(RAIZ, "contexto", "manifiesto.json"))
         ok, inc, r = integridad.verificar(base, integridad.generar(),
                                           exigir_cero_movimientos=True)
         self.assertTrue(ok, inc)
         conteo = {e: sum(1 for v in r.values() if v == e) for e in integridad.ESTADOS}
-        self.assertEqual(conteo[integridad.PRESERVED], 43)
+        self.assertEqual(conteo[integridad.PRESERVED], len(base))
+        self.assertNotIn(extraccion.DESTINO, base,
+                         "el destino de la extraccion vive FUERA del manifiesto")
         self.assertEqual(conteo[integridad.MOVED], 0)
         self.assertEqual(conteo[integridad.ADDED], 0)
         self.assertEqual(conteo[integridad.LOST], 0)

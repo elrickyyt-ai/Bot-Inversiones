@@ -58,7 +58,11 @@ CODIGOS_DE_FALLO = {
                 # codigo declarado y nunca producido es vocabulario muerto.
                 validar.ARQUITECTURA_ANCLA_NO_RESOLUBLE,
                 validar.ARQUITECTURA_ESTADO_DIVERGENTE,
-                validar.ARQUITECTURA_ESTADO_DESCONOCIDO),
+                validar.ARQUITECTURA_ESTADO_DESCONOCIDO,
+                # Cierre de bloque (D-56, S0.4). M29-M31.
+                validar.CIERRE_SIN_DECLARAR,
+                validar.CIERRE_OBLIGACION_INCUMPLIDA,
+                validar.CIERRE_CADUCADO),
     "grafo": (grafo.ARCO_PROHIBIDO, grafo.POINTER_EXPANDE_L0,
               grafo.RELACION_DESCONOCIDA, grafo.L0_NO_ALCANZABLE),
     "extraccion": (extraccion.EXTRACCION_NO_REALIZADA, extraccion.ANCLA_ROTA,
@@ -234,6 +238,45 @@ def m28_arquitectura_estado_desconocido():
                   "ancla": None}])
 
 
+_CIERRE_OK = {
+    "commit_de_cierre": "f784b8591ad00606fd85c9c979688c8b9feea88d",
+    "entregables": ["contexto/validar.py"],
+    "tests": "python3 -m unittest discover -s tests",
+    "validadores": ["contexto/validar.py"],
+    "ultima_verificacion": {
+        "commit": "f784b8591ad00606fd85c9c979688c8b9feea88d"},
+}
+
+
+def _cierre(**kw):
+    """Contrato con un bloque cuyo cierre se muta. Devuelve sus codigos."""
+    c = {"bloque_activo": "OTRO", "open_debt": kw.pop("open_debt", []),
+         "bloques": {"B": {"escritura": ["contexto/"],
+                           "desde": _CIERRE_OK["commit_de_cierre"],
+                           "hasta": None}}}
+    if kw.get("_sin_cierre"):
+        pass
+    else:
+        c["bloques"]["B"]["cierre"] = dict(_CIERRE_OK, **kw)
+    _e, d = validar.veredicto_cierre("B", c)
+    return {m.split(":")[0] for m in d["motivos"]}
+
+
+def m29_cierre_sin_declarar():
+    """Un bloque que no declara cierre: UNDECLARED, que no es OPEN."""
+    return _cierre(_sin_cierre=True)
+
+
+def m30_cierre_obligacion_incumplida():
+    """Un entregable declarado que no existe. La intencion no lo salva."""
+    return _cierre(entregables=["informes/no_existe_jamas.md"])
+
+
+def m31_cierre_caducado():
+    """La huella de los insumos ya no corresponde: STALE, nunca CLOSED."""
+    return _cierre(huella="0" * 64)
+
+
 def m25_alcance_no_declarado():
     """Retirar `bloque_activo`. No existe el estado "sin guarda"."""
     c = {"bloques": {"X": {"escritura": ["contexto/"]}}}
@@ -393,6 +436,11 @@ MUTACIONES = [
      m27_arquitectura_estado_divergente),
     ("M28", "arquitectura", "estado fuera del vocabulario",
      m28_arquitectura_estado_desconocido),
+    ("M29", "cierre", "un bloque que no declara cierre", m29_cierre_sin_declarar),
+    ("M30", "cierre", "entregable declarado que no existe",
+     m30_cierre_obligacion_incumplida),
+    ("M31", "cierre", "huella de insumos que ya no corresponde",
+     m31_cierre_caducado),
 ]
 
 

@@ -16,8 +16,8 @@
   "docs/05-diseno-p6-impacto-economico.md": "94a0d4751cf526cf02261f676925de189da55ba793d740931aa46b67af81af6b",
   "docs/06-diseno-p61-materialidad.md": "844b50203e7495ba5fc37949bef01a075f84b6083024974e143f0ee26ed2e5fb",
   "docs/07-protocolo-de-informes.md": "112dde1519c4448402a2eaaf92664bb12b4d77d9b48cfdbe70f204769a5e01d4",
-  "docs/DECISIONES.md": "93bbad657fbba4db57913a1a4331c904a9ac3b1a996ab272a9ef032e7ae62228",
-  "docs/ESTADO.md": "4908372afb06741145294772c140dd6a4a59f4cf1ff8a09dbefe817c3c2df275",
+  "docs/DECISIONES.md": "f6a0cdc31ab0eb785be96b637ad533dd8695931be279b8f748aac6015d4288dd",
+  "docs/ESTADO.md": "dfb7b1cb0b6e3dd3aaeb818d381c059a7f50f7f0c3c14795e6bbc59b179f772b",
   "informes/2026-07-20_cripto_fundamentales_v1.md": "b04c8759135f3e15190107acf0b2a46c7c2260df159ce9af137537145b29c503",
   "informes/2026-07-22_cripto_tecnico_v1.md": "dc76707890cc20f5c20978bbb5e470deee73d753d2808d25acbb6bec1dcedb52",
   "informes/2026-07-22_macro_y_sintesis_v1.md": "0634d02e6f9de43a33f35dd58f56c47ac732de9412ed74b31cce15041ad92f72",
@@ -49,7 +49,8 @@
   "informes/2026-09-08_auditoria_historical_instrument_master.md": "03d67067f2d11f960226717624021e161da4443812e7b91eefd169b564f6a673",
   "informes/2026-09-08_backfill_readiness_historico.md": "bb137e450f3562b6e7c08dc4acd4d7455b087e8aa7300da811d84a130bda3195",
   "informes/2026-09-08_implementacion_historical_instrument_master_v1.md": "6bba3b409281ce3606a87947c599539aace3279129b0f1c78ca5aa8502dc7e50",
-  "informes/2026-09-11_p5a_hardening_recorrido_causal.md": "c70ed3350ae2f555c3c1cd5c87e721195cf5ec178b329f9b441f039199354868"
+  "informes/2026-09-11_p5a_hardening_recorrido_causal.md": "c70ed3350ae2f555c3c1cd5c87e721195cf5ec178b329f9b441f039199354868",
+  "informes/2026-09-12_f1_contexto_durable_y_cierre.md": "9f3514c2512e8659eb05b8ee660f4e5e13820a2228b695262031efce6e3ff991"
  },
- "n": 43
+ "n": 44
 }
