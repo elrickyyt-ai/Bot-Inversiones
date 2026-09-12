@@ -21,8 +21,29 @@
    "class": "CODE-ANCHORED",
    "canonical_source": "engine/knowledge/modelo.py::PREDICADOS_NO_CAUSALES",
    "_nota": "NO se almacena el valor: se resuelve al validar y se compara. Almacenarlo seria duplicar como verdad.",
-   "canonical_fingerprint": "f5d1ca60118498826528e476d706a8c48e9105cc6bd30a88d78022a3dd8a2d03"
+   "canonical_fingerprint": "f5d1ca60118498826528e476d706a8c48e9105cc6bd30a88d78022a3dd8a2d03",
+   "canonical_fingerprint_version": "canonical-fingerprint/v1",
+   "_canonical_fingerprint_es": "metadata / provenance, no query result"
   }
  ],
- "_sello_de_deriva": "canonical_fingerprint es la huella del valor normalizado en el momento de declarar la consulta. NO es el valor almacenado y NO se usa para responder la pregunta -- eso se hace SIEMPRE resolviendo la fuente viva. Existe para detectar que el contexto durable se declaro contra otro estado del codigo y nadie volvio a mirarlo."
+ "mecanismos": {
+  "canonical-fingerprint/v1": {
+   "naturaleza": "metadata / provenance -- NO es query result",
+   "formula": "SHA-256(canonical_serialization(canonical_value)) en hex minusculas",
+   "normalizacion": "coleccion (set/frozenset/list/tuple) -> lista ORDENADA de str(x); escalar -> str(x). El orden incidental NO forma parte del valor; la multiplicidad SI.",
+   "serializacion": "coleccion: elementos unidos por LF. Escalar: su str.",
+   "codificacion": "UTF-8",
+   "por_que_es_compatible_con_el_arco_1": "el valor canonico NO se almacena. La respuesta a la STATE QUERY se obtiene SIEMPRE resolviendo la fuente viva; el fingerprint solo detecta que la declaracion se hizo contra otro estado del codigo.",
+   "cambiarlo_exige": "canonical-fingerprint/v2"
+  },
+  "heuristic/v1": {
+   "aplica_a": "DUPLICATED_AS_TRUTH detection",
+   "que_detecta": "renderizaciones directas del valor canonico completo en la superficie",
+   "limitacion": "heuristic detection != formal proof of absence. No garantiza detectar parafrasis ni representaciones semanticamente equivalentes.",
+   "proteccion_primaria": "contractual: CODE-ANCHORED -> canonical_source -> canonical_fingerprint -> NO value field"
+  }
+ },
+ "open_debt": [
+  "Structural enforcement of no-value duplication (D-2): la deteccion es heuristica, no estructural. NO se amplia F1 para resolverla."
+ ]
 }

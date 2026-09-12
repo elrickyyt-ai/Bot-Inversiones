@@ -18,6 +18,47 @@ import estado as _estado
 
 RAIZ = _estado.RAIZ
 
+# --- Mecanismos versionados (D-1.1 y D-2) -----------------------------------
+#
+# canonical-fingerprint/v1  [N] COMPORTAMIENTO NORMATIVO
+#
+#   fingerprint = SHA-256( canonical_serialization( canonical_value ) )  -> hex
+#
+#   normalizacion   una coleccion (set, frozenset, list, tuple) se normaliza a
+#                   la lista ORDENADA de str(x) de sus elementos. Un escalar, a
+#                   str(x). El orden incidental de representacion NO forma parte
+#                   del valor: frozenset, list y tuple con los mismos elementos
+#                   producen el MISMO fingerprint. La multiplicidad SI se
+#                   conserva -- ["A","A"] y {"A"} son valores distintos.
+#   serializacion   coleccion: elementos unidos por "\n" (LF). Escalar: su str.
+#   codificacion    UTF-8.
+#   algoritmo       SHA-256, en hexadecimal minusculas.
+#
+#   QUE ES: metadata / provenance. Registra contra QUE estado de la fuente
+#   canonica se declaro la consulta.
+#   QUE NO ES: query result. El validador NUNCA lo usa para responder la
+#   pregunta -- eso se hace SIEMPRE resolviendo la fuente viva. Por eso es
+#   compatible con el Arco 1: el valor canonico no se almacena.
+#
+#   Cambiar cualquiera de los cuatro puntos exige canonical-fingerprint/v2.
+CANONICAL_FINGERPRINT_VERSION = "canonical-fingerprint/v1"
+
+# heuristic/v1  [N] DETECCION DE DUPLICACION COMO VERDAD (D-2)
+#
+#   Busca renderizaciones DIRECTAS del valor canonico completo dentro de la
+#   superficie. NO es una prueba formal de ausencia:
+#
+#       heuristic detection  !=  formal proof of absence
+#
+#   No garantiza detectar parafrasis ni representaciones semanticamente
+#   equivalentes. La proteccion PRIMARIA del Arco 1 no es esta deteccion,
+#   sino el contrato:
+#
+#       CODE-ANCHORED -> canonical_source -> canonical_fingerprint -> NO value field
+#
+#   OPEN DEBT: Structural enforcement of no-value duplication.
+DUPLICACION_HEURISTICA_VERSION = "heuristic/v1"
+
 DIVERGENCIA_CANONICA = "DIVERGENCIA_CANONICA"
 DUPLICACION_COMO_VERDAD = "DUPLICACION_COMO_VERDAD"
 REFERENCIA_AUSENTE = "REFERENCIA_AUSENTE"
@@ -62,13 +103,18 @@ def _normalizar(v):
     return v
 
 
-def _huella(v):
-    """Sello del valor normalizado. NO es el valor: el validador nunca lo
-    usa para responder la pregunta, solo para detectar que el contexto se
-    declaro contra otro estado del codigo."""
+def canonical_serialization(v):
+    """Serializacion canonica de canonical-fingerprint/v1. Ver cabecera."""
     n = _normalizar(v)
-    base = "\n".join(n) if isinstance(n, list) else str(n)
-    return hashlib.sha256(base.encode("utf-8")).hexdigest()
+    return "\n".join(n) if isinstance(n, list) else str(n)
+
+
+def _huella(v):
+    """canonical-fingerprint/v1. METADATA DE PROCEDENCIA, no respuesta.
+
+    El validador nunca lo usa para responder la STATE QUERY: solo para
+    detectar que la consulta se declaro contra otro estado del codigo."""
+    return hashlib.sha256(canonical_serialization(v).encode("utf-8")).hexdigest()
 
 
 def _renderizaciones(v):
@@ -141,7 +187,10 @@ def validar(contrato=None, superficie=None):
                 r.update(ok=False, motivo=f"{DUPLICACION_COMO_VERDAD}: el registro almacena el "
                                           f"valor de {c['query_id']} en vez de referenciarlo")
         resultados.append(r)
-    return {"consultas_declaradas": len(_estado.consultas(contrato)), "resultados": resultados}
+    return {"consultas_declaradas": len(_estado.consultas(contrato)),
+            "fingerprint_version": CANONICAL_FINGERPRINT_VERSION,
+            "duplicacion_deteccion": DUPLICACION_HEURISTICA_VERSION,
+            "resultados": resultados}
 
 
 def main(argv=None):
