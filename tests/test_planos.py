@@ -138,6 +138,21 @@ class TestElContratoNoLlevaLaRegla(unittest.TestCase):
         sel, _d = suite_cron.declaracion({"ci_cron": {}})
         self.assertEqual(sel, ())
 
+    def test_el_diagnostico_de_FAIL_es_la_MISMA_funcion_no_una_copia(self):
+        """S0.11. El cron tambien tiene que conservar el motivo de un FAIL,
+        pero no con su propia implementacion: la autoridad compartida es
+        suite_pr, y aqui solo se delega."""
+        self.assertIn("_pr.emitir_diagnostico", self.fuente)
+        self.assertNotIn("def emitir_diagnostico", self.fuente)
+        self.assertIs(suite_cron._pr.emitir_diagnostico, suite_pr.emitir_diagnostico)
+
+    def test_el_cron_solo_vuelca_el_diagnostico_cuando_falla(self):
+        """El log del cron diario no puede convertirse en un dump: el
+        volcado va DENTRO del `if not ok`."""
+        i = self.fuente.index("if not ok:")
+        j = self.fuente.index("RESULTADO:", i)
+        self.assertIn("_pr.emitir_diagnostico", self.fuente[i:j])
+
     def test_los_dos_perfiles_estan_declarados(self):
         for p in suite_cron.PERFILES:
             self.assertIsNotNone(suite_cron.esperados(p), p)

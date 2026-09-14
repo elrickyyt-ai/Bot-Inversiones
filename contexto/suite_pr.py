@@ -83,6 +83,31 @@ def evaluar(salida, esperados):
     return True, None, cifras
 
 
+def emitir_diagnostico(salida, escribir=print, max_lineas=400):
+    """La salida de unittest TAL CUAL, y solo cuando el resultado es FAIL.
+
+    Existe por un defecto real: el run 34836874466 -- primer schedule sobre la
+    canonica ya corregida -- dejo en el log del CI `failures=1` y nada mas. Ni
+    test, ni fichero, ni assertion, ni traceback. Las filas que lo provocaron
+    no se commitearon (fail-closed, correcto), asi que la evidencia del porque
+    desaparecio con el runner.
+
+    Un sistema fail-closed tiene que poder explicar por que rechazo algo, no
+    solo rechazarlo. Esto NO cambia que se rechaza: solo conserva el motivo.
+
+    No filtra ni interpreta. Un filtro decide de antemano que es relevante, y
+    lo relevante de un fallo que no se preveia es justamente lo que no estaba
+    previsto. El unico limite es un tope de lineas para que un fallo masivo no
+    inunde el log, y cuando se aplica se DECLARA.
+    """
+    lineas = salida.splitlines()
+    escribir("  --- salida de la suite (solo en FAIL) ---")
+    for l in lineas[:max_lineas]:
+        escribir(f"  {l}")
+    if len(lineas) > max_lineas:
+        escribir(f"  --- truncado: {len(lineas) - max_lineas} linea(s) mas ---")
+
+
 def _hay_pyarrow():
     """Solo para DIAGNOSTICO del mensaje. La regla no depende de esto."""
     sys.path.insert(0, os.path.join(RAIZ, "engine", "contract"))
@@ -121,6 +146,8 @@ def main(argv=None):
                   "ImportError>")
     elif codigo:
         print(f"  {codigo}")
+    if not ok:
+        emitir_diagnostico(salida)
     print(f"RESULTADO: {'PASS' if ok else 'FAIL'}")
     return 0 if ok else 1
 
