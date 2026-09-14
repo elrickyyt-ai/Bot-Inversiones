@@ -333,6 +333,107 @@ class TestLasAutoridadesSiguenPasando(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
 
 
+
+class TestUnFallOConservaSuDiagnostico(unittest.TestCase):
+    """S0.11. El run 34836874466 dejo `failures=1` en el log y nada mas: ni
+    test, ni fichero, ni traceback. Las filas que lo provocaron no se
+    commitearon -- fail-closed correcto -- asi que el motivo se perdio con el
+    runner y el fallo quedo sin diagnosticar.
+
+    Un sistema fail-closed tiene que poder explicar por que rechazo algo. Lo
+    que estos tests fijan NO es que el diagnostico sea bonito, sino que el
+    veredicto no cambie al anadirlo: PASS sigue siendo PASS, FAIL sigue
+    devolviendo el mismo codigo de salida, y ahora el FAIL lleva el motivo.
+    """
+
+    SALIDA_FALLO = (
+        "..F...\n"
+        "======================================================================\n"
+        "FAIL: test_algo_concreto (test_modulo.UnaClase.test_algo_concreto)\n"
+        "----------------------------------------------------------------------\n"
+        "Traceback (most recent call last):\n"
+        '  File "/repo/tests/test_modulo.py", line 42, in test_algo_concreto\n'
+        "    self.assertEqual(real, esperado)\n"
+        "AssertionError: 3 != 4\n"
+        "\n"
+        "----------------------------------------------------------------------\n"
+        "Ran 6 tests in 0.1s\n"
+        "\n"
+        "FAILED (failures=1, skipped={n})\n"
+    )
+    SALIDA_OK = "......\n\n----------------------\nRan 6 tests in 0.1s\n\nOK (skipped={n})\n"
+
+    def _ejecutar(self, texto):
+        """Corre main() sobre una salida YA capturada -- los dos modulos
+        aceptan un fichero, asi que no hace falta lanzar la suite real."""
+        import contextlib, tempfile
+        n = self.esperados
+        with tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False,
+                                         encoding="utf-8") as fh:
+            fh.write(texto.format(n=n))
+            ruta = fh.name
+        import io as _io
+        buf = _io.StringIO()
+        try:
+            with contextlib.redirect_stdout(buf):
+                codigo = self.sp.main([ruta])
+        finally:
+            os.unlink(ruta)
+        return codigo, buf.getvalue()
+
+    def setUp(self):
+        import suite_pr
+        self.sp = suite_pr
+        self.esperados = self.sp.declaracion()[0]
+
+    def test_PASS_sigue_dando_PASS_y_no_emite_diagnostico(self):
+        codigo, texto = self._ejecutar(self.SALIDA_OK)
+        self.assertEqual(codigo, 0)
+        self.assertIn("RESULTADO: PASS", texto)
+        self.assertNotIn("solo en FAIL", texto,
+                         "en PASS no se vuelca nada: el log diario no es un dump")
+
+    def test_FAIL_conserva_EXACTAMENTE_el_mismo_codigo_de_salida(self):
+        """Lo que no puede cambiar. El diagnostico se anade al log, no al
+        veredicto."""
+        codigo, texto = self._ejecutar(self.SALIDA_FALLO)
+        self.assertEqual(codigo, 1)
+        self.assertIn("RESULTADO: FAIL", texto)
+
+    def test_FAIL_ahora_expone_test_fichero_assertion_y_traceback(self):
+        _codigo, texto = self._ejecutar(self.SALIDA_FALLO)
+        self.assertIn("test_algo_concreto", texto, "el NOMBRE del test")
+        self.assertIn("test_modulo.py", texto, "el FICHERO")
+        self.assertIn("assertEqual", texto, "la ASSERTION")
+        self.assertIn("AssertionError: 3 != 4", texto, "el TRACEBACK")
+
+    def test_el_diagnostico_no_reinterpreta_la_salida(self):
+        """No filtra: un filtro decide de antemano que es relevante, y de un
+        fallo imprevisto lo relevante es justo lo que no se preveia."""
+        import io as _io
+        buf = _io.StringIO()
+        self.sp.emitir_diagnostico("alfa\nbeta\n", escribir=buf.write)
+        self.assertIn("alfa", buf.getvalue())
+        self.assertIn("beta", buf.getvalue())
+
+    def test_un_fallo_masivo_se_trunca_y_lo_DECLARA(self):
+        import io as _io
+        buf = _io.StringIO()
+        self.sp.emitir_diagnostico("x\n" * 50, escribir=buf.write, max_lineas=10)
+        self.assertIn("truncado", buf.getvalue())
+        self.assertIn("40", buf.getvalue())
+
+    def test_la_regla_de_PASS_FAIL_no_la_toca_el_diagnostico(self):
+        """evaluar() sigue siendo pura y sigue decidiendo sola."""
+        ok, cod, _c = self.sp.evaluar(self.SALIDA_FALLO.format(n=self.esperados),
+                                      self.esperados)
+        self.assertFalse(ok)
+        self.assertEqual(cod, self.sp.SUITE_CON_ERRORES)
+        ok2, cod2, _c2 = self.sp.evaluar(self.SALIDA_OK.format(n=self.esperados),
+                                         self.esperados)
+        self.assertTrue(ok2)
+        self.assertIsNone(cod2)
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
 

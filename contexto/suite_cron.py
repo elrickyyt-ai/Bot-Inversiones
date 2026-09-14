@@ -121,6 +121,8 @@ def main(argv=None):
               f"{args.perfil} declara {esp}. Un salto no declarado no es cobertura")
     elif codigo:
         print(f"  {codigo}")
+    if not ok:
+        _pr.emitir_diagnostico(salida)     # misma funcion, no una copia
     print(f"RESULTADO: {'PASS' if ok else 'FAIL'}")
     return 0 if ok else 1
 
