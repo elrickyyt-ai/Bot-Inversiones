@@ -104,13 +104,23 @@ class TestElCronSoloEjecutaPlanoDeDatos(unittest.TestCase):
             self.assertTrue(clases, f"{m} es BOTH y no aporta ninguna clase")
 
     def test_cada_entrada_del_cron_existe_de_verdad(self):
+        """Resuelve el nombre COMPLETO. Desde #16 una entrada puede llegar al
+        nivel de test -- `modulo.Clase.test` --, no solo de clase."""
+        for e in self.cron:
+            obj = self._resolver(e)
+            self.assertIsNotNone(obj, f"{e} no existe")
+
+    def _resolver(self, entrada):
+        """El objeto que nombra una entrada de cron_ejecuta, o None."""
         import importlib
         sys.path.insert(0, os.path.join(RAIZ, "tests"))
-        for e in self.cron:
-            mod, _, clase = e.partition(".")
-            m = importlib.import_module(mod)
-            if clase:
-                self.assertTrue(hasattr(m, clase), f"{e} no existe")
+        mod, _, resto = entrada.partition(".")
+        obj = importlib.import_module(mod)
+        for tramo in filter(None, resto.split(".")):
+            obj = getattr(obj, tramo, None)
+            if obj is None:
+                return None
+        return obj
 
 
 class TestElContratoNoLlevaLaRegla(unittest.TestCase):
@@ -193,6 +203,75 @@ class TestElCronNoDependeDeHistoriaGit(unittest.TestCase):
         criterio no es 'no falla en shallow'."""
         self.assertRegex(_decl()["paso_en_vacio"], r"(?i)sin comprobar nada")
 
+
+
+class TestLaAdmisionAlCronNoSeGanaPorVerdeVacio(unittest.TestCase):
+    """La guarda que nace del schedule #16 (run 34959054186).
+
+    `test_solo_se_escribio_en_incoming` entro en el cron porque pasaba en mis
+    dos entornos de validacion. Pasaba EN VACIO: recorre las lineas de
+    `git status --porcelain data` y, con el arbol limpio, esa lista esta
+    vacia, el bucle no itera y la asercion nunca se evalua. En el cron real,
+    build.py escribe data/thesis/{ID}.json legitimamente y el test cae con
+    `S0.5 no puede tocar data/thesis/ADA.json`.
+
+    La regla que esto fija NO es "prohibido mirar git status". Es que la
+    admision a ci_cron exige haber validado el test contra el ESTADO
+    OPERACIONAL POST-INGESTA, no contra un arbol limpio. La comprobacion de
+    abajo es un PROXY de esa regla -- estatico, especifico y reproducible --,
+    no la regla entera: cubre el mecanismo concreto que fallo.
+    """
+
+    def setUp(self):
+        self.decl = _decl()
+
+    def test_el_contrato_declara_la_regla_de_admision(self):
+        self.assertRegex(self.decl["admision_a_cron"],
+                         r"(?i)estado operacional post-ingesta")
+        self.assertRegex(self.decl["admision_a_cron"],
+                         r"(?i)no basta con que pase sobre data/ limpia")
+
+    def test_ninguna_entrada_del_cron_interroga_el_estado_sucio_del_arbol(self):
+        """El veredicto de un test del cron no puede depender de QUE ficheros
+        dejo sucios el pipeline: eso no es una propiedad del dato, es un
+        artefacto de como corrio el ciclo."""
+        import inspect
+        sospechosas = []
+        for e in _decl()["cron_ejecuta"]:
+            obj = TestElCronSoloEjecutaPlanoDeDatos._resolver(self, e)
+            try:
+                fuente = inspect.getsource(obj)
+            except (TypeError, OSError):                      # modulo entero
+                continue
+            if "status" in fuente and "--porcelain" in fuente:
+                sospechosas.append(e)
+        self.assertEqual(sospechosas, [],
+                         f"entradas cuyo veredicto depende del arbol sucio: "
+                         f"{sospechosas}. Ver ci_cron.admision_a_cron")
+
+    def test_los_dos_tests_de_estado_sucio_quedaron_FUERA_del_cron(self):
+        """Nombrados uno a uno: que su salida sea deliberada y no un descuido."""
+        for t in ("test_solo_se_escribio_en_incoming",
+                  "test_ninguna_particion_de_history_fue_tocada"):
+            fuera = [e for e in self.decl["cron_ejecuta"] if e.endswith(t)]
+            self.assertEqual(fuera, [], t)
+
+    def test_los_dos_invariantes_operacionales_SIGUEN_en_el_cron(self):
+        """Sacar la clase entera habria perdido cobertura que el cron si debe
+        vigilar: que data/metrics no resucite."""
+        for t in ("test_los_ocho_json_siguen_eliminados",
+                  "test_el_directorio_data_metrics_no_existe"):
+            dentro = [e for e in self.decl["cron_ejecuta"] if e.endswith(t)]
+            self.assertEqual(len(dentro), 1, t)
+
+    def test_la_clase_entera_sigue_ejecutandose_en_el_PR(self):
+        """Nada se ha perdido: los cuatro tests siguen corriendo en el gate,
+        que ejecuta `discover -s tests`. Solo se ha repartido."""
+        self.assertEqual(_decl()["plano"]["test_reconciliacion"], AMBOS)
+
+    def test_el_contrato_explica_por_que_se_partio_la_clase(self):
+        self.assertIn("data/thesis", self.decl["por_que_esta_clase_entra_por_TEST_y_no_entera"])
+        self.assertRegex(self.decl["por_que_no_se_detecto_antes"], r"(?i)paso en vacio")
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
