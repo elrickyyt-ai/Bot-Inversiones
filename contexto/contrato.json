@@ -320,8 +320,13 @@
     "test_temporal",
     "test_tesis_evidencia",
     "test_valoracion",
-    "test_reconciliacion.TestElBorradoDeF1SeMantiene"
+    "test_reconciliacion.TestElBorradoDeF1SeMantiene.test_los_ocho_json_siguen_eliminados",
+    "test_reconciliacion.TestElBorradoDeF1SeMantiene.test_el_directorio_data_metrics_no_existe"
    ],
+   "por_que_esta_clase_entra_por_TEST_y_no_entera": "Schedule #16, run 34959054186. La clase mezcla dos naturalezas y entrar entera fue un error de seleccion mio al escribir D-60. Sus cuatro tests: los DOS primeros afirman sobre el ESTADO DEL ARBOL (data/metrics no existe, los 8 JSON siguen borrados) y son invariantes operacionales legitimos del ciclo diario. Los DOS restantes -- test_solo_se_escribio_en_incoming y test_ninguna_particion_de_history_fue_tocada -- interrogan `git status` para afirmar sobre la OPERACION CONCRETA de S0.5 (`S0.5 no puede tocar {ruta}`), no sobre el dato. En un cron real con filas nuevas, build.py escribe data/thesis/{ID}.json legitimamente via _write_thesis_row, asi que el tercero falla: `AssertionError: False is not true : S0.5 no puede tocar data/thesis/ADA.json`. Se quedan en GOVERNANCE_ONLY, sin tocar sus assertions ni su semantica: siguen ejecutandose enteros en el gate de PR.",
+   "por_que_no_se_detecto_antes": "Paso en VACIO. `test_solo_se_escribio_en_incoming` recorre las lineas de `git status --porcelain data`; con el arbol limpio -- mi entorno y el clon --depth 1 con los que valide D-60 -- esa lista esta vacia, el bucle no itera y la asercion NUNCA se evalua. Por eso el run #13 (0 filas nuevas, build no escribio nada) paso y el #15 y el #16 (con filas nuevas) fallaron. El contrato ya declaraba el riesgo del paso en vacio bajo shallow; el criterio no cubria el paso en vacio con data/ LIMPIA.",
+   "admision_a_cron": "REGLA, tras #16: un test solo puede entrar en ci_cron si su comportamiento se ha validado contra el ESTADO OPERACIONAL POST-INGESTA que el pipeline produce realmente -- no basta con que pase sobre data/ limpia ni bajo clon superficial. La postcondicion del cron incluye hoy escrituras en data/incoming/ y data/thesis/, y manana puede incluir otras rutas legitimas: la regla se enuncia sobre la POSTCONDICION del pipeline, no sobre una lista de directorios, que envejeceria igual que envejecio esta seleccion.",
+   "cobertura_que_NO_se_pierde": "Sacar test_ninguna_particion_de_history_fue_tocada del cron no deja history/ sin vigilancia en el ciclo diario: QA-CORE comprueba por hash que ninguna particion cerrada de history/ ha cambiado, y se ejecuta en el job de ingesta antes que la suite.",
    "skips_esperados": {
     "sin-parquet": 187,
     "con-parquet": 0
