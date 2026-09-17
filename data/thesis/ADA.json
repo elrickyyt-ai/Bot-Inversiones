@@ -325,5 +325,138 @@
     ],
     "data_as_of": "2026-09-16",
     "retrieved_at": "2026-09-16T10:31:19Z"
+  },
+  {
+    "thesis_id": "ADA_2026-09-17_2026-09-17T10:41:02Z",
+    "asset_id": "ADA",
+    "thesis_type": "crypto",
+    "bull_case": "Si el precio confirma el sesgo técnico actual (mixto (1/4 señales alcistas — sin confluencia clara)) y el contexto macro deja de ser restrictivo (pausa o recortes de tipos), la posición actual cerca de mínimos de 365d dejaría margen de recuperación.",
+    "base_case": "Continuación del rango actual sin una confluencia clara en ningún sentido — es la lectura más probable con los datos de hoy, según el propio motor técnico.",
+    "bear_case": "Si el entorno de tipos altos persiste y la señal bajista técnica se confirma, no hay en los datos actuales un catalizador fundamental (tokenomics/on-chain) que sostenga un rebote.",
+    "contradictions": [],
+    "convergences": [
+      "Fundamental (posición cerca de mínimos de 365d) y técnico (sesgo bajista) apuntan en la misma dirección de corto plazo."
+    ],
+    "divergences": [],
+    "invalidation_factors": [
+      "Un cambio de régimen macro (la Fed o el BCE giran a recortes agresivos) alteraría el contexto que sostiene la lectura actual.",
+      "Una corrección posterior de los datos marcados con posible incidencia (ver advertencias) cambiaría la lectura fundamental."
+    ],
+    "confidence_pct": 80,
+    "evidence_validity": "VALID",
+    "evidence": [
+      {
+        "entidad": "ADA",
+        "dominio": "fundamental",
+        "metrica": "market_cap_percentile_365d",
+        "papel": "REQUERIDA",
+        "data_as_of": "2026-09-17",
+        "frescura": "FRESH",
+        "retraso": 0,
+        "unidad": "sesion",
+        "motivo": "percentil de capitalización: regla de convergencia/divergencia y bull_case"
+      },
+      {
+        "entidad": "ADA",
+        "dominio": "tecnico",
+        "metrica": "confluencia_sesgo",
+        "papel": "REQUERIDA",
+        "data_as_of": "2026-09-17",
+        "frescura": "FRESH",
+        "retraso": 0,
+        "unidad": "sesion",
+        "motivo": "dirección técnica: regla de convergencia/divergencia, bear_case y base de confidence_pct"
+      },
+      {
+        "entidad": "ADA",
+        "dominio": "fundamental",
+        "metrica": "tvl_percentile_365d",
+        "papel": "PUBLICADA",
+        "data_as_of": "2026-09-17",
+        "frescura": "FRESH",
+        "retraso": 0,
+        "unidad": "sesion",
+        "motivo": "se publica como hecho; ninguna regla se bifurca por su valor"
+      },
+      {
+        "entidad": "ADA",
+        "dominio": "fundamental",
+        "metrica": "fdv_mcap_ratio",
+        "papel": "PUBLICADA",
+        "data_as_of": "2026-09-17",
+        "frescura": "FRESH",
+        "retraso": 0,
+        "unidad": "sesion",
+        "motivo": "se publica como hecho y puede generar una advertencia de dilución"
+      },
+      {
+        "entidad": "US",
+        "dominio": "macro",
+        "metrica": "cpi_yoy_pct",
+        "papel": "CONTEXTO",
+        "data_as_of": "2026-08-01",
+        "frescura": "FRESH",
+        "retraso": 47,
+        "unidad": "dia",
+        "motivo": "entra en el régimen macro de EE.UU. que se publica como hecho"
+      },
+      {
+        "entidad": "US",
+        "dominio": "macro",
+        "metrica": "fed_funds_pct",
+        "papel": "CONTEXTO",
+        "data_as_of": "2026-08-01",
+        "frescura": "FRESH",
+        "retraso": 47,
+        "unidad": "dia",
+        "motivo": "entra en el régimen macro de EE.UU. que se publica como hecho"
+      },
+      {
+        "entidad": "US",
+        "dominio": "macro",
+        "metrica": "desempleo_pct",
+        "papel": "CONTEXTO",
+        "data_as_of": "2026-08-01",
+        "frescura": "FRESH",
+        "retraso": 47,
+        "unidad": "dia",
+        "motivo": "entra en el régimen macro; NO está en el Data Contract (hallazgo P1)"
+      },
+      {
+        "entidad": "US",
+        "dominio": "macro",
+        "metrica": "spread_10y2y_pct",
+        "papel": "CONTEXTO",
+        "data_as_of": "2026-09-16",
+        "frescura": "FRESH",
+        "retraso": 1,
+        "unidad": "sesion",
+        "motivo": "entra en el régimen macro; NO está en el Data Contract (hallazgo P1)"
+      },
+      {
+        "entidad": "EA",
+        "dominio": "macro",
+        "metrica": "hicp_yoy_pct",
+        "papel": "CONTEXTO",
+        "data_as_of": "2026-07-01",
+        "frescura": "LAGGING",
+        "retraso": 78,
+        "unidad": "dia",
+        "motivo": "entra en el régimen macro de la Eurozona que se publica como hecho"
+      },
+      {
+        "entidad": "EA",
+        "dominio": "macro",
+        "metrica": "ecb_deposit_rate_pct",
+        "papel": "CONTEXTO",
+        "data_as_of": "2026-09-16",
+        "frescura": "FRESH",
+        "retraso": 1,
+        "unidad": "sesion",
+        "motivo": "entra en el régimen macro de la Eurozona que se publica como hecho"
+      }
+    ],
+    "data_as_of": "2026-09-17",
+    "retrieved_at": "2026-09-17T10:41:02Z"
   }
 ]
