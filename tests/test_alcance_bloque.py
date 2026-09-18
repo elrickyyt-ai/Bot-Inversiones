@@ -228,16 +228,29 @@ class TestDiffCompletoDelPR(unittest.TestCase):
     """El `exit=0` historico solo habia mirado el ultimo commit."""
 
     def test_el_origen_del_rango_se_declara_siempre(self):
-        """REESCRITO con la correccion de S0.1: `rango_parcial()` desaparecio
-        al pasar el rango a ser el del bloque. La propiedad que sobrevive, y
-        es mas fuerte, es que la salida DECLARA que se ha medido."""
+        """REESCRITO dos veces. Primero con S0.1, al desaparecer
+        `rango_parcial()`. Y ahora otra vez (docs/07 s3): la version anterior
+        exigia que el bloque ACTIVO tuviera rango, y eso no es la propiedad --
+        es el estado accidental de que el activo de hoy declare `desde`. Sus
+        dos mitades se contradecian: la primera prohibia `origen is None` y la
+        segunda lo daba por bueno dos lineas mas abajo.
+
+        La propiedad que sobrevive, y que el docstring anterior ya nombraba:
+        la salida DECLARA que se ha medido. `None` es una declaracion --
+        significa "el bloque no declara rango"-- y `rutas_a_evaluar` tiene una
+        cadena de respaldo documentada para ese caso."""
         import alcance_pr
         _r, origen = alcance_pr.rango_del_bloque()
-        self.assertIn(origen, ("bloque", "bloque-abierto"))
+        self.assertIn(origen, ("bloque", "bloque-abierto", None))
         r2, o2 = alcance_pr.rango_del_bloque(
             {"bloque_activo": "Z", "bloques": {"Z": {"escritura": []}}})
         self.assertIsNone(r2, "sin `desde` no se inventa un rango")
         self.assertIsNone(o2)
+        # Y sin rango la salida no finge: lo declara y mide otra cosa.
+        rutas, origen2, rango2 = alcance_pr.rutas_a_evaluar(
+            contrato={"bloque_activo": "Z", "bloques": {"Z": {"escritura": []}}})
+        self.assertIn(origen2, ("pr", "ultimo-commit"))
+        self.assertTrue(rango2, "el rango realmente medido viaja con el resultado")
 
     def test_el_workflow_inyecta_base_y_head_del_pr(self):
         ruta = os.path.join(RAIZ, ".github", "workflows", "verificar-contexto.yml")
@@ -265,13 +278,43 @@ class TestTransicionDeBloque(unittest.TestCase):
                                            _contrato(bid, bloques))
             self.assertFalse(ok, bid)
 
-    def test_pc1_esta_declarado_pero_no_autorizado(self):
+    def test_un_bloque_UNDECLARED_nunca_es_el_bloque_activo(self):
+        """CADUCADO (docs/07 s3). La version anterior afirmaba sobre PC-1 en
+        concreto: que no llevaba `decision` y que no era el activo. Era cierto
+        y era ACCIDENTAL -- caduca el dia de la transferencia, que es
+        exactamente el caso que este test deberia seguir cubriendo.
+
+        La propiedad que sobrevive: `UNDECLARED` significa NO AUTORIZADO. Un
+        bloque no autorizado que fuese el activo concederia alcance de
+        escritura sin que ninguna decision lo hubiera concedido -- el
+        interruptor que D-54 retiro, con otro nombre. Vale para cualquier
+        bloque y para cualquier transicion futura."""
         c = estado.cargar_contrato()
-        pc1 = c["bloques"].get("PC-1")
-        self.assertIsNotNone(pc1)
-        self.assertIsNone(pc1.get("decision"), "PC-1 no puede llevar decision aun")
-        self.assertEqual(pc1.get("estado"), "UNDECLARED")
-        self.assertNotEqual(c["bloque_activo"], "PC-1")
+        activo = c["bloque_activo"]
+        for bid, decl in (c["bloques"] or {}).items():
+            if decl.get("estado") != "UNDECLARED":
+                continue
+            self.assertNotEqual(activo, bid,
+                                f"{bid} es UNDECLARED y sin embargo es el bloque activo")
+            self.assertIsNone(decl.get("decision"),
+                              f"{bid} es UNDECLARED y sin embargo lleva `decision`")
+
+    def test_el_bloque_activo_esta_constituido_por_una_decision_registrada(self):
+        """La otra mitad: ningun bloque se concede alcance a si mismo. El
+        activo apunta a una decision que existe de verdad en DECISIONES.md.
+        `desde` NO entra aqui: un bloque recien activado puede no tener aun
+        commits propios, y `rango_del_bloque` lo resuelve declarandolo."""
+        c = estado.cargar_contrato()
+        activo = c["bloque_activo"]
+        decl = (c["bloques"] or {}).get(activo)
+        self.assertIsNotNone(decl, f"bloque_activo {activo!r} no esta en `bloques`")
+        self.assertNotEqual(decl.get("estado"), "UNDECLARED",
+                            f"{activo} es el activo y esta UNDECLARED")
+        did = decl.get("decision")
+        self.assertIsNotNone(did, f"{activo} es el bloque activo y no declara `decision`")
+        with open(os.path.join(RAIZ, "docs", "DECISIONES.md"), encoding="utf-8") as fh:
+            self.assertIn(f"## {did} ", fh.read(),
+                          f"{did} no existe como entrada en docs/DECISIONES.md")
 
 
 class TestRangoDelBloque(unittest.TestCase):
@@ -288,14 +331,25 @@ class TestRangoDelBloque(unittest.TestCase):
         self.assertNotIn("HEAD", rango)
         self.assertEqual(origen, "bloque")
 
-    def test_bloque_abierto_usa_HEAD_como_valor_operativo(self):
+    def test_bloque_abierto_no_fija_hasta_y_usa_HEAD_como_valor_operativo(self):
+        """D-61 NO toca esto, y conviene que el test lo diga.
+
+        Se probo a truncar el rango de un bloque abierto en su ultimo commit
+        propio, y se falso: un extremo unico no puede a la vez excluir el
+        commit ajeno e incluir el trabajo propio posterior a el. D-61 resuelve
+        la autoria POR RUTA y deja `hasta` exactamente como estaba, que es lo
+        que su propio texto dice (*no modifica el significado de `hasta`, que
+        sigue siendo el extremo administrativo del bloque con HEAD como valor
+        operativo mientras esta abierto*)."""
         desde, hasta, operativo = validar.rango_bloque("S0")
         self.assertTrue(desde)
         self.assertIsNone(hasta, "un bloque abierto deja `hasta` en null")
         self.assertTrue(operativo)
         rango, origen = self._rango("S0")
-        self.assertIn("HEAD", rango)
         self.assertEqual(origen, "bloque-abierto")
+        self.assertTrue(rango.startswith(f"{desde}~1.."))
+        self.assertEqual(rango.split("..")[-1], "HEAD",
+                         "el valor operativo de un bloque abierto sigue siendo HEAD")
 
     def test_bloque_sin_rango_no_lo_inventa(self):
         desde, hasta, _ = validar.rango_bloque("PC-1")
@@ -315,17 +369,28 @@ class TestRangoDelBloque(unittest.TestCase):
                 continue
             rango, _ = self._rango(bid)
             rutas = alcance_pr._diff(rango)
+            # CADUCADO con D-61 (docs/07 s3): antes se evaluaba la procedencia
+            # contra HEAD mientras el conjunto de rutas salia del rango del
+            # bloque -- dos puntos de referencia para una sola pregunta. La
+            # propiedad que sobrevive es que ambos son EL MISMO: el extremo
+            # del rango que se esta validando.
+            extremo = rango.split("..")[-1]
             # El contrato ENTERO, no un recorte: `alcance.importado` forma
             # parte de la regla desde que existe IMPORTADO, y un contrato
             # parcial haria fallar al bloque por una ruta que no escribio.
-            ok, motivo = validar.guarda_alcance(rutas, dict(c, bloque_activo=bid))
+            ok, motivo = validar.guarda_alcance(rutas, dict(c, bloque_activo=bid),
+                                                head=extremo)
             self.assertTrue(ok, f"{bid} incumple su propio alcance: {motivo}")
 
     def _rango(self, bid):
+        """El contrato ENTERO con el bloque sustituido, no un recorte. Es la
+        misma leccion que este modulo ya aprendio con `alcance.importado`:
+        desde D-61 la procedencia depende tambien de
+        `alcance.autoria_automatizada`, y un contrato parcial la resolveria
+        sin actor declarado y sin decirlo."""
         import alcance_pr
         c = estado.cargar_contrato()
-        return alcance_pr.rango_del_bloque({"bloque_activo": bid,
-                                            "bloques": c["bloques"]})
+        return alcance_pr.rango_del_bloque(dict(c, bloque_activo=bid))
 
 
 class TestAutoridadDeLaExtraccion(unittest.TestCase):
@@ -455,8 +520,15 @@ class TestLasTresCondiciones(unittest.TestCase):
         self.p1, self.p2 = validar._padres(self.merge)
 
     def test_1_con_las_tres_cumplidas_es_IMPORTADO(self):
-        ok, motivo = validar.procedencia_importada(self.RUTA)
+        """CADUCADO con D-61 (docs/07 s3): el `head` por defecto era HEAD, y
+        HEAD dejo de ser el extremo del bloque en cuanto otro escritor commiteo
+        despues. La condicion 1 no cambia -- se evalua donde le corresponde."""
+        ok, motivo = validar.procedencia_importada(self.RUTA, head=self._extremo())
         self.assertTrue(ok, motivo)
+
+    def _extremo(self):
+        import alcance_pr
+        return alcance_pr.rango_del_bloque()[0].split("..")[-1]
 
     def test_2_una_ruta_que_el_bloque_movio_no_es_IMPORTADO(self):
         """Sobre el estado real. La topologia sintetica de
@@ -541,23 +613,62 @@ class TestLaIntegracionRealDeS0(unittest.TestCase):
     IMPORTADAS = tuple(f"data/thesis/{a}.json"
                        for a in ("ADA", "BTC", "DOT", "ETH", "SOL", "XRP"))
 
+    def _rango(self):
+        import alcance_pr
+        return alcance_pr.rango_del_bloque()[0]
+
+    def _extremo(self):
+        """El extremo del rango que se esta validando. H-1a: estos tests
+        dejaban que `head` cayera a su valor por defecto en vez de tomarlo del
+        rango que se esta validando -- correcto por casualidad mientras ambos
+        coincidiesen, y por eso mismo no es una propiedad en la que apoyarse."""
+        return self._rango().split("..")[-1]
+
     def test_las_seis_rutas_del_cron_son_IMPORTADO(self):
-        ver, _b = validar.veredicto_alcance(list(self.IMPORTADAS))
+        ver, _b = validar.veredicto_alcance(list(self.IMPORTADAS), head=self._extremo())
         for r in self.IMPORTADAS:
             self.assertEqual(ver[r], validar.IMPORTADO, r)
 
     def test_el_bloque_S0_vuelve_a_cumplir_su_propio_alcance(self):
         import alcance_pr
-        rutas, _origen, _rango = alcance_pr.rutas_a_evaluar()
-        ok, motivo = validar.guarda_alcance(rutas)
+        rutas, _origen, rango = alcance_pr.rutas_a_evaluar()
+        ok, motivo = validar.guarda_alcance(rutas, head=rango.split("..")[-1])
         self.assertTrue(ok, motivo)
 
     def test_no_queda_ninguna_ruta_FUERA_DE_ALCANCE(self):
         import alcance_pr
-        rutas, _o, _r = alcance_pr.rutas_a_evaluar()
-        ver, _b = validar.veredicto_alcance(rutas)
+        rutas, _o, rango = alcance_pr.rutas_a_evaluar()
+        ver, _b = validar.veredicto_alcance(rutas, head=rango.split("..")[-1])
         fuera = sorted(r for r, v in ver.items() if v == validar.FUERA_DE_ALCANCE)
         self.assertEqual(fuera, [])
+
+    def test_la_revision_propia_de_una_ruta_del_cron_no_es_la_ultima_que_la_toca(self):
+        """D-61 sobre el caso real, y la propiedad que lo distingue de no hacer
+        nada: para estas seis rutas, el commit mas reciente que las toca NO es
+        el que decide su veredicto, porque no lo escribio el bloque."""
+        rango = self._rango()
+        for r in self.IMPORTADAS:
+            ultima = validar._git(["log", "--full-history", "-1", "--format=%H",
+                                   rango, "--", r]).stdout.strip()
+            propia = validar.revision_propia(r, rango)
+            self.assertTrue(propia, f"{r}: el bloque no dejo ninguna revision")
+            self.assertNotEqual(propia, ultima, r)
+            correo = validar._git(["log", "-1", "--format=%ae", propia]).stdout.strip()
+            self.assertNotEqual(correo, validar.actor_automatizado(), r)
+
+    def test_una_ruta_que_el_bloque_tocase_no_se_salvaria_por_D61(self):
+        """El control que impide leer D-61 como un permiso. `revision_propia`
+        es la revision del BLOQUE: si el bloque hubiese escrito la ruta, la
+        segunda condicion de D-59 se mediria sobre SU contenido y la delataria.
+        Se comprueba sobre el mecanismo, no sobre un commit inventado: la
+        revision propia de cada ruta es anterior o igual al merge declarado, y
+        su contenido alli es exactamente el del lado integrado."""
+        merge = validar.merge_de_integracion()
+        _p1, p2 = validar._padres(merge)
+        rango = self._rango()
+        for r in self.IMPORTADAS:
+            propia = validar.revision_propia(r, rango)
+            self.assertEqual(validar._blob(propia, r), validar._blob(p2, r), r)
 
     def test_los_ocho_metrics_siguen_sin_resucitar(self):
         """La resolucion del merge no puede deshacerse por un cambio de guarda."""

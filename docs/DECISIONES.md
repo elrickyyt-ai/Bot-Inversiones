@@ -770,3 +770,84 @@ el run `34722019555`, y es correcto.
 
 Esta separación anticipa la que el sistema necesitará cuando exista `RUN`:
 **development/governance plane** frente a **operational data plane**.
+
+## D-61 · Un bloque abierto no responde de los commits que no escribió
+
+**Vigente** (S0, 2026-09-18). **Extiende D-59.** No modifica D-54 ni D-60.
+
+**El problema.** El primer commit automático posterior al merge de integración
+—`b7009fd`, 2026-09-16— dejó el gate de alcance en rojo: `contexto/alcance_pr.py`
+sale con `exit=1` y seis tests fallan. Las seis rutas `data/thesis/*.json` pasan
+de `IMPORTADO` a `FUERA_DE_ALCANCE` porque su contenido en `HEAD` dejó de ser el
+del lado integrado en cuanto ese commit las reescribió.
+
+**El mismo commit produce dos veredictos opuestos**: sus siete escrituras en
+`data/incoming/` salen `PERMITIDO` y sus seis en `data/thesis/` salen
+`FUERA_DE_ALCANCE`. La diferencia no está en quién escribió —es el mismo
+commit— sino en si el prefijo figura en `S0.escritura`. Y `data/incoming/`
+figura allí porque **S0 escribió allí** al reconciliar las 754 filas (S0.5),
+no para acomodar escrituras ajenas. Que esas siete pasaran era una coincidencia
+de prefijo, no una atribución correcta.
+
+**Decisión.** Un bloque responde únicamente de las modificaciones de las que es
+autor. Un commit que aterriza en el rango de un bloque abierto sin que el bloque
+lo haya escrito **no cuenta en el cálculo de su alcance propio**, con
+independencia de quién lo escriba y de por qué vía entre en el rango.
+
+**La semántica no es nueva: la eligió D-59.** *«La distinción que faltaba no es
+de permiso sino de autoría»*, y `IMPORTADO` existe porque *«esta modificación no
+es autoría del bloque y queda fuera del cálculo de su alcance propio»*. Lo que
+esta decisión hace es **extender ese criterio más allá del merge de
+integración**, que es precisamente lo que D-59 reservó a *«un bloque posterior
+con su propia decisión, no una ampliación silenciosa de ésta»*.
+
+**Se descartó** que un bloque abierto responda de todo lo que ocurre mientras lo
+está. Exigiría declarar en `escritura` rutas que el bloque no escribe, y D-59 ya
+lo rechazó con su motivo: *«habría sido falso: S0 no escribe tesis, y el
+contrato habría pasado a mentir para ponerse verde»*. Además vaciaría a
+`IMPORTADO` de sentido: un veredicto que existe para decir «esto no es suyo»
+sobra si el bloque responde de todo.
+
+**Qué NO decide esta entrada.** No decide cómo se determina la autoría de un
+commit. No introduce una categoría de actor en el contrato ni una taxonomía de
+escritores. No modifica `escritura`, que sigue significando el conjunto de rutas
+que el bloque puede escribir: **autoría y permiso de ruta siguen siendo cosas
+distintas**. No modifica el significado de `hasta`, que sigue siendo el extremo
+administrativo del bloque con `HEAD` como valor operativo mientras está abierto.
+No toca `VEREDICTOS_QUE_PASAN` ni la precedencia: lo que no es autoría del
+bloque sigue sin autorizar nada.
+
+**Relación con las decisiones vigentes.** **D-59** permanece literalmente válida
+—su principio, sus tres condiciones y su límite declarado al merge— y esta
+entrada cubre el caso que ella dejó expresamente reservado. **D-54** queda
+intacta: el rango de un bloque sigue siendo `desde~1..hasta`. **D-60** no se
+toca.
+
+**Consecuencia para los bloques abiertos.** Un bloque abierto convive con
+escrituras que no son suyas sin absorberlas. Deja de depender de que su
+`escritura` cubra por casualidad los directorios que otro escritor toque, y deja
+de romperse cada vez que eso ocurra.
+
+**Cómo se comprueba, y qué se descartó.** La autoría se resuelve **por ruta**:
+la segunda condición de D-59 se mide en la revisión en que *el bloque* dejó esa
+ruta, no en la punta del árbol. La alternativa —truncar el rango del bloque en
+su último commit propio— se implementó primero y **se falsó con el propio gate**:
+pasaba mientras el commit ajeno fuese el más reciente, y el primer commit propio
+que aterrizaba encima lo devolvía al rango. Un extremo único no puede a la vez
+excluir el commit ajeno e incluir el trabajo propio posterior a él; por eso
+`hasta` se queda como estaba y esta entrada no toca D-54.
+
+**Esto no es un permiso, y se comprueba que no lo es.** Si el bloque *sí* toca
+una ruta, la revisión propia es la suya, la segunda condición de D-59 se mide
+sobre lo que el bloque dejó y la delata exactamente igual que antes. Se verificó
+construyendo el caso: un commit del bloque sobre `data/thesis/` sale
+`FUERA_DE_ALCANCE` y el gate falla, mientras el commit automatizado sobre la
+misma ruta sale `IMPORTADO`. Lo que cambia es de quién responde el bloque, no
+qué puede escribir.
+
+**Consecuencia para `b7009fd`.** Sus seis escrituras en `data/thesis/` dejan de
+contar en el alcance propio de S0: **no son autoría de S0**. Sus siete
+escrituras en `data/incoming/` siguen saliendo `PERMITIDO`, pero ya no por la
+coincidencia de prefijo que las salvaba: `data/incoming/` está en
+`S0.escritura` porque **S0 escribió allí**, y la precedencia sitúa `PERMITIDO`
+por delante de `IMPORTADO` desde D-59.

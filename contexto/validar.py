@@ -701,6 +701,47 @@ def merge_de_integracion(contrato=None):
     return ((c.get("alcance") or {}).get("importado") or {}).get("merge_de_integracion")
 
 
+def actor_automatizado(contrato=None):
+    """Identidad declarada del escritor automatizado, o None (D-61).
+
+    Vive en el contrato, no aqui: es un DATO, como `merge_de_integracion`. Sin
+    declaracion no se asume ninguna -- no hay descubrimiento de actores."""
+    c = contrato or _estado.cargar_contrato()
+    return ((c.get("alcance") or {}).get("autoria_automatizada") or {}).get("identidad")
+
+
+def revision_propia(ruta, rango, contrato=None, raiz=RAIZ):
+    """SHA del commit mas reciente de `rango` que toca `ruta` y que NO escribio
+    el actor automatizado declarado, o None si no hay ninguno o no hay
+    declaracion.
+
+    D-61: un bloque responde unicamente de las modificaciones de las que es
+    autor. La pregunta es POR RUTA, no por extremo del rango. Un extremo unico
+    no puede hacer las dos cosas que hacen falta -- excluir el commit ajeno y
+    seguir incluyendo el trabajo propio posterior a el -- y se probo: truncar
+    el rango en el ultimo commit propio pasaba hasta que el bloque volvia a
+    escribir, y entonces el commit ajeno quedaba otra vez dentro.
+
+    Esto responde UNA pregunta -- en que revision dejo el bloque esta ruta -- y
+    no clasifica ni autoriza nada: `veredicto_alcance` sigue decidiendo eso.
+
+    `--full-history` es necesario, no decorativo: la simplificacion por defecto
+    esconde un merge cuando el resultado coincide con uno de sus padres, y el
+    merge de integracion es justamente el acto propio del bloque sobre las
+    rutas que aqui importan."""
+    identidad = actor_automatizado(contrato)
+    if not identidad:
+        return None
+    r = _git(["log", "--full-history", "--format=%H %ae", rango, "--", ruta], raiz)
+    if r.returncode != 0:
+        return None
+    for linea in r.stdout.splitlines():
+        partes = linea.split(" ", 1)
+        if len(partes) == 2 and partes[1].strip() != identidad:
+            return partes[0]
+    return None
+
+
 def _blob(rev, ruta, raiz=RAIZ):
     """sha del blob de `ruta` en `rev`, o None si alli no existe."""
     import subprocess
@@ -758,18 +799,29 @@ def procedencia_importada(ruta, contrato=None, raiz=RAIZ, head="HEAD"):
         return False, "no hay merge-base entre los dos padres"
     mb = r.stdout.strip()
 
-    en_head, en_p2 = _blob(head, ruta, raiz), _blob(p2, ruta, raiz)
+    desde, _h, _o = rango_bloque(contrato=contrato)
+
+    # D-61: la segunda condicion se comprueba en la revision en que EL BLOQUE
+    # dejo la ruta, no en la punta del arbol. Lo que un commit ajeno escriba
+    # despues no es autoria del bloque y no puede decidir su veredicto. Sin
+    # actor declarado, o si el bloque nunca toco la ruta, `rev` es `head` y la
+    # condicion es exactamente la de D-59: la ausencia de declaracion no
+    # concede nada. Si el bloque SI la toco, se mide lo que el bloque dejo, y
+    # entonces esta condicion lo delata igual que antes.
+    rev = (revision_propia(ruta, f"{desde}~1..{head}", contrato, raiz)
+           if desde else None) or head
+
+    en_rev, en_p2 = _blob(rev, ruta, raiz), _blob(p2, ruta, raiz)
     # Una ruta AUSENTE no se importa: borrar es un acto de autoria, y sin esta
     # comprobacion dos ausencias compararian iguales y pasarian solas.
-    if en_head is None or en_p2 is None:
-        return False, "la ruta no existe en HEAD o en el segundo padre"
-    if en_head != en_p2:
-        return False, "el contenido en HEAD no es el del lado integrado"
+    if en_rev is None or en_p2 is None:
+        return False, "la ruta no existe en la revision propia o en el segundo padre"
+    if en_rev != en_p2:
+        return False, "el contenido que dejo el bloque no es el del lado integrado"
 
     if _blob(p1, ruta, raiz) != _blob(mb, ruta, raiz):
         return False, "el lado del bloque movio la ruta respecto al merge-base"
 
-    desde, _h, _o = rango_bloque(contrato=contrato)
     if desde and _tocada_por_el_bloque(ruta, desde, p1, raiz):
         return False, "algun commit del bloque toca la ruta"
     return True, None

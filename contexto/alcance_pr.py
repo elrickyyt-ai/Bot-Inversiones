@@ -100,9 +100,14 @@ def ficheros_cambiados(base=None, head="HEAD", raiz=RAIZ, contrato=None):
     return rutas_a_evaluar(base, head, raiz, contrato)[0]
 
 
-def verificar(rutas, contrato=None, raiz=RAIZ):
-    """(codigo_salida, motivo). Delega la REGLA entera."""
-    ok, motivo = _validar.guarda_alcance(rutas, contrato, raiz)
+def verificar(rutas, contrato=None, raiz=RAIZ, head="HEAD"):
+    """(codigo_salida, motivo). Delega la REGLA entera.
+
+    `head` es la revision en cuyo extremo se evalua la procedencia. Antes se
+    perdia aqui y `guarda_alcance` caia a su valor por defecto: el conjunto de
+    rutas se calculaba sobre el rango del bloque y la procedencia se comparaba
+    contra HEAD -- dos puntos de referencia para una sola pregunta."""
+    ok, motivo = _validar.guarda_alcance(rutas, contrato, raiz, head)
     return (0 if ok else 1), motivo
 
 
@@ -114,17 +119,19 @@ def main(argv=None):
     args = ap.parse_args(argv)
 
     rutas, origen, rango = rutas_a_evaluar(args.base, args.head)
-    codigo, motivo = verificar(rutas)
+    extremo = rango.split("..")[-1] if rango else args.head
+    codigo, motivo = verificar(rutas, head=extremo)
     bid, decl = bloque_activo()
-    veredictos, _ = _validar.veredicto_alcance(rutas)
+    veredictos, _ = _validar.veredicto_alcance(rutas, head=extremo)
 
     print(f"GUARDA DE ALCANCE - {len(rutas)} fichero(s) en {rango}")
     print(f"  bloque activo {bid!r}" + ("" if decl else "  <- NO DECLARADO en `bloques`"))
     if decl:
         print(f"  escritura declarada: {list(decl.get('escritura') or ())}")
     if origen == "bloque-abierto":
-        print("  rango del BLOQUE, con `hasta` abierto: HEAD es un valor operativo, "
-              "no el cierre del bloque")
+        print(f"  rango del BLOQUE, con `hasta` abierto: {extremo[:7]} es un valor "
+              f"operativo, no el cierre del bloque; la autoria de cada ruta se "
+              f"resuelve por ruta (D-61)")
     elif origen == "bloque":
         print("  rango del BLOQUE, cerrado y reproducible")
     elif origen == "pr":
