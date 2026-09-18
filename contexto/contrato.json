@@ -415,9 +415,53 @@
     "data/incoming/"
    ],
    "desde": "aadb269",
-   "hasta": null,
+   "hasta": "d99328ad29b770e3015fbe3b86e0641542ee5c66",
    "decision": "D-55",
-   "estado": "OPEN",
+   "estado": "CLOSED",
+   "cierre": {
+       "intencion": "El alcance de S0 esta completo: la reconciliacion de F1 y de la linea P1-P6.2 en la rama canonica, el alcance por bloque sin interruptor, el cierre calculado, la arquitectura objetivo persistida, los dos planos de validacion y la constitucion del bloque sucesor.",
+       "intencion_declarada_por": "usuario, en la autorizacion de la transicion S0 -> PC-1",
+       "intencion_declarada_el": "2026-09-18",
+       "_la_intencion_no_cierra": "Lo UNICO que una afirmacion humana puede decir. Las siete obligaciones de OBLIGACIONES_CIERRE se CALCULAN; si alguna falla el bloque no cierra, con independencia de esta intencion (D-56).",
+       "commit_de_cierre": "d99328ad29b770e3015fbe3b86e0641542ee5c66",
+       "_commit_de_cierre": "Es COMMIT_TRANSICION, el commit que constituyo y activo PC-1 (D-62), no el commit que escribe esta declaracion. La sexta obligacion exige que la verificacion sea DE ESTE commit, y se ejecuto sobre su arbol; atribuirle una verificacion corrida sobre otro arbol seria exactamente el fallo que D-56 corrige.",
+       "entregables": [
+         "contexto/ARQUITECTURA_OBJETIVO.md",
+         "contexto/suite_pr.py",
+         "contexto/suite_cron.py",
+         "engine/contract/reconciliar_metrics.py",
+         "tests/_parquet.py",
+         "tests/test_alcance_bloque.py",
+         "tests/test_arquitectura.py",
+         "tests/test_cierre_bloque.py",
+         "tests/test_planos.py",
+         "tests/test_reconciliacion.py",
+         "tests/test_superficie_durable.py"
+       ],
+       "_entregables": "Los ficheros que S0 CREO en su rango, obtenidos con `git diff --name-status --diff-filter=A aadb269~1..`, no una lista retrospectiva. Queda FUERA informes/2026-09-12_f1_contexto_durable_y_cierre.md: aparece como ADDED en el rango de S0 porque la rama canonica no lo tenia, pero es entregable de F1 y ya esta declarado en su cierre. S0 no tiene informe propio y el mecanismo no exige ninguno. contexto/validar.py, contexto/alcance_pr.py y contexto/contrato.json no se declaran aqui: S0 los modifico mucho, pero no los creo.",
+       "tests": "python3 contexto/suite_pr.py",
+       "_tests": "El plano de GOBERNANZA (D-60). El cierre de un bloque es gobernanza: alcance, procedencia, historia, cierre. suite_cron.py valida el plano de datos y responde a otro contrato (ci_cron), asi que no es el comando que cierra este bloque.",
+       "validadores": [
+         "contexto/validar.py",
+         "contexto/integridad.py",
+         "contexto/extraccion.py",
+         "contexto/grafo.py",
+         "contexto/alcance_pr.py",
+         "engine/knowledge/consulta.py --validar"
+       ],
+       "ultima_verificacion": {
+         "commit": "d99328ad29b770e3015fbe3b86e0641542ee5c66",
+         "fecha": "2026-09-18T17:33:44Z",
+         "tests": 1171,
+         "saltados": 187,
+         "resultado": "OK",
+         "autoridades": "6/6 exit=0",
+         "qa": "CORE PASS . PARQUET NOT RUN",
+         "_qa": "NO es un PASS de parquet y no se declara como tal. El entorno de verificacion no tiene pyarrow, asi que qa.py devuelve STATUS: UNVERIFIED para el plano parquet. La obligacion 2 exige un comando de tests DECLARADO y la 6 que la verificacion sea de commit_de_cierre; ninguna exige QA PARQUET, que pertenece al plano del cron (ci_cron) y se ejecuta en su job con pyarrow fijado. Se registra lo medido, no lo deseado."
+       },
+       "huella": "7c4c4846e0aa6eaf73fe9f273723b967614a718f44891cdb74e534647397fd94",
+       "_huella": "canonical-fingerprint/v1 sobre los insumos del cierre, TOMADOS EN commit_de_cierre y no en el worktree, con contexto/contrato.json excluido de su propio sello. Calculada con validar.huella_cierre(), no a mano."
+     },
    "_nota": "S0 declara engine/contract/ y data/incoming/ porque reconcilia las 754 filas del cron en el carril del ano abierto. Eso es exactamente lo que el mecanismo nuevo permite expresar y el interruptor anterior no: un alcance PROPIO, no la ausencia de guarda."
   },
   "PC-1": {

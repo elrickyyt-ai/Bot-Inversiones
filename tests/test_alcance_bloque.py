@@ -340,16 +340,37 @@ class TestRangoDelBloque(unittest.TestCase):
         la autoria POR RUTA y deja `hasta` exactamente como estaba, que es lo
         que su propio texto dice (*no modifica el significado de `hasta`, que
         sigue siendo el extremo administrativo del bloque con HEAD como valor
-        operativo mientras esta abierto*)."""
-        desde, hasta, operativo = validar.rango_bloque("S0")
-        self.assertTrue(desde)
-        self.assertIsNone(hasta, "un bloque abierto deja `hasta` en null")
-        self.assertTrue(operativo)
-        rango, origen = self._rango("S0")
-        self.assertEqual(origen, "bloque-abierto")
-        self.assertTrue(rango.startswith(f"{desde}~1.."))
-        self.assertEqual(rango.split("..")[-1], "HEAD",
-                         "el valor operativo de un bloque abierto sigue siendo HEAD")
+        operativo mientras esta abierto*).
+
+        CADUCADO tambien en la transicion S0 -> PC-1 (docs/07 s3): el bloque
+        abierto se nombraba, y era S0 hasta que S0 se cerro. Ahora se toma del
+        contrato el que lo este, sea cual sea."""
+        c = estado.cargar_contrato()
+        abiertos = [b for b, d in (c["bloques"] or {}).items()
+                    if d.get("hasta") is None and d.get("estado") != "UNDECLARED"]
+        self.assertTrue(abiertos, "siempre hay al menos un bloque abierto")
+        for bid in abiertos:
+            desde, hasta, operativo = validar.rango_bloque(bid, c)
+            self.assertIsNone(hasta, f"{bid}: un bloque abierto deja `hasta` en null")
+            self.assertTrue(operativo, bid)
+            rango, origen = self._rango(bid)
+            if not desde:
+                # Sin commits propios todavia no hay rango, y NO se inventa.
+                self.assertIsNone(rango, bid)
+                continue
+            self.assertEqual(origen, "bloque-abierto", bid)
+            self.assertTrue(rango.startswith(f"{desde}~1.."), bid)
+            self.assertEqual(rango.split("..")[-1], "HEAD",
+                             f"{bid}: el valor operativo sigue siendo HEAD")
+
+        # Y el reverso, sobre los cerrados: `hasta` fijado y rango reproducible.
+        for bid, d in (c["bloques"] or {}).items():
+            if d.get("hasta") is None:
+                continue
+            _de, ha, op = validar.rango_bloque(bid, c)
+            self.assertTrue(ha, bid)
+            self.assertFalse(op, bid)
+            self.assertNotIn("HEAD", self._rango(bid)[0], bid)
 
     def test_bloque_sin_rango_no_lo_inventa(self):
         desde, hasta, _ = validar.rango_bloque("PC-1")
