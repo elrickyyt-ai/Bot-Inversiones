@@ -345,7 +345,7 @@
   "_por_que_187_y_no_125": "125 fue una estimacion previa hecha como 1052 - 927, la diferencia entre los tests CONTADOS con y sin pyarrow. No era el numero de saltos: cuando setUpClass falla, unittest no cuenta los tests de esa clase. Medido tras aplicar la guarda, el clean-room ejecuta los 1052 y salta 187. La cifra declarada es la MEDIDA, no la estimada.",
   "cobertura_no_se_pierde": "se retrasa. El job `verificar` del cron diario instala pyarrow con version fijada y corre la suite completa mas qa.py --require-parquet. Ese reparto es el que T9 documento a proposito."
  },
- "bloque_activo": "S0",
+ "bloque_activo": "PC-1",
  "_bloque_activo": "DF-1. Siempre hay un bloque activo: si esta clave falta o apunta a un bloque no declarado, la guarda devuelve ALCANCE_NO_DECLARADO y FALLA. No existe el estado 'sin guarda' -- eso era el defecto del interruptor `alcance_bloque.vigente` que este contrato sustituye.",
  "bloques": {
   "F1": {
@@ -430,9 +430,9 @@
    ],
    "desde": null,
    "hasta": null,
-   "decision": null,
-   "estado": "UNDECLARED",
-   "_nota": "Declarado por anticipado SOLO como destino del roadmap. `decision: null` y `estado: UNDECLARED` significan que todavia no esta autorizado: activarlo exige ponerlo en bloque_activo con su decision registrada."
+   "decision": "D-62",
+   "estado": "OPEN",
+   "_nota": "Constituido y activado por D-62. Es un bloque de ALCANCE de escritura, sucesor de S0; D-62 no declara que capacidad construira. `desde` sigue null a proposito: se fijara en el primer commit de autoria PROPIA del bloque (D-54 + D-61), y el commit que lo constituyo lo escribio S0. La relacion con P7..P11 sigue siendo deuda DD-4, sin resolver."
   }
  },
  "arquitectura_objetivo": {

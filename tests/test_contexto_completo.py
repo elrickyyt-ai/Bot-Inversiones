@@ -192,10 +192,34 @@ class TestT6Completo(unittest.TestCase):
         self.assertIn("SEXTO", motivo.upper())
 
     def test_guarda_anti_deriva_alcance(self):
-        ok, motivo = validar.guarda_alcance(["engine/knowledge/modelo.py"])
-        self.assertFalse(ok)
-        ok2, _ = validar.guarda_alcance(["contexto/validar.py"])
-        self.assertTrue(ok2)
+        """CADUCADO con la transicion S0 -> PC-1 (docs/07 s3). La version
+        anterior afirmaba que `engine/knowledge/modelo.py` no pasa la guarda.
+        Era cierto y era ACCIDENTAL: lo era porque el bloque activo era S0, que
+        no declara `engine/`. PC-1 si lo declara, asi que el literal caduca el
+        dia de la transferencia -- que es justo el dia en que esta guarda
+        deberia seguir sirviendo.
+
+        La propiedad que sobrevive, y no depende de quien mande: lo que el
+        bloque activo NO declara se deniega por defecto, lo que SI declara
+        pasa, y el historico queda protegido en los dos casos."""
+        decl = (estado.cargar_contrato()["bloques"] or {})[
+            estado.cargar_contrato()["bloque_activo"]]
+        escritura = tuple(decl.get("escritura") or ())
+        self.assertTrue(escritura, "el bloque activo declara escritura")
+
+        no_declarada = next(
+            c for c in ("engine/", "data/", "knowledge/", "informes/", "docs/",
+                        "contexto/", "tests/", ".github/")
+            if not c.startswith(escritura) and not any(
+                e.startswith(c) for e in escritura))
+        ok, _ = validar.guarda_alcance([no_declarada + "cualquiera.py"])
+        self.assertFalse(ok, f"{no_declarada} no esta declarada y aun asi pasa")
+
+        ok2, _ = validar.guarda_alcance([escritura[0] + "cualquiera.py"])
+        self.assertTrue(ok2, f"{escritura[0]} esta declarada y no pasa")
+
+        ok3, _ = validar.guarda_alcance(["docs/DECISIONES.md"])
+        self.assertFalse(ok3, "el historico deja de estar protegido")
 
 
 if __name__ == "__main__":

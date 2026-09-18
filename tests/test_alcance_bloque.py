@@ -523,12 +523,25 @@ class TestLasTresCondiciones(unittest.TestCase):
         """CADUCADO con D-61 (docs/07 s3): el `head` por defecto era HEAD, y
         HEAD dejo de ser el extremo del bloque en cuanto otro escritor commiteo
         despues. La condicion 1 no cambia -- se evalua donde le corresponde."""
-        ok, motivo = validar.procedencia_importada(self.RUTA, head=self._extremo())
+        ok, motivo = validar.procedencia_importada(self.RUTA, self._contrato_s0(),
+                                                   head=self._extremo())
         self.assertTrue(ok, motivo)
 
     def _extremo(self):
+        """El extremo del rango de S0, nombrado. CADUCADO con la transicion a
+        PC-1 (docs/07 s3): pedia el rango del bloque ACTIVO, que era S0 por
+        casualidad. Esta clase mide la integracion real de S0, asi que S0 es
+        quien tiene que decirlo -- y quien este activo deja de importar."""
         import alcance_pr
-        return alcance_pr.rango_del_bloque()[0].split("..")[-1]
+        return alcance_pr.rango_del_bloque(self._contrato_s0())[0].split("..")[-1]
+
+    def _contrato_s0(self):
+        """El contrato ENTERO con S0 activo. No basta con pasar `head`:
+        `procedencia_importada` resuelve `desde` del bloque ACTIVO, asi que con
+        PC-1 activo -- que no declara `desde` -- la comprobacion por ruta de
+        D-61 se desactiva y la ruta cae a FUERA_DE_ALCANCE. Preguntar por S0
+        con el bloque de otro era medir media pregunta."""
+        return dict(estado.cargar_contrato(), bloque_activo="S0")
 
     def test_2_una_ruta_que_el_bloque_movio_no_es_IMPORTADO(self):
         """Sobre el estado real. La topologia sintetica de
@@ -614,8 +627,19 @@ class TestLaIntegracionRealDeS0(unittest.TestCase):
                        for a in ("ADA", "BTC", "DOT", "ETH", "SOL", "XRP"))
 
     def _rango(self):
+        """El rango de S0, NOMBRADO. CADUCADO con la transicion a PC-1
+        (docs/07 s3): estos tests pedian el rango del bloque ACTIVO y median
+        S0 solo mientras S0 lo fuese. Al activarse PC-1 -- que no declara
+        `desde` -- devolvia None y reventaban. La propiedad que sobrevive es
+        que el rango de un bloque sale de SU declaracion, no de quien mande."""
         import alcance_pr
-        return alcance_pr.rango_del_bloque()[0]
+        return alcance_pr.rango_del_bloque(self._contrato_s0())[0]
+
+    def _contrato_s0(self):
+        """El contrato ENTERO con S0 activo -- misma leccion que en
+        TestLasTresCondiciones: `head` solo no basta, porque la procedencia
+        resuelve `desde` del bloque activo."""
+        return dict(estado.cargar_contrato(), bloque_activo="S0")
 
     def _extremo(self):
         """El extremo del rango que se esta validando. H-1a: estos tests
@@ -625,20 +649,23 @@ class TestLaIntegracionRealDeS0(unittest.TestCase):
         return self._rango().split("..")[-1]
 
     def test_las_seis_rutas_del_cron_son_IMPORTADO(self):
-        ver, _b = validar.veredicto_alcance(list(self.IMPORTADAS), head=self._extremo())
+        ver, _b = validar.veredicto_alcance(list(self.IMPORTADAS), self._contrato_s0(),
+                                            head=self._extremo())
         for r in self.IMPORTADAS:
             self.assertEqual(ver[r], validar.IMPORTADO, r)
 
     def test_el_bloque_S0_vuelve_a_cumplir_su_propio_alcance(self):
         import alcance_pr
-        rutas, _origen, rango = alcance_pr.rutas_a_evaluar()
-        ok, motivo = validar.guarda_alcance(rutas, head=rango.split("..")[-1])
+        c = self._contrato_s0()
+        rutas, _origen, rango = alcance_pr.rutas_a_evaluar(contrato=c)
+        ok, motivo = validar.guarda_alcance(rutas, c, head=rango.split("..")[-1])
         self.assertTrue(ok, motivo)
 
     def test_no_queda_ninguna_ruta_FUERA_DE_ALCANCE(self):
         import alcance_pr
-        rutas, _o, rango = alcance_pr.rutas_a_evaluar()
-        ver, _b = validar.veredicto_alcance(rutas, head=rango.split("..")[-1])
+        c = self._contrato_s0()
+        rutas, _o, rango = alcance_pr.rutas_a_evaluar(contrato=c)
+        ver, _b = validar.veredicto_alcance(rutas, c, head=rango.split("..")[-1])
         fuera = sorted(r for r, v in ver.items() if v == validar.FUERA_DE_ALCANCE)
         self.assertEqual(fuera, [])
 
@@ -650,7 +677,7 @@ class TestLaIntegracionRealDeS0(unittest.TestCase):
         for r in self.IMPORTADAS:
             ultima = validar._git(["log", "--full-history", "-1", "--format=%H",
                                    rango, "--", r]).stdout.strip()
-            propia = validar.revision_propia(r, rango)
+            propia = validar.revision_propia(r, rango, self._contrato_s0())
             self.assertTrue(propia, f"{r}: el bloque no dejo ninguna revision")
             self.assertNotEqual(propia, ultima, r)
             correo = validar._git(["log", "-1", "--format=%ae", propia]).stdout.strip()
@@ -663,11 +690,11 @@ class TestLaIntegracionRealDeS0(unittest.TestCase):
         Se comprueba sobre el mecanismo, no sobre un commit inventado: la
         revision propia de cada ruta es anterior o igual al merge declarado, y
         su contenido alli es exactamente el del lado integrado."""
-        merge = validar.merge_de_integracion()
+        merge = validar.merge_de_integracion(self._contrato_s0())
         _p1, p2 = validar._padres(merge)
         rango = self._rango()
         for r in self.IMPORTADAS:
-            propia = validar.revision_propia(r, rango)
+            propia = validar.revision_propia(r, rango, self._contrato_s0())
             self.assertEqual(validar._blob(propia, r), validar._blob(p2, r), r)
 
     def test_los_ocho_metrics_siguen_sin_resucitar(self):

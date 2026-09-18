@@ -164,10 +164,19 @@ class TestGuardaDeAlcanceConectada(unittest.TestCase):
             self.assertEqual(codigo, 1, ruta)
             self.assertIn(validar.FUERA_DE_ALCANCE, motivo)
 
-    def test_los_cambios_legitimos_de_F1_pasan(self):
-        """contexto/, tests/ y la configuracion de CI no se bloquean."""
-        rutas = ["contexto/validar.py", "tests/test_ci_pr.py",
-                 ".github/workflows/verificar-contexto.yml", "informes/nuevo.md"]
+    def test_lo_que_el_bloque_activo_declara_pasa(self):
+        """CADUCADO con la transicion S0 -> PC-1 (docs/07 s3). La version
+        anterior fijaba una lista literal -- contexto/, tests/, .github/,
+        informes/ -- y pasaba porque S0 declara las cuatro. PC-1 NO declara
+        `.github/`, asi que el literal caduca el dia de la transferencia sin
+        que nada este mal: es la `escritura` de PC-1, declarada en aadb269, y
+        no se amplia para que un test siga verde.
+
+        La propiedad que sobrevive: lo que el bloque ACTIVO declara pasa."""
+        escritura = tuple((estado.cargar_contrato()["bloques"] or {})[
+            estado.cargar_contrato()["bloque_activo"]].get("escritura") or ())
+        self.assertTrue(escritura)
+        rutas = [pre + "cualquiera.txt" for pre in escritura]
         codigo, motivo = alcance_pr.verificar(rutas)
         self.assertEqual(codigo, 0, motivo)
 
@@ -206,8 +215,16 @@ class TestGuardaDeAlcanceConectada(unittest.TestCase):
         for bid, decl in c["bloques"].items():
             self.assertNotIn("vigente", decl, bid)
             self.assertNotIn("como_se_cierra", decl, bid)
-        # Y el alcance sigue aplicandose sobre una ruta no declarada:
-        codigo, _ = alcance_pr.verificar(["engine/causal/mecanismos.py"])
+        # Y el alcance sigue aplicandose sobre una ruta no declarada. La ruta
+        # se DERIVA del bloque activo: `engine/` estaba fuera bajo S0 y esta
+        # dentro bajo PC-1, y lo que este test fija no es que directorio sea,
+        # sino que lo no declarado se sigue denegando.
+        escritura = tuple(c["bloques"][c["bloque_activo"]].get("escritura") or ())
+        fuera = next(x for x in ("engine/", "data/", "knowledge/", "docs/",
+                                 "contexto/", "tests/", ".github/", "informes/")
+                     if not x.startswith(escritura)
+                     and not any(e.startswith(x) for e in escritura))
+        codigo, _ = alcance_pr.verificar([fuera + "cualquiera.py"])
         self.assertEqual(codigo, 1, "la guarda tiene que seguir aplicando")
 
 
@@ -497,10 +514,21 @@ class TestElPipelinePropagaElFAIL(unittest.TestCase):
             import shutil
             shutil.rmtree(tmp)
 
-    def test_FAIL_de_alcance_un_cambio_en_engine_hace_fallar_el_job(self):
-        """Caso FAIL de alcance, sobre el diff, sin tocar engine/ real."""
+    def test_FAIL_de_alcance_una_ruta_no_declarada_hace_fallar_el_job(self):
+        """Caso FAIL de alcance, sobre el diff, sin tocar nada real.
+
+        CADUCADO con la transicion S0 -> PC-1 (docs/07 s3): el literal era
+        `engine/`, que PC-1 SI declara. Lo que este test fija es que el
+        pipeline propaga el FAIL cuando una ruta no esta declarada, no que
+        `engine/` sea esa ruta. Se deriva del bloque activo."""
+        c = estado.cargar_contrato()
+        escritura = tuple(c["bloques"][c["bloque_activo"]].get("escritura") or ())
+        fuera = next(x for x in ("engine/", "data/", "knowledge/", "docs/",
+                                 "contexto/", "tests/", ".github/", "informes/")
+                     if not x.startswith(escritura)
+                     and not any(e.startswith(x) for e in escritura))
         codigo, motivo = alcance_pr.verificar(
-            ["contexto/validar.py", "engine/knowledge/modelo.py"])
+            [escritura[0] + "cualquiera.py", fuera + "cualquiera.py"])
         self.assertEqual(codigo, 1)
         self.assertIn(validar.FUERA_DE_ALCANCE, motivo)
 

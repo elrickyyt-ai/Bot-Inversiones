@@ -851,3 +851,55 @@ escrituras en `data/incoming/` siguen saliendo `PERMITIDO`, pero ya no por la
 coincidencia de prefijo que las salvaba: `data/incoming/` está en
 `S0.escritura` porque **S0 escribió allí**, y la precedencia sitúa `PERMITIDO`
 por delante de `IMPORTADO` desde D-59.
+
+## D-62 · PC-1 es el bloque de alcance que sucede a S0
+
+**Vigente** (PC-1, 2026-09-18). Constituye `contrato.json::bloques."PC-1"`.
+Usa el mecanismo de **D-54**; no lo modifica. El cierre de S0 lo decide
+**D-56** por veredicto calculado, no esta entrada.
+
+**Qué es.** PC-1 es un **bloque de alcance de escritura**, sucesor de S0 en
+`bloque_activo`. Su `escritura` —`engine/`, `tests/`, `docs/`, `informes/`,
+`contexto/`— no la declara esta entrada: está declarada desde `aadb269` y **no
+se amplía aquí**. Es el primer bloque cuyo alcance vuelve a abrir `engine/`
+después de F1 (contexto durable) y S0 (reconciliación), de los que D-55 y el
+informe de cierre de F1 dicen expresamente que **no son el producto**.
+
+**Qué NO es.** No es una decisión de arquitectura. No declara qué capacidad se
+construirá, ni qué componente de `arquitectura_objetivo` se implementa, ni en
+qué orden. Añadir una capacidad seguirá exigiendo su propia decisión
+registrada, como establece D-58.
+
+**Constituir ≠ activar ≠ ejecutar.** Son tres actos distintos y esta entrada
+sólo respalda los dos primeros:
+
+- **constituir** — registrar esta decisión y poner `estado: OPEN`;
+- **activar** — `bloque_activo = "PC-1"`, que es lo que `alcance.transicion_de_bloque` exige y lo que permite que la cuarta obligación de cierre de S0 se cumpla;
+- **ejecutar** — el primer commit de autoría propia del bloque, que todavía no existe.
+
+**`desde` permanece `null`.** `desde` es el primer commit **que el bloque
+escribió** (D-54, y D-61 para la autoría). El commit que constituye PC-1 lo
+escribe S0, dentro de `S0.escritura`, mientras S0 sigue siendo el bloque
+activo: atribuírselo a PC-1 afirmaría una autoría que no existe. La regla ya
+estaba fijada al crearse el mecanismo —*«PC-1 · sin rango · UNDECLARED · no se
+inventa»*, cuerpo de `27a3b16`— y un bloque activo sin rango no desprotege
+nada: `rutas_a_evaluar` cae por su cadena declarada y **declara qué midió**.
+
+**DD-4 sigue abierta.** La relación de PC-1 con `P7…P11` no se decide aquí.
+DD-4 quedó registrada como deuda explícita en S0.4 y **esta entrada no la
+resuelve ni la simula resuelta**: lo que constituye es el bloque, no el
+roadmap de producto. Producto y alcance siguen siendo ejes distintos.
+
+**Lo que esta entrada descarta.** Que PC-1 sea `AssessmentContract`. Ese
+nombre existió en `f784b85` —*«el siguiente bloque de producto
+(AssessmentContract) tiene que tocar engine/ por definición»*— y `aadb269` lo
+**eliminó** en el mismo commit en que creó `bloques."PC-1"`, dejando alcance
+sin propósito declarado. Hoy tiene cero ocurrencias en el árbol.
+Reinstaurarlo por vía interpretativa revertiría una supresión deliberada sin
+decisión que la respalde.
+
+**Relación con las decisiones vigentes.** **D-54** intacta: el rango sigue
+siendo `desde~1..hasta`. **D-55** es el precedente de forma —constituyó S0
+diciendo qué es y qué no es, sin resolver ninguna cuestión de producto.
+**D-56** decide el cierre de S0, que esta entrada habilita pero no declara.
+**D-58**, **D-59**, **D-60** y **D-61** no se tocan.
