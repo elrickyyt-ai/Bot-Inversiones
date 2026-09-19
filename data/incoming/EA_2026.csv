@@ -219,3 +219,4 @@ EA,macro,macro,ecb_deposit_rate_pct,2.25,,%,2026-09-15,2026-09-16T10:31:19Z,FRED
 EA,macro,macro,ecb_deposit_rate_pct,2.5,,%,2026-09-16,2026-09-17T10:41:02Z,FRED,1,,70,engine/macro/README.md,
 EA,macro,macro,ecb_deposit_rate_pct,2.5,,%,2026-09-17,2026-09-18T10:16:47Z,FRED,1,,70,engine/macro/README.md,
 EA,macro,macro,hicp_yoy_pct,3.23,,%,2026-08-01,2026-09-18T10:16:47Z,FRED,1,,70,engine/macro/README.md,
+EA,macro,macro,ecb_deposit_rate_pct,2.5,,%,2026-09-18,2026-09-19T09:58:19Z,FRED,1,,70,engine/macro/README.md,
